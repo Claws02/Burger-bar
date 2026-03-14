@@ -28,11 +28,13 @@
     #finish-edit-btn { background: #03A9F4; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 0 #0277BD; }
     #finish-edit-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #0277BD; }
 
-    #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 140px; height: 140px; background: rgba(102, 187, 106, 0.15); border-radius: 50%; pointer-events: auto; border: 4px solid rgba(102, 187, 106, 0.5); display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); box-shadow: inset 0 2px 8px rgba(0,0,0,0.2); }
-    #joystick-knob { width: 60px; height: 60px; background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(230,230,230,0.95) 100%); border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; border: 2px solid rgba(255,255,255,0.5); }
-    #action-btn { position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; background: linear-gradient(135deg, #FFD54F 0%, #FFCA28 100%); border-radius: 50%; pointer-events: auto; border: 4px solid #FFA000; box-shadow: 0 8px 0 #E65100, 0 10px 18px rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; font-size: 35px; color: white; transition: transform 0.05s, box-shadow 0.05s; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-    #action-btn:active { transform: translateY(8px); box-shadow: 0 0 0 #E65100, 0 2px 8px rgba(0,0,0,0.3); }
-    .hint { position: absolute; bottom: -25px; font-size: 16px; color: rgba(255,255,255,0.9); font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+    #touch-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 4; }
+    #joystick-zone { position: fixed; width: 140px; height: 140px; background: rgba(255,255,255,0.07); border-radius: 50%; pointer-events: none; border: 2.5px solid rgba(255,255,255,0.22); display: flex; justify-content: center; align-items: center; z-index: 6; transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.12s; }
+    #joystick-zone.active { opacity: 1; }
+    #joystick-knob { width: 62px; height: 62px; background: rgba(255,255,255,0.82); border-radius: 50%; box-shadow: 0 3px 12px rgba(0,0,0,0.28); border: 2px solid rgba(255,255,255,0.5); pointer-events: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+    #action-btn { position: fixed; width: 108px; height: 108px; background: rgba(255, 200, 30, 0.78); border-radius: 50%; pointer-events: none; border: 3px solid rgba(255,160,0,0.85); box-shadow: 0 7px 0 rgba(200,80,0,0.55), 0 9px 18px rgba(0,0,0,0.28); display: flex; justify-content: center; align-items: center; font-size: 38px; z-index: 6; transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.12s; }
+    #action-btn.active { opacity: 1; }
+    #action-btn.pressed { box-shadow: 0 2px 0 rgba(200,80,0,0.55), 0 3px 8px rgba(0,0,0,0.2); margin-top: 5px; }
 
     .overlay-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(15, 20, 25, 0.95); color: white; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10; pointer-events: auto; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
     .start-btn { background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%); padding: 15px 40px; border-radius: 30px; font-size: 24px; color: white; border: none; box-shadow: 0 6px 0 #1B5E20, 0 8px 16px rgba(0,0,0,0.3); font-family: inherit; font-weight: bold; margin-top: 15px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.1s; }
@@ -55,9 +57,6 @@
         #top-hud { top: 10px; left: 10px; right: 10px; gap: 10px; flex-wrap: wrap; }
         #day-banner { padding: 8px 15px; font-size: 16px; }
         #cash-display { padding: 8px 15px; font-size: 18px; }
-        #joystick-zone { width: 110px; height: 110px; bottom: 20px; left: 20px; }
-        #action-btn { width: 80px; height: 80px; bottom: 25px; right: 25px; font-size: 28px; }
-        .hint { font-size: 12px; }
         .start-btn, .edit-btn { padding: 12px 30px; font-size: 18px; margin-top: 10px; }
         h1 { font-size: 36px !important; }
         .overlay-screen p { font-size: 14px; max-width: 90vw; }
@@ -69,10 +68,6 @@
         #cash-val { font-size: 18px; }
         #rating-val { font-size: 12px; }
         #top-hud { top: 8px; left: 8px; right: 8px; }
-        #joystick-zone { width: 100px; height: 100px; bottom: 15px; left: 15px; border: 3px solid rgba(255, 255, 255, 0.3); }
-        #joystick-knob { width: 50px; height: 50px; }
-        #action-btn { width: 70px; height: 70px; bottom: 20px; right: 20px; border: 3px solid #FF9800; font-size: 24px; box-shadow: 0 6px 0 #FF6F00, 0 8px 12px rgba(0,0,0,0.4); }
-        #action-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #FF6F00; }
         #finish-edit-btn { padding: 8px 15px; font-size: 14px; margin-top: 8px; }
         .shop-container { max-height: 60vh; padding: 15px; }
         .upgrade-item { padding: 12px; margin-bottom: 8px; }
@@ -100,8 +95,11 @@
                 <span id="rating-val" style="font-size: 14px; color:#ffc107;">⭐ 0.0</span>
             </div>
         </div>
-        <div id="joystick-zone"><div id="joystick-knob"></div><div class="hint">WASD</div></div>
-        <div id="action-btn" id="main-action">✋<div class="hint">SPACE</div></div>
+        <div id="touch-overlay"></div>
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
+        <div id="action-btn">✋</div>
+        <div id="touch-hint" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.55);font-size:13px;font-weight:bold;text-shadow:0 1px 4px rgba(0,0,0,0.6);pointer-events:none;text-align:center;">Left thumb to move · Right thumb to act</div>
+
     </div>
 
     <div id="edit-hud">
@@ -148,8 +146,8 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
 
     const scene = new THREE.Scene(); 
-    scene.background = new THREE.Color('#87CEEB');
-    scene.fog = new THREE.Fog('#87CEEB', 60, 120);
+    scene.background = new THREE.Color('#b4c8d4');
+    scene.fog = new THREE.Fog('#b4c8d4', 50, 105);
 
     let frustumSize = 26; 
     const camera = new THREE.OrthographicCamera(1, 1, 1, 1, 1, 1000);
@@ -164,36 +162,37 @@
     }
     window.addEventListener('resize', resize); resize();
 
-    // --- LIGHTING ---
-    const hemiLight = new THREE.HemisphereLight(0xffeedd, 0x557733, 0.9); scene.add(hemiLight);
-    const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.0);
+    // --- LIGHTING (soft overcast day — calm, non-reflective, easy on the eyes) ---
+    const hemiLight = new THREE.HemisphereLight(0xb8b0a4, 0x3a4a2e, 0.35); scene.add(hemiLight);
+    const dirLight = new THREE.DirectionalLight(0xd8cebc, 0.28);
     dirLight.position.set(25, 50, 25); dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 1024; dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.camera.left = -40; dirLight.shadow.camera.right = 40;
     dirLight.shadow.camera.top = 40; dirLight.shadow.camera.bottom = -40;
     dirLight.shadow.bias = -0.001;
     scene.add(dirLight);
-    const fillLight = new THREE.DirectionalLight(0xaaccff, 0.3);
+    const fillLight = new THREE.DirectionalLight(0x6677aa, 0.12);
     fillLight.position.set(-15, 20, -10); scene.add(fillLight);
+    const ambientLight = new THREE.AmbientLight(0x9a9590, 0.58); scene.add(ambientLight);
 
     // --- MATERIALS ---
-    const matWood = new THREE.MeshLambertMaterial({ color: '#8D6E63' });
-    const matKitchenFloor = new THREE.MeshLambertMaterial({ color: '#607D8B' }); 
-    const matDiningFloor = new THREE.MeshLambertMaterial({ color: '#C8A96E' }); 
-    const matGrass = new THREE.MeshLambertMaterial({ color: '#5A8C3C' });
-    const matSidewalk = new THREE.MeshLambertMaterial({ color: '#B0BEC5' });
-    const matWallOuter = new THREE.MeshLambertMaterial({ color: '#F5E6C8' });
-    const matWallInner = new THREE.MeshLambertMaterial({ color: '#EDD9A3' });
-    const matWallCap = new THREE.MeshLambertMaterial({ color: '#D4A25E' });
-    const matKitchenWall = new THREE.MeshLambertMaterial({ color: '#CFD8DC' });
+    const matWood = new THREE.MeshLambertMaterial({ color: '#7a6055' });
+    const matKitchenFloor = new THREE.MeshLambertMaterial({ color: '#526570' }); 
+    const matDiningFloor = new THREE.MeshLambertMaterial({ color: '#b09660' }); 
+    const matGrass = new THREE.MeshLambertMaterial({ color: '#4a7830' });
+    const matSidewalk = new THREE.MeshLambertMaterial({ color: '#8fa4ae' });
+    const matWallOuter = new THREE.MeshLambertMaterial({ color: '#d9cba8' });
+    const matWallInner = new THREE.MeshLambertMaterial({ color: '#ccbe90' });
+    const matWallCap = new THREE.MeshLambertMaterial({ color: '#b88e4e' });
+    const matKitchenWall = new THREE.MeshLambertMaterial({ color: '#b0bcc0' });
     
-    const matSilver = new THREE.MeshLambertMaterial({ color: '#CFD8DC' });
-    const matWhite = new THREE.MeshLambertMaterial({ color: '#FFFFFF' });
-    const matDarkGrey = new THREE.MeshLambertMaterial({ color: '#263238' });
+    const matSilver = new THREE.MeshLambertMaterial({ color: '#a8b8be' });
+    const matWhite = new THREE.MeshLambertMaterial({ color: '#d8d8d8' });
+    const matDarkGrey = new THREE.MeshLambertMaterial({ color: '#1e2a30' });
     const matBlack = new THREE.MeshLambertMaterial({ color: '#111111' });
-    const matGlowRed = new THREE.MeshBasicMaterial({ color: '#FF3D00' }); 
-    const matWater = new THREE.MeshLambertMaterial({ color: '#4FC3F7', transparent: true, opacity: 0.8 });
-    const matBot = new THREE.MeshLambertMaterial({ color: '#03A9F4' });
+    const matGlowRed = new THREE.MeshBasicMaterial({ color: '#cc2e00' }); 
+    const matWater = new THREE.MeshLambertMaterial({ color: '#3fa8d8', transparent: true, opacity: 0.75 });
+    const matBot = new THREE.MeshLambertMaterial({ color: '#0090d0' });
     
     const matSkin = new THREE.MeshLambertMaterial({color:'#ffccaa'});
     const matBun = new THREE.MeshLambertMaterial({color:'#D2B48C'});
@@ -205,18 +204,18 @@
     const matCheese = new THREE.MeshLambertMaterial({color:'#FFD700'});
     const matCustColors = ['#E91E63', '#FFEB3B', '#00BCD4', '#FF9800', '#9C27B0'].map(c => new THREE.MeshLambertMaterial({color: c}));
 
-    const matBrick = new THREE.MeshLambertMaterial({ color: '#C1440E' });
-    const matRoof = new THREE.MeshLambertMaterial({ color: '#8B4513' });
-    const matSign = new THREE.MeshLambertMaterial({ color: '#FF6F00' });
-    const matSignText = new THREE.MeshLambertMaterial({ color: '#FFF176' });
-    const matPlant = new THREE.MeshLambertMaterial({ color: '#388E3C' });
-    const matPot = new THREE.MeshLambertMaterial({ color: '#8D6E63' });
-    const matUmbrella = new THREE.MeshLambertMaterial({ color: '#E53935' });
-    const matUmbrellaPole = new THREE.MeshLambertMaterial({ color: '#BDBDBD' });
-    const matPath = new THREE.MeshLambertMaterial({ color: '#A1887F' });
-    const matFence = new THREE.MeshLambertMaterial({ color: '#8D6E63' });
-    const matStripe = new THREE.MeshLambertMaterial({ color: '#FFCC02' });
-    const matRoadLine = new THREE.MeshLambertMaterial({ color: '#F9A825' });
+    const matBrick = new THREE.MeshLambertMaterial({ color: '#a83c0c' });
+    const matRoof = new THREE.MeshLambertMaterial({ color: '#723810' });
+    const matSign = new THREE.MeshLambertMaterial({ color: '#d86000' });
+    const matSignText = new THREE.MeshLambertMaterial({ color: '#e8d860' });
+    const matPlant = new THREE.MeshLambertMaterial({ color: '#307828' });
+    const matPot = new THREE.MeshLambertMaterial({ color: '#7a6055' });
+    const matUmbrella = new THREE.MeshLambertMaterial({ color: '#c83030' });
+    const matUmbrellaPole = new THREE.MeshLambertMaterial({ color: '#909090' });
+    const matPath = new THREE.MeshLambertMaterial({ color: '#8a7068' });
+    const matFence = new THREE.MeshLambertMaterial({ color: '#7a6055' });
+    const matStripe = new THREE.MeshLambertMaterial({ color: '#d8b000' });
+    const matRoadLine = new THREE.MeshLambertMaterial({ color: '#d09000' });
     
     const geoBox = new THREE.BoxGeometry(1, 1, 1);
     const geoCyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
@@ -643,18 +642,78 @@
     window.addEventListener('keydown', e => { if (e.key === 'w' || e.key === 'ArrowUp') keys.w = true; if (e.key === 's' || e.key === 'ArrowDown') keys.s = true; if (e.key === 'a' || e.key === 'ArrowLeft') keys.a = true; if (e.key === 'd' || e.key === 'ArrowRight') keys.d = true; if (e.key === ' ' && !isActionPressed) { isActionPressed = true; handleAction(); } });
     window.addEventListener('keyup', e => { if (e.key === 'w' || e.key === 'ArrowUp') keys.w = false; if (e.key === 's' || e.key === 'ArrowDown') keys.s = false; if (e.key === 'a' || e.key === 'ArrowLeft') keys.a = false; if (e.key === 'd' || e.key === 'ArrowRight') keys.d = false; if (e.key === ' ') isActionPressed = false; });
 
-    const jZone = document.getElementById('joystick-zone'), jKnob = document.getElementById('joystick-knob');
-    let joyTouchId = null, joyCenter = { x: 0, y: 0 }; const maxJoyDist = 40;
+    // --- TOUCH-ANYWHERE CONTROLS ---
+    // Left half of screen = joystick (spawns at finger), Right half = action button (spawns at finger)
+    const jZone = document.getElementById('joystick-zone');
+    const jKnob = document.getElementById('joystick-knob');
+    const actionBtn = document.getElementById('action-btn');
+    const touchOverlay = document.getElementById('touch-overlay');
+    const touchHint = document.getElementById('touch-hint');
+    const maxJoyDist = 52;
 
-    jZone.addEventListener('pointerdown', e => { e.preventDefault(); if (joyTouchId === null) { jZone.setPointerCapture(e.pointerId); joyTouchId = e.pointerId; const rect = jZone.getBoundingClientRect(); joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 }; jKnob.style.background = 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(200,200,200,1) 100%)'; updateJoy(e.clientX, e.clientY); } });
-    jZone.addEventListener('pointermove', e => { e.preventDefault(); if (e.pointerId === joyTouchId) updateJoy(e.clientX, e.clientY); });
-    function endJoy(e) { if (e.pointerId === joyTouchId) { joyTouchId = null; joyVector = {x:0, z:0}; jKnob.style.transform = `translate(0px, 0px)`; jKnob.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(230,230,230,0.95) 100%)'; } }
-    jZone.addEventListener('pointerup', endJoy); jZone.addEventListener('pointercancel', endJoy);
-    function updateJoy(tx, ty) { let dx = tx - joyCenter.x, dy = ty - joyCenter.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist > maxJoyDist) { dx = (dx/dist)*maxJoyDist; dy = (dy/dist)*maxJoyDist; } jKnob.style.transform = `translate(${Math.round(dx*10)/10}px, ${Math.round(dy*10)/10}px)`; joyVector.x = dx/maxJoyDist; joyVector.z = dy/maxJoyDist; }
+    let joyTouchId = null, joyCenter = { x: 0, y: 0 };
+    let actionTouchId = null;
 
-    document.getElementById('action-btn').addEventListener('pointerdown', e => { e.preventDefault(); document.getElementById('action-btn').setPointerCapture(e.pointerId); document.getElementById('action-btn').style.transform = 'scale(0.95)'; handleAction(); });
-    document.getElementById('action-btn').addEventListener('pointerup', e => { document.getElementById('action-btn').style.transform = 'scale(1)'; });
-    document.getElementById('action-btn').addEventListener('pointercancel', e => { document.getElementById('action-btn').style.transform = 'scale(1)'; });
+    function showJoystick(x, y) {
+        jZone.style.left = x + 'px'; jZone.style.top = y + 'px';
+        jZone.classList.add('active');
+        jKnob.style.transform = 'translate(0,0)';
+    }
+    function hideJoystick() {
+        jZone.classList.remove('active');
+        joyVector = { x: 0, z: 0 };
+        jKnob.style.transform = 'translate(0,0)';
+    }
+    function showActionBtn(x, y) {
+        actionBtn.style.left = x + 'px'; actionBtn.style.top = y + 'px';
+        actionBtn.classList.add('active');
+    }
+    function hideActionBtn() { actionBtn.classList.remove('active'); actionBtn.classList.remove('pressed'); }
+
+    function updateJoy(tx, ty) {
+        let dx = tx - joyCenter.x, dy = ty - joyCenter.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > maxJoyDist) { dx = (dx/dist)*maxJoyDist; dy = (dy/dist)*maxJoyDist; }
+        jKnob.style.transform = `translate(${Math.round(dx*10)/10}px, ${Math.round(dy*10)/10}px)`;
+        joyVector.x = dx / maxJoyDist; joyVector.z = dy / maxJoyDist;
+    }
+
+    touchOverlay.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        touchOverlay.setPointerCapture(e.pointerId);
+        if (touchHint) touchHint.style.opacity = '0';
+        const half = window.innerWidth / 2;
+        if (e.clientX < half) {
+            // Left side = joystick
+            if (joyTouchId === null) {
+                joyTouchId = e.pointerId;
+                joyCenter = { x: e.clientX, y: e.clientY };
+                showJoystick(e.clientX, e.clientY);
+            }
+        } else {
+            // Right side = action
+            if (actionTouchId === null) {
+                actionTouchId = e.pointerId;
+                showActionBtn(e.clientX, e.clientY);
+                actionBtn.classList.add('pressed');
+                handleAction();
+            }
+        }
+    });
+
+    touchOverlay.addEventListener('pointermove', e => {
+        e.preventDefault();
+        if (e.pointerId === joyTouchId) updateJoy(e.clientX, e.clientY);
+    });
+
+    touchOverlay.addEventListener('pointerup', e => {
+        if (e.pointerId === joyTouchId) { joyTouchId = null; hideJoystick(); }
+        if (e.pointerId === actionTouchId) { actionTouchId = null; hideActionBtn(); }
+    });
+    touchOverlay.addEventListener('pointercancel', e => {
+        if (e.pointerId === joyTouchId) { joyTouchId = null; hideJoystick(); }
+        if (e.pointerId === actionTouchId) { actionTouchId = null; hideActionBtn(); }
+    });
 
     // --- DYNAMIC SPAWNING & EDIT MODE ---
     function getValidSpawn() {
@@ -678,8 +737,8 @@
         document.getElementById('edit-hud').style.display = 'block';
         player.pos = getValidSpawn(); playerMesh.position.copy(player.pos);
         draggedStation = null; gridHelper.visible = true;
-        document.getElementById('action-btn').style.background = '#03A9F4'; document.getElementById('action-btn').style.borderColor = '#0288D1';
-        document.getElementById('action-btn').innerHTML = 'Grab';
+        actionBtn.style.background = 'rgba(3,169,244,0.82)'; actionBtn.style.borderColor = 'rgba(2,136,209,0.9)';
+        actionBtn.innerHTML = '🔧';
     }
 
     function saveEditMode() {
@@ -689,8 +748,8 @@
             draggedStation = null; placementFootprint.visible = false;
         }
         document.getElementById('edit-hud').style.display = 'none';
-        document.getElementById('action-btn').style.background = '#FFC107'; document.getElementById('action-btn').style.borderColor = '#FF9800';
-        document.getElementById('action-btn').innerHTML = '✋<div class="hint">SPACE</div>';
+        actionBtn.style.background = 'rgba(255,202,40,0.82)'; actionBtn.style.borderColor = 'rgba(255,160,0,0.9)';
+        actionBtn.innerHTML = '✋';
         gridHelper.visible = false; highlightRing.visible = false;
 
         if (eco.day === 0) document.getElementById('start-screen').style.display = 'flex';
@@ -1046,7 +1105,7 @@
         for(let part = 0; part < 4; part++) {
             const cloudPuff = new THREE.Mesh(
                 new THREE.SphereGeometry(2.5 + Math.random()*2, 8, 6),
-                new THREE.MeshLambertMaterial({color:'#ffffff', transparent:true, opacity:0.85})
+                new THREE.MeshLambertMaterial({color:'#d0d8e0', transparent:true, opacity:0.65})
             );
             cloudPuff.position.set((Math.random()-0.5)*5, Math.random()*2, (Math.random()-0.5)*3);
             cloudPuff.castShadow = false;
