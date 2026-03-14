@@ -1,918 +1,1211 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Burger Boss 3D | Franchise</title>
-    <!-- Three.js for 3D Rendering -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
 
-        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #11181c; font-family: 'Nunito', sans-serif; user-select: none; touch-action: none; }
-        #game-container { position: relative; width: 100vw; height: 100vh; }
-        canvas { display: block; width: 100%; height: 100%; }
+    body, html { margin: 0; padding: 0; overflow: hidden; background-color: #11181c; font-family: 'Nunito', sans-serif; user-select: none; touch-action: none; }
+    #game-container { position: relative; width: 100vw; height: 100vh; }
+    canvas { display: block; width: 100%; height: 100%; }
 
-        /* Floating UI */
-        #floating-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: hidden; }
-        .float-bubble { position: absolute; background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%); padding: 6px 12px; border-radius: 20px; font-size: 20px; font-weight: bold; transform: translate(-50%, -100%); box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid #333; white-space: nowrap; }
-        .float-bubble::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-width: 10px 10px 0; border-style: solid; border-color: #333 transparent transparent transparent; }
-        .float-bar-container { position: absolute; width: 60px; height: 8px; background: rgba(0,0,0,0.7); border-radius: 4px; transform: translate(-50%, -50%); overflow: hidden; border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
-        .float-bar-fill { height: 100%; background: #4CAF50; transition: width 0.1s, background-color 0.3s; }
+    #floating-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: hidden; }
+    .float-bubble { position: absolute; background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%); padding: 6px 12px; border-radius: 20px; font-size: 20px; font-weight: bold; transform: translate(-50%, -100%); box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid #333; white-space: nowrap; }
+    .float-bubble::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-width: 10px 10px 0; border-style: solid; border-color: #333 transparent transparent transparent; }
+    .float-bar-container { position: absolute; width: 60px; height: 8px; background: rgba(0,0,0,0.7); border-radius: 4px; transform: translate(-50%, -50%); overflow: hidden; border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+    .float-bar-fill { height: 100%; background: #4CAF50; transition: width 0.1s, background-color 0.3s; }
 
-        /* HUD Layer */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-        #top-hud { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-        #day-banner { background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%); padding: 10px 25px; border-radius: 30px; font-size: 18px; font-weight: 900; color: #ff5722; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid #e64a19; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
-        #cash-display { background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%); padding: 10px 20px; border-radius: 20px; font-size: 22px; font-weight: 900; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid #fff; display:flex; flex-direction: column; align-items:center; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
-        /* Edit Mode HUD */
-        #edit-hud { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 15px 30px; border-radius: 30px; font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #03A9F4; display: none; z-index: 5; pointer-events: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        #finish-edit-btn { background: #03A9F4; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 0 #0277BD; }
-        #finish-edit-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #0277BD; }
+    #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+    #top-hud { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+    #day-banner { background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%); padding: 10px 25px; border-radius: 30px; font-size: 18px; font-weight: 900; color: #ff5722; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid #e64a19; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+    #cash-display { background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%); padding: 10px 20px; border-radius: 20px; font-size: 22px; font-weight: 900; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid #fff; display:flex; flex-direction: column; align-items:center; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    
+    #edit-hud { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 15px 30px; border-radius: 30px; font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #03A9F4; display: none; z-index: 5; pointer-events: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+    #finish-edit-btn { background: #03A9F4; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 0 #0277BD; }
+    #finish-edit-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #0277BD; }
 
-        /* Controls */
-        #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 140px; height: 140px; background: rgba(102, 187, 106, 0.15); border-radius: 50%; pointer-events: auto; border: 4px solid rgba(102, 187, 106, 0.5); display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); box-shadow: inset 0 2px 8px rgba(0,0,0,0.2); }
-        #joystick-knob { width: 60px; height: 60px; background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(230,230,230,0.95) 100%); border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; border: 2px solid rgba(255,255,255,0.5); }
-        #action-btn { position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; background: linear-gradient(135deg, #FFD54F 0%, #FFCA28 100%); border-radius: 50%; pointer-events: auto; border: 4px solid #FFA000; box-shadow: 0 8px 0 #E65100, 0 10px 18px rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; font-size: 35px; color: white; transition: transform 0.05s, box-shadow 0.05s; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        #action-btn:active { transform: translateY(8px); box-shadow: 0 0 0 #E65100, 0 2px 8px rgba(0,0,0,0.3); }
-        .hint { position: absolute; bottom: -25px; font-size: 16px; color: rgba(255,255,255,0.9); font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+    #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 140px; height: 140px; background: rgba(102, 187, 106, 0.15); border-radius: 50%; pointer-events: auto; border: 4px solid rgba(102, 187, 106, 0.5); display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); box-shadow: inset 0 2px 8px rgba(0,0,0,0.2); }
+    #joystick-knob { width: 60px; height: 60px; background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(230,230,230,0.95) 100%); border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; border: 2px solid rgba(255,255,255,0.5); }
+    #action-btn { position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; background: linear-gradient(135deg, #FFD54F 0%, #FFCA28 100%); border-radius: 50%; pointer-events: auto; border: 4px solid #FFA000; box-shadow: 0 8px 0 #E65100, 0 10px 18px rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; font-size: 35px; color: white; transition: transform 0.05s, box-shadow 0.05s; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    #action-btn:active { transform: translateY(8px); box-shadow: 0 0 0 #E65100, 0 2px 8px rgba(0,0,0,0.3); }
+    .hint { position: absolute; bottom: -25px; font-size: 16px; color: rgba(255,255,255,0.9); font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
 
-        /* Menus */
-        .overlay-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(15, 20, 25, 0.95); color: white; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10; pointer-events: auto; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
-        .start-btn { background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%); padding: 15px 40px; border-radius: 30px; font-size: 24px; color: white; border: none; box-shadow: 0 6px 0 #1B5E20, 0 8px 16px rgba(0,0,0,0.3); font-family: inherit; font-weight: bold; margin-top: 15px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.1s; }
-        .start-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #1B5E20, 0 2px 8px rgba(0,0,0,0.2); }
-        .edit-btn { background: linear-gradient(135deg, #42A5F5 0%, #1E88E5 100%); padding: 15px 40px; border-radius: 30px; font-size: 20px; color: white; border: none; box-shadow: 0 6px 0 #0D47A1, 0 8px 16px rgba(0,0,0,0.3); font-family: inherit; font-weight: bold; margin-top: 15px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.1s; }
-        .edit-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #0D47A1, 0 2px 8px rgba(0,0,0,0.2); }
+    .overlay-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(15, 20, 25, 0.95); color: white; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10; pointer-events: auto; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
+    .start-btn { background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%); padding: 15px 40px; border-radius: 30px; font-size: 24px; color: white; border: none; box-shadow: 0 6px 0 #1B5E20, 0 8px 16px rgba(0,0,0,0.3); font-family: inherit; font-weight: bold; margin-top: 15px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.1s; }
+    .start-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #1B5E20, 0 2px 8px rgba(0,0,0,0.2); }
+    .edit-btn { background: linear-gradient(135deg, #42A5F5 0%, #1E88E5 100%); padding: 15px 40px; border-radius: 30px; font-size: 20px; color: white; border: none; box-shadow: 0 6px 0 #0D47A1, 0 8px 16px rgba(0,0,0,0.3); font-family: inherit; font-weight: bold; margin-top: 15px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.1s; }
+    .edit-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #0D47A1, 0 2px 8px rgba(0,0,0,0.2); }
 
-        .shop-container { background: rgba(0,0,0,0.7); padding: 20px; border-radius: 15px; border: 2px solid rgba(102, 187, 106, 0.4); width: 100%; max-width: 500px; max-height: 50vh; overflow-y: auto; }
-        .upgrade-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.08); padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #66BB6A; transition: background 0.2s; }
-        .upgrade-item:hover { background: rgba(255,255,255,0.12); }
-        .buy-btn { background: linear-gradient(135deg, #FFCA28 0%, #FBC02D 100%); color: #333; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #E65100, 0 6px 12px rgba(0,0,0,0.3); font-family: inherit; text-transform: uppercase; font-size: 13px; transition: all 0.1s;}
-        .buy-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 0 0 #E65100, 0 2px 6px rgba(0,0,0,0.2); }
-        .buy-btn:disabled { background: #666; color: #999; box-shadow: 0 4px 0 #444, 0 6px 12px rgba(0,0,0,0.2); cursor: not-allowed; }
+    .shop-container { background: rgba(0,0,0,0.7); padding: 20px; border-radius: 15px; border: 2px solid rgba(102, 187, 106, 0.4); width: 100%; max-width: 500px; max-height: 50vh; overflow-y: auto; }
+    .upgrade-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.08); padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #66BB6A; transition: background 0.2s; }
+    .upgrade-item:hover { background: rgba(255,255,255,0.12); }
+    .buy-btn { background: linear-gradient(135deg, #FFCA28 0%, #FBC02D 100%); color: #333; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #E65100, 0 6px 12px rgba(0,0,0,0.3); font-family: inherit; text-transform: uppercase; font-size: 13px; transition: all 0.1s;}
+    .buy-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 0 0 #E65100, 0 2px 6px rgba(0,0,0,0.2); }
+    .buy-btn:disabled { background: #666; color: #999; box-shadow: 0 4px 0 #444, 0 6px 12px rgba(0,0,0,0.2); cursor: not-allowed; }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px;}
-        ::-webkit-scrollbar-thumb { background: #ffc107; border-radius: 4px; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px;}
+    ::-webkit-scrollbar-thumb { background: #ffc107; border-radius: 4px; }
 
-        /* RESPONSIVE DESIGN */
-        @media (max-width: 1024px) {
-            #top-hud { top: 10px; left: 10px; right: 10px; gap: 10px; flex-wrap: wrap; }
-            #day-banner { padding: 8px 15px; font-size: 16px; }
-            #cash-display { padding: 8px 15px; font-size: 18px; }
-            #joystick-zone { width: 110px; height: 110px; bottom: 20px; left: 20px; }
-            #action-btn { width: 80px; height: 80px; bottom: 25px; right: 25px; font-size: 28px; }
-            .hint { font-size: 12px; }
-            .start-btn, .edit-btn { padding: 12px 30px; font-size: 18px; margin-top: 10px; }
-            h1 { font-size: 36px !important; }
-            .overlay-screen p { font-size: 14px; max-width: 90vw; }
-        }
-        @media (max-width: 640px) {
-            body { font-size: 14px; }
-            #day-banner { padding: 6px 12px; font-size: 14px; border: 2px solid #e64a19; }
-            #cash-display { padding: 6px 12px; font-size: 16px; flex-direction: row; gap: 10px; }
-            #cash-val { font-size: 18px; }
-            #rating-val { font-size: 12px; }
-            #top-hud { top: 8px; left: 8px; right: 8px; }
-            #joystick-zone { width: 100px; height: 100px; bottom: 15px; left: 15px; border: 3px solid rgba(255, 255, 255, 0.3); }
-            #joystick-knob { width: 50px; height: 50px; }
-            #action-btn { width: 70px; height: 70px; bottom: 20px; right: 20px; border: 3px solid #FF9800; font-size: 24px; box-shadow: 0 6px 0 #FF6F00, 0 8px 12px rgba(0,0,0,0.4); }
-            #action-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #FF6F00; }
-            #finish-edit-btn { padding: 8px 15px; font-size: 14px; margin-top: 8px; }
-            .shop-container { max-height: 60vh; padding: 15px; }
-            .upgrade-item { padding: 12px; margin-bottom: 8px; }
-            .buy-btn { padding: 8px 15px; font-size: 13px; }
-            h1 { font-size: 28px !important; margin: 0 !important; }
-            p { line-height: 1.4 !important; }
-            .start-btn, .edit-btn { padding: 10px 20px; font-size: 16px; margin-top: 8px; }
-            .overlay-screen { padding: 16px; }
-            #edit-hud { padding: 12px 20px; font-size: 14px; top: 10px; }
-            #edit-hud span { font-size: 12px; }
-        }
+    @media (max-width: 1024px) {
+        #top-hud { top: 10px; left: 10px; right: 10px; gap: 10px; flex-wrap: wrap; }
+        #day-banner { padding: 8px 15px; font-size: 16px; }
+        #cash-display { padding: 8px 15px; font-size: 18px; }
+        #joystick-zone { width: 110px; height: 110px; bottom: 20px; left: 20px; }
+        #action-btn { width: 80px; height: 80px; bottom: 25px; right: 25px; font-size: 28px; }
+        .hint { font-size: 12px; }
+        .start-btn, .edit-btn { padding: 12px 30px; font-size: 18px; margin-top: 10px; }
+        h1 { font-size: 36px !important; }
+        .overlay-screen p { font-size: 14px; max-width: 90vw; }
+    }
+    @media (max-width: 640px) {
+        body { font-size: 14px; }
+        #day-banner { padding: 6px 12px; font-size: 14px; border: 2px solid #e64a19; }
+        #cash-display { padding: 6px 12px; font-size: 16px; flex-direction: row; gap: 10px; }
+        #cash-val { font-size: 18px; }
+        #rating-val { font-size: 12px; }
+        #top-hud { top: 8px; left: 8px; right: 8px; }
+        #joystick-zone { width: 100px; height: 100px; bottom: 15px; left: 15px; border: 3px solid rgba(255, 255, 255, 0.3); }
+        #joystick-knob { width: 50px; height: 50px; }
+        #action-btn { width: 70px; height: 70px; bottom: 20px; right: 20px; border: 3px solid #FF9800; font-size: 24px; box-shadow: 0 6px 0 #FF6F00, 0 8px 12px rgba(0,0,0,0.4); }
+        #action-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #FF6F00; }
+        #finish-edit-btn { padding: 8px 15px; font-size: 14px; margin-top: 8px; }
+        .shop-container { max-height: 60vh; padding: 15px; }
+        .upgrade-item { padding: 12px; margin-bottom: 8px; }
+        .buy-btn { padding: 8px 15px; font-size: 13px; }
+        h1 { font-size: 28px !important; margin: 0 !important; }
+        p { line-height: 1.4 !important; }
+        .start-btn, .edit-btn { padding: 10px 20px; font-size: 16px; margin-top: 8px; }
+        .overlay-screen { padding: 16px; }
+        #edit-hud { padding: 12px 20px; font-size: 14px; top: 10px; }
+        #edit-hud span { font-size: 12px; }
+    }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
-        <div id="floating-ui"></div>
-        
-        <div id="ui-layer">
-            <div id="top-hud">
-                <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size: 14px; color: #666;">Groups Left: 1</span></div>
-                <div id="cash-display">
-                    <span id="cash-val">$0</span>
-                    <span id="rating-val" style="font-size: 14px; color:#ffc107;">⭐ 0.0</span>
-                </div>
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="floating-ui"></div>
+    
+    <div id="ui-layer">
+        <div id="top-hud">
+            <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size: 14px; color: #666;">Groups Left: 1</span></div>
+            <div id="cash-display">
+                <span id="cash-val">$0</span>
+                <span id="rating-val" style="font-size: 14px; color:#ffc107;">⭐ 0.0</span>
             </div>
-            <div id="joystick-zone"><div id="joystick-knob"></div><div class="hint">WASD</div></div>
-            <div id="action-btn" id="main-action">✋<div class="hint">SPACE</div></div>
         </div>
-
-        <div id="edit-hud">
-            REORGANIZE KITCHEN<br>
-            <span style="font-size: 14px; color: #bbb;">Face an item and press Action to Pick Up/Drop</span><br>
-            <button id="finish-edit-btn" onclick="saveEditMode()">DONE EDITING</button>
-        </div>
-
-        <div id="start-screen" class="overlay-screen" style="display: flex;">
-            <h1 style="font-size: 45px; margin: 0; color: #ffc107; text-shadow: 0 4px 0 #e65100;">BURGER BOSS 3D</h1>
-            <p style="font-size: 16px; text-align: center; max-width: 480px; line-height: 1.5; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; margin-top: 15px;">
-                <b>Start small, dream big!</b><br><br>
-                Serve burgers to earn cash. Buy expansions, tables, and robot workers!<br><br>
-                <span style="color: #F44336; font-weight: bold;">WARNING:</span> Maintain at least a <b>2.0 Cumulative Star Rating</b> by Day 5 or your restaurant will be shut down!
-            </p>
-            <button class="start-btn" onclick="startNextDay()">START SHIFT</button>
-            <button class="edit-btn" onclick="startEditMode()">REORGANIZE</button>
-        </div>
-
-        <div id="shop-screen" class="overlay-screen">
-            <h1 style="font-size: 40px; margin: 0; color: #4CAF50;">DAY COMPLETE!</h1>
-            <div style="font-size: 20px; margin: 5px 0;">Earned: <span id="shop-earned" style="color:#4CAF50; font-weight:bold;">$0</span></div>
-            <div style="font-size: 20px; margin-bottom: 15px;">Overall Rating: <span id="shop-stars" style="color:#ffc107;">⭐ 0.0</span></div>
-            
-            <!-- Dynamic Shop Container -->
-            <div class="shop-container" id="dynamic-shop"></div>
-            
-            <button class="start-btn" onclick="startNextDay()">START NEXT DAY</button>
-            <button class="edit-btn" onclick="startEditMode()">REORGANIZE</button>
-        </div>
-
-        <div id="game-over-screen" class="overlay-screen">
-            <h1 style="font-size: 50px; margin: 0; color: #F44336; text-shadow: 0 4px 0 #B71C1C;">STORE CLOSED!</h1>
-            <p style="font-size: 18px; text-align: center; max-width: 480px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; margin-top: 20px;">
-                Your cumulative rating dropped below 2.0 Stars!<br>The health inspector and angry reviewers have shut you down.<br><br>
-                <b>Days Survived: <span id="fail-days">0</span></b>
-            </p>
-            <button class="start-btn" onclick="location.reload()">RESTART FRANCHISE</button>
-        </div>
+        <div id="joystick-zone"><div id="joystick-knob"></div><div class="hint">WASD</div></div>
+        <div id="action-btn" id="main-action">✋<div class="hint">SPACE</div></div>
     </div>
 
-    <script>
-        // --- THREE.JS INIT & CAMERA ---
-        const canvas = document.getElementById('gameCanvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "low-power", alpha: true });
-        renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+    <div id="edit-hud">
+        REORGANIZE KITCHEN<br>
+        <span style="font-size: 14px; color: #bbb;">Face an item and press Action to Pick Up/Drop</span><br>
+        <button id="finish-edit-btn" onclick="saveEditMode()">DONE EDITING</button>
+    </div>
 
-        const scene = new THREE.Scene(); scene.background = new THREE.Color('#11181c');
+    <div id="start-screen" class="overlay-screen" style="display: flex;">
+        <h1 style="font-size: 45px; margin: 0; color: #ffc107; text-shadow: 0 4px 0 #e65100;">BURGER BOSS 3D</h1>
+        <p style="font-size: 16px; text-align: center; max-width: 480px; line-height: 1.5; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; margin-top: 15px;">
+            <b>Start small, dream big!</b><br><br>
+            Serve burgers to earn cash. Buy expansions, tables, and robot workers!<br><br>
+            <span style="color: #F44336; font-weight: bold;">WARNING:</span> Maintain at least a <b>2.0 Cumulative Star Rating</b> by Day 5 or your restaurant will be shut down!
+        </p>
+        <button class="start-btn" onclick="startNextDay()">START SHIFT</button>
+        <button class="edit-btn" onclick="startEditMode()">REORGANIZE</button>
+    </div>
 
-        // Fixed wide Frustum to show entire 40x30 space easily without zooming out further later
-        let frustumSize = 38; 
-        const camera = new THREE.OrthographicCamera(1, 1, 1, 1, 1, 1000);
-        camera.position.set(0, 45, 45); camera.lookAt(0, 0, 0);
+    <div id="shop-screen" class="overlay-screen">
+        <h1 style="font-size: 40px; margin: 0; color: #4CAF50;">DAY COMPLETE!</h1>
+        <div style="font-size: 20px; margin: 5px 0;">Earned: <span id="shop-earned" style="color:#4CAF50; font-weight:bold;">$0</span></div>
+        <div style="font-size: 20px; margin-bottom: 15px;">Overall Rating: <span id="shop-stars" style="color:#ffc107;">⭐ 0.0</span></div>
+        <div class="shop-container" id="dynamic-shop"></div>
+        <button class="start-btn" onclick="startNextDay()">START NEXT DAY</button>
+        <button class="edit-btn" onclick="startEditMode()">REORGANIZE</button>
+    </div>
 
-        function resize() {
-            const aspect = window.innerWidth / window.innerHeight;
-            let fSize = aspect < 1 ? frustumSize / aspect : frustumSize; 
-            camera.left = -fSize * aspect / 2; camera.right = fSize * aspect / 2;
-            camera.top = fSize / 2; camera.bottom = -fSize / 2;
-            camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+    <div id="game-over-screen" class="overlay-screen">
+        <h1 style="font-size: 50px; margin: 0; color: #F44336; text-shadow: 0 4px 0 #B71C1C;">STORE CLOSED!</h1>
+        <p style="font-size: 18px; text-align: center; max-width: 480px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; margin-top: 20px;">
+            Your cumulative rating dropped below 2.0 Stars!<br>The health inspector and angry reviewers have shut you down.<br><br>
+            <b>Days Survived: <span id="fail-days">0</span></b>
+        </p>
+        <button class="start-btn" onclick="location.reload()">RESTART FRANCHISE</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "low-power", alpha: true });
+    renderer.shadowMap.enabled = true; 
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+
+    const scene = new THREE.Scene(); 
+    scene.background = new THREE.Color('#87CEEB');
+    scene.fog = new THREE.Fog('#87CEEB', 60, 120);
+
+    let frustumSize = 26; 
+    const camera = new THREE.OrthographicCamera(1, 1, 1, 1, 1, 1000);
+    camera.position.set(0, 38, 38); camera.lookAt(0, 0, 0);
+
+    function resize() {
+        const aspect = window.innerWidth / window.innerHeight;
+        let fSize = aspect < 1 ? frustumSize / aspect : frustumSize; 
+        camera.left = -fSize * aspect / 2; camera.right = fSize * aspect / 2;
+        camera.top = fSize / 2; camera.bottom = -fSize / 2;
+        camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', resize); resize();
+
+    // --- LIGHTING ---
+    const hemiLight = new THREE.HemisphereLight(0xffeedd, 0x557733, 0.9); scene.add(hemiLight);
+    const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.0);
+    dirLight.position.set(25, 50, 25); dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024; dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.left = -40; dirLight.shadow.camera.right = 40;
+    dirLight.shadow.camera.top = 40; dirLight.shadow.camera.bottom = -40;
+    dirLight.shadow.bias = -0.001;
+    scene.add(dirLight);
+    const fillLight = new THREE.DirectionalLight(0xaaccff, 0.3);
+    fillLight.position.set(-15, 20, -10); scene.add(fillLight);
+
+    // --- MATERIALS ---
+    const matWood = new THREE.MeshLambertMaterial({ color: '#8D6E63' });
+    const matKitchenFloor = new THREE.MeshLambertMaterial({ color: '#607D8B' }); 
+    const matDiningFloor = new THREE.MeshLambertMaterial({ color: '#C8A96E' }); 
+    const matGrass = new THREE.MeshLambertMaterial({ color: '#5A8C3C' });
+    const matSidewalk = new THREE.MeshLambertMaterial({ color: '#B0BEC5' });
+    const matWallOuter = new THREE.MeshLambertMaterial({ color: '#F5E6C8' });
+    const matWallInner = new THREE.MeshLambertMaterial({ color: '#EDD9A3' });
+    const matWallCap = new THREE.MeshLambertMaterial({ color: '#D4A25E' });
+    const matKitchenWall = new THREE.MeshLambertMaterial({ color: '#CFD8DC' });
+    
+    const matSilver = new THREE.MeshLambertMaterial({ color: '#CFD8DC' });
+    const matWhite = new THREE.MeshLambertMaterial({ color: '#FFFFFF' });
+    const matDarkGrey = new THREE.MeshLambertMaterial({ color: '#263238' });
+    const matBlack = new THREE.MeshLambertMaterial({ color: '#111111' });
+    const matGlowRed = new THREE.MeshBasicMaterial({ color: '#FF3D00' }); 
+    const matWater = new THREE.MeshLambertMaterial({ color: '#4FC3F7', transparent: true, opacity: 0.8 });
+    const matBot = new THREE.MeshLambertMaterial({ color: '#03A9F4' });
+    
+    const matSkin = new THREE.MeshLambertMaterial({color:'#ffccaa'});
+    const matBun = new THREE.MeshLambertMaterial({color:'#D2B48C'});
+    const matMeat = new THREE.MeshLambertMaterial({color:'#654321'});
+    const matRaw = new THREE.MeshLambertMaterial({color:'#CD5C5C'});
+    const matPlate = new THREE.MeshLambertMaterial({color:'#F5F5DC'});
+    const matLettuce = new THREE.MeshLambertMaterial({color:'#6B8E23'});
+    const matTomato = new THREE.MeshLambertMaterial({color:'#DC143C'});
+    const matCheese = new THREE.MeshLambertMaterial({color:'#FFD700'});
+    const matCustColors = ['#E91E63', '#FFEB3B', '#00BCD4', '#FF9800', '#9C27B0'].map(c => new THREE.MeshLambertMaterial({color: c}));
+
+    const matBrick = new THREE.MeshLambertMaterial({ color: '#C1440E' });
+    const matRoof = new THREE.MeshLambertMaterial({ color: '#8B4513' });
+    const matSign = new THREE.MeshLambertMaterial({ color: '#FF6F00' });
+    const matSignText = new THREE.MeshLambertMaterial({ color: '#FFF176' });
+    const matPlant = new THREE.MeshLambertMaterial({ color: '#388E3C' });
+    const matPot = new THREE.MeshLambertMaterial({ color: '#8D6E63' });
+    const matUmbrella = new THREE.MeshLambertMaterial({ color: '#E53935' });
+    const matUmbrellaPole = new THREE.MeshLambertMaterial({ color: '#BDBDBD' });
+    const matPath = new THREE.MeshLambertMaterial({ color: '#A1887F' });
+    const matFence = new THREE.MeshLambertMaterial({ color: '#8D6E63' });
+    const matStripe = new THREE.MeshLambertMaterial({ color: '#FFCC02' });
+    const matRoadLine = new THREE.MeshLambertMaterial({ color: '#F9A825' });
+    
+    const geoBox = new THREE.BoxGeometry(1, 1, 1);
+    const geoCyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
+    const geoSphere = new THREE.SphereGeometry(0.5, 12, 12);
+
+    // --- WORLD & ENVIRONMENT ---
+    const worldGrp = new THREE.Group(); scene.add(worldGrp);
+    const roomGrp = new THREE.Group(); scene.add(roomGrp);
+    let bounds = { l: -10, r: 10, t: -10, b: 10 }; 
+
+    function buildOutdoorWorld() {
+        while(worldGrp.children.length > 0) worldGrp.remove(worldGrp.children[0]);
+
+        const grassGround = new THREE.Mesh(new THREE.BoxGeometry(120, 0.5, 120), matGrass);
+        grassGround.position.set(0, -0.75, 0); grassGround.receiveShadow = true; worldGrp.add(grassGround);
+
+        const sidewalkW = 6;
+        const rW = bounds.r - bounds.l;
+        const rD = bounds.b - bounds.t;
+        const cx = (bounds.r + bounds.l) / 2;
+        const cz = (bounds.b + bounds.t) / 2;
+
+        const sidewalk = new THREE.Mesh(
+            new THREE.BoxGeometry(rW + sidewalkW*2, 0.3, rD + sidewalkW*2),
+            matSidewalk
+        );
+        sidewalk.position.set(cx, -0.2, cz); sidewalk.receiveShadow = true; worldGrp.add(sidewalk);
+
+        const road = new THREE.Mesh(new THREE.BoxGeometry(80, 0.2, 12), new THREE.MeshLambertMaterial({color:'#455A64'}));
+        road.position.set(cx, -0.25, bounds.b + sidewalkW + 6); road.receiveShadow = true; worldGrp.add(road);
+        for(let i = -3; i <= 3; i++) {
+            const dash = new THREE.Mesh(new THREE.BoxGeometry(4, 0.05, 0.4), matRoadLine);
+            dash.position.set(cx + i * 10, -0.15, bounds.b + sidewalkW + 6); worldGrp.add(dash);
         }
-        window.addEventListener('resize', resize); resize();
 
-        // --- PRE-COMPILED MATERIALS (CRASH FIX) ---
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x555555, 0.75); scene.add(hemiLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.65);
-        dirLight.position.set(20, 40, 20); dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 512; dirLight.shadow.mapSize.height = 512;
-        dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30;
-        dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30;
-        scene.add(dirLight);
+        const curb = new THREE.Mesh(new THREE.BoxGeometry(rW + sidewalkW*2 + 2, 0.4, 0.5), new THREE.MeshLambertMaterial({color:'#B0BEC5'}));
+        curb.position.set(cx, -0.1, bounds.b + sidewalkW); worldGrp.add(curb);
 
-        const matWood = new THREE.MeshLambertMaterial({ color: '#8D6E63' });
-        const matFloor = new THREE.MeshLambertMaterial({ color: '#D7CCC8' });
-        const matWall = new THREE.MeshLambertMaterial({ color: '#3E2723' });
-        const matSilver = new THREE.MeshLambertMaterial({ color: '#CFD8DC' });
-        const matWhite = new THREE.MeshLambertMaterial({ color: '#FFFFFF' });
-        const matDarkGrey = new THREE.MeshLambertMaterial({ color: '#263238' });
-        const matBlack = new THREE.MeshLambertMaterial({ color: '#111111' });
-        const matGlowRed = new THREE.MeshBasicMaterial({ color: '#FF3D00' }); 
-        const matWater = new THREE.MeshLambertMaterial({ color: '#4FC3F7', transparent: true, opacity: 0.8 });
-        const matTrash = new THREE.MeshLambertMaterial({ color: '#388E3C' });
-        const matBot = new THREE.MeshLambertMaterial({ color: '#03A9F4' });
+        const kitchenDepth = (rD / 2);
+        const kitchenFloor = new THREE.Mesh(new THREE.BoxGeometry(rW, 0.25, kitchenDepth), matKitchenFloor);
+        kitchenFloor.position.set(cx, 0.05, bounds.t + kitchenDepth/2);
+        kitchenFloor.receiveShadow = true; roomGrp.add(kitchenFloor);
+
+        for(let xi = 0; xi < rW; xi += 2) {
+            const line = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.01, kitchenDepth), new THREE.MeshLambertMaterial({color:'#546E7A'}));
+            line.position.set(bounds.l + xi, 0.18, bounds.t + kitchenDepth/2); worldGrp.add(line);
+        }
+        for(let zi = 0; zi < kitchenDepth; zi += 2) {
+            const line = new THREE.Mesh(new THREE.BoxGeometry(rW, 0.01, 0.06), new THREE.MeshLambertMaterial({color:'#546E7A'}));
+            line.position.set(cx, 0.18, bounds.t + zi); worldGrp.add(line);
+        }
+
+        const diningFloor = new THREE.Mesh(new THREE.BoxGeometry(rW, 0.25, kitchenDepth), matDiningFloor);
+        diningFloor.position.set(cx, 0.05, bounds.t + kitchenDepth + kitchenDepth/2);
+        diningFloor.receiveShadow = true; roomGrp.add(diningFloor);
+
+        for(let xi = 0; xi < rW; xi += 1.5) {
+            const plank = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.01, kitchenDepth), new THREE.MeshLambertMaterial({color:'#B8954A'}));
+            plank.position.set(bounds.l + xi, 0.18, bounds.t + kitchenDepth + kitchenDepth/2); worldGrp.add(plank);
+        }
+
+        const divider = new THREE.Mesh(new THREE.BoxGeometry(rW, 0.15, 0.3), new THREE.MeshLambertMaterial({color:'#5D4037'}));
+        divider.position.set(cx, 0.2, bounds.t + kitchenDepth + 0.15); roomGrp.add(divider);
+
+        const wallH = 2.5;
+        const wallCapH = 0.25;
+        const wallThick = 0.6;
         
-        const matSkin = new THREE.MeshLambertMaterial({color:'#ffccaa'});
-        const matBun = new THREE.MeshLambertMaterial({color:'#D2B48C', flatShading: false});
-        const matMeat = new THREE.MeshLambertMaterial({color:'#654321'});
-        const matRaw = new THREE.MeshLambertMaterial({color:'#CD5C5C'});
-        const matPlate = new THREE.MeshLambertMaterial({color:'#F5F5DC'});
-        const matDirtyPlate = new THREE.MeshLambertMaterial({color:'#A1887F'});
-        const matLettuce = new THREE.MeshLambertMaterial({color:'#6B8E23'});
-        const matTomato = new THREE.MeshLambertMaterial({color:'#DC143C'});
-        const matCheese = new THREE.MeshLambertMaterial({color:'#FFD700'});
-        const matCustColors = ['#E91E63', '#FFEB3B', '#00BCD4', '#FF9800', '#9C27B0'].map(c => new THREE.MeshLambertMaterial({color: c}));
+        function makeWallSegment(wx, wy, wz, sw, sh, sd, isKitchen) {
+            const wallMat = isKitchen ? matKitchenWall : matWallOuter;
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(sw, sh, sd), wallMat);
+            wall.position.set(wx, wy, wz); wall.castShadow = true; wall.receiveShadow = true;
+            roomGrp.add(wall);
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(sw + 0.1, wallCapH, sd + 0.1), matWallCap);
+            cap.position.set(wx, wy + sh/2 + wallCapH/2, wz); cap.castShadow = true;
+            roomGrp.add(cap);
+            return wall;
+        }
 
-        const geoBox = new THREE.BoxGeometry(1, 1, 1);
-        const geoCyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
-        const geoSphere = new THREE.SphereGeometry(0.5, 12, 12);
+        makeWallSegment(cx, wallH/2, bounds.t - wallThick/2, rW + wallThick*2, wallH, wallThick, true);
+        makeWallSegment(bounds.l - wallThick/2, wallH/2, cz, wallThick, wallH, rD, false);
+        makeWallSegment(bounds.r + wallThick/2, wallH/2, cz, wallThick, wallH, rD, false);
+        const frontGapWidth = 5;
+        const leftFrontW = (rW - frontGapWidth) / 2 - wallThick;
+        makeWallSegment(bounds.l + leftFrontW/2 + wallThick/2, wallH/2, bounds.b + wallThick/2, leftFrontW, wallH, wallThick, false);
+        makeWallSegment(bounds.r - leftFrontW/2 - wallThick/2, wallH/2, bounds.b + wallThick/2, leftFrontW, wallH, wallThick, false);
 
-        // --- DYNAMIC ENVIRONMENT ---
-        const roomGrp = new THREE.Group(); scene.add(roomGrp);
-        let bounds = { l: -10, r: 10, t: -10, b: 10 }; 
+        const doorW2 = frontGapWidth / 2 - 0.2;
+        const doorH2 = wallH - 0.1;
+        const doorMat2 = new THREE.MeshLambertMaterial({ color: '#8D6E63', transparent: true, opacity: 0.85 });
+        const doorFrameMat2 = new THREE.MeshLambertMaterial({ color: '#5D4037' });
+        const frameTop2 = new THREE.Mesh(new THREE.BoxGeometry(frontGapWidth + wallThick, 0.25, wallThick), doorFrameMat2);
+        frameTop2.position.set(cx, wallH, bounds.b + wallThick/2); frameTop2.castShadow = true; roomGrp.add(frameTop2);
+        const doorLPanel = new THREE.Mesh(new THREE.BoxGeometry(doorW2, doorH2, 0.12), doorMat2);
+        doorLPanel.position.set(cx - doorW2/2 - 0.2, doorH2/2, bounds.b + wallThick/2);
+        doorLPanel.rotation.y = Math.PI * 0.08; doorLPanel.castShadow = true; roomGrp.add(doorLPanel);
+        const doorRPanel = new THREE.Mesh(new THREE.BoxGeometry(doorW2, doorH2, 0.12), doorMat2);
+        doorRPanel.position.set(cx + doorW2/2 + 0.2, doorH2/2, bounds.b + wallThick/2);
+        doorRPanel.rotation.y = -Math.PI * 0.08; doorRPanel.castShadow = true; roomGrp.add(doorRPanel);
+        const glassMat2 = new THREE.MeshLambertMaterial({ color: '#B3E5FC', transparent: true, opacity: 0.45 });
+        const glassLPane = new THREE.Mesh(new THREE.BoxGeometry(doorW2 * 0.6, doorH2 * 0.55, 0.06), glassMat2);
+        glassLPane.position.set(cx - doorW2/2 - 0.2, doorH2 * 0.62, bounds.b + wallThick/2);
+        glassLPane.rotation.y = Math.PI * 0.08; roomGrp.add(glassLPane);
+        const glassRPane = new THREE.Mesh(new THREE.BoxGeometry(doorW2 * 0.6, doorH2 * 0.55, 0.06), glassMat2);
+        glassRPane.position.set(cx + doorW2/2 + 0.2, doorH2 * 0.62, bounds.b + wallThick/2);
+        glassRPane.rotation.y = -Math.PI * 0.08; roomGrp.add(glassRPane);
+        const doorHandleMat = new THREE.MeshLambertMaterial({color:'#CFD8DC'});
+        const handleLP = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.25), doorHandleMat);
+        handleLP.position.set(cx - 0.35, doorH2 * 0.42, bounds.b + wallThick/2 + 0.1);
+        handleLP.rotation.y = Math.PI * 0.08; roomGrp.add(handleLP);
+        const handleRP = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.25), doorHandleMat);
+        handleRP.position.set(cx + 0.35, doorH2 * 0.42, bounds.b + wallThick/2 + 0.1);
+        handleRP.rotation.y = -Math.PI * 0.08; roomGrp.add(handleRP);
         
-        // Floor with neutral tone
-        const mainFloor = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({color: '#D7CCC8'}));
-        mainFloor.receiveShadow = true; roomGrp.add(mainFloor);
-        
-        // Walls with warm restaurant colors
-        const backWall = new THREE.Mesh(new THREE.BoxGeometry(1, 8, 1), new THREE.MeshLambertMaterial({color: '#D2B48C'})); backWall.receiveShadow=true; roomGrp.add(backWall);
-        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(1, 8, 1), new THREE.MeshLambertMaterial({color: '#DEB887'})); leftWall.receiveShadow=true; roomGrp.add(leftWall);
-        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(1, 8, 1), new THREE.MeshLambertMaterial({color: '#D2B48C'})); rightWall.receiveShadow=true; roomGrp.add(rightWall);
-
-        // Red dining area carpet
-        const carpet = new THREE.Mesh(new THREE.BoxGeometry(6, 0.1, 6), new THREE.MeshLambertMaterial({color:'#C41E3A'}));
-        carpet.receiveShadow = true; roomGrp.add(carpet);
-
-        function updateRoomVisuals() {
-            let w = bounds.r - bounds.l, d = bounds.b - bounds.t;
-            let cx = (bounds.r + bounds.l)/2, cz = (bounds.b + bounds.t)/2;
-            
-            mainFloor.scale.set(w, 1, d); mainFloor.position.set(cx, -0.5, cz);
-            backWall.scale.set(w + 2, 8, 1); backWall.position.set(cx, 4, bounds.t - 0.5);
-            leftWall.scale.set(1, 8, d + 2); leftWall.position.set(bounds.l - 0.5, 4, cz);
-            rightWall.scale.set(1, 8, d + 2); rightWall.position.set(bounds.r + 0.5, 4, cz);
-            carpet.position.set(bounds.l + 4, 0.05, bounds.b - 4); 
-        }
-
-        const highlightRing = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 8, 24), new THREE.MeshBasicMaterial({color: 0xffff00}));
-        highlightRing.rotation.x = -Math.PI/2; highlightRing.position.y = 0.1; highlightRing.visible = false; scene.add(highlightRing);
-        const placementFootprint = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 1), new THREE.MeshBasicMaterial({color: 0x00ff00, transparent: true, opacity: 0.6}));
-        placementFootprint.visible = false; scene.add(placementFootprint);
-        const gridHelper = new THREE.GridHelper(60, 30, 0x444444, 0x555555);
-        gridHelper.position.set(0, 0.1, 0); gridHelper.material.opacity = 0.1; gridHelper.material.transparent = true; gridHelper.visible = false; scene.add(gridHelper); gridHelper.renderOrder = -1;
-
-        // --- CUSTOM 3D STATIONS ---
-        const stationGrp = new THREE.Group(); scene.add(stationGrp);
-
-        function buildFridge() {
-            const grp = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(3, 6, 3), matSilver); body.position.y = 3; body.castShadow = true; body.receiveShadow = true;
-            const door1 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.5, 0.5), new THREE.MeshLambertMaterial({color: '#87CEEB'})); door1.position.set(0, 4, 1.5); door1.castShadow = true;
-            const handle = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.5, 0.3), matBlack); handle.position.set(1.2, 4, 1.8); handle.castShadow = true;
-            grp.add(body, door1, handle); return grp;
-        }
-        function buildSink() {
-            const grp = new THREE.Group();
-            const base = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), matSilver); base.position.y = 1.5; base.castShadow = true; base.receiveShadow = true;
-            const basin = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 2.4), new THREE.MeshLambertMaterial({color: '#A9A9A9'})); basin.position.set(0, 3, 0); basin.receiveShadow = true;
-            const water = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 2.2), new THREE.MeshLambertMaterial({color: '#6DB3F2', transparent: true, opacity: 0.7})); water.position.set(0, 3.1, 0);
-            const faucet = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 2), matSilver); faucet.position.set(0, 3.7, -1.2); faucet.castShadow = true;
-            grp.add(base, basin, water, faucet); return grp;
-        }
-        function buildGrill() {
-            const grp = new THREE.Group();
-            const base = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 3), matDarkGrey); base.position.y = 1.5; base.castShadow = true; base.receiveShadow = true;
-            const coals = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.2, 2.0), matGlowRed); coals.position.set(0, 3, 0.2); coals.receiveShadow = true;
-            const hood = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.2, 0.6), matDarkGrey); hood.position.set(0, 4.1, -1.2); hood.castShadow = true; hood.receiveShadow = true;
-            grp.add(base, coals, hood); return grp;
-        }
-        function buildTrash() {
-            const grp = new THREE.Group(); 
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.6, 2.5, 16), new THREE.MeshLambertMaterial({color: '#228B22'})); body.position.y = 1.25; body.castShadow = true; body.receiveShadow = true;
-            const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.1, 16), matBlack); hole.position.y = 2.5;
-            const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.2, 16), new THREE.MeshLambertMaterial({color: '#1a6b1a'})); lid.position.y = 2.65; lid.castShadow = true;
-            grp.add(body, hole, lid); return grp;
-        }
-        function buildCounter(w, d) {
-            const grp = new THREE.Group();
-            const base = new THREE.Mesh(new THREE.BoxGeometry(w, 2.8, d), new THREE.MeshLambertMaterial({color: '#8B4513'})); base.position.y = 1.4; base.castShadow=true; base.receiveShadow = true;
-            const top = new THREE.Mesh(new THREE.BoxGeometry(w+0.2, 0.2, d+0.2), new THREE.MeshLambertMaterial({color: '#DCDCDC'})); top.position.y = 2.9; top.castShadow = true; top.receiveShadow = true;
-            const edge = new THREE.Mesh(new THREE.BoxGeometry(w+0.4, 0.1, d+0.4), new THREE.MeshLambertMaterial({color: '#696969'})); edge.position.y = 3.0; edge.castShadow = true;
-            grp.add(base, top, edge); return grp;
-        }
-        function buildTable() {
-            const grp = new THREE.Group();
-            const tMesh = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#8B4513'})); tMesh.scale.set(2.5, 2, 2.5); tMesh.position.y = 1; tMesh.castShadow=true; tMesh.receiveShadow=true; grp.add(tMesh);
-            const tTop = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#D2B48C'})); tTop.scale.set(2.7, 0.2, 2.7); tTop.position.y = 2.1; tTop.receiveShadow=true; tTop.castShadow = true; grp.add(tTop);
-            const s1 = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#654321'})); s1.scale.set(1.0, 1.0, 1.0); s1.position.set(-3.0, 0.5, 0); s1.castShadow=true; s1.receiveShadow=true; grp.add(s1);
-            const s2 = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#654321'})); s2.scale.set(1.0, 1.0, 1.0); s2.position.set(3.0, 0.5, 0); s2.castShadow=true; s2.receiveShadow=true; grp.add(s2);
-            return grp;
-        }
-
-        const stations = {};
-        function addStation(id, type, x, z, w, d) {
-            let s = { id: id, type: type, x: x, z: z, w: w, d: d, visuals: [] };
-            if (type === 'fridge') s.mesh = buildFridge();
-            if (type === 'sink') s.mesh = buildSink();
-            if (type === 'grill') { s.mesh = buildGrill(); s.slots = [null, null]; }
-            if (type === 'prep') { s.mesh = buildCounter(w, d); s.slots = [null, null]; }
-            if (type === 'counter') { s.mesh = buildCounter(w, d); s.cleanPlates = 8; }
-            if (type === 'trash') s.mesh = buildTrash();
-            if (type === 'table') { s.mesh = buildTable(); s.r = 2.5; s.group = null; s.served = 0; s.dirtyPlates = 0; }
-            
-            s.mesh.position.set(x, 0, z); stationGrp.add(s.mesh); stations[id] = s;
-        }
-
-        // Base Map (Tight 20x20)
-        addStation('fridge', 'fridge', -8, -8, 3, 3);
-        addStation('sink', 'sink', -4, -8, 3, 3);
-        addStation('grill', 'grill', 2, -8, 5, 3);
-        addStation('prep', 'prep', 7, -8, 3, 3);
-        addStation('counter', 'counter', 7, -2, 3, 3);
-        addStation('trash', 'trash', 7, 4, 2, 2);
-        addStation('table0', 'table', 0, 2, 5, 5);
-
-        updateRoomVisuals();
-
-        // --- GAME DATA ---
-        let gameState = 'start'; 
-        let eco = { cash: 0, day: 0, floorLevel: 1 };
-        let upg = { speedLevel: 0, speedMult: 1, grillLevel: 0, grillMult: 1, decorLevel: 0, patienceMult: 1, tables: 1, bussers: 0, chefs: 0 };
-        let stats = { groupsServed: 0, totalStars: 0, cashEarned: 0, groupsRemaining: 0, spawnTimer: 0 };
-        let globalStats = { lifetimeStars: 0, lifetimeGroups: 0 };
-
-        let joyVector = { x: 0, z: 0 }; let keys = { w: false, a: false, s: false, d: false }; let isActionPressed = false;
-
-        // Player
-        const player = { pos: new THREE.Vector3(0, 0, 0), dir: 0, radius: 0.8, speed: 0.22, holding: null, wobble: 0 };
-        const playerMesh = new THREE.Group();
-        const pBody = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color:'#ffffff'})); pBody.scale.set(1.4, 1.6, 1.4); pBody.position.y = 0.8; pBody.castShadow=true;
-        const pHead = new THREE.Mesh(geoSphere, matSkin); pHead.scale.set(1.2, 1.2, 1.2); pHead.position.y = 1.9; pHead.castShadow=true;
-        const pHat = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.8), new THREE.MeshLambertMaterial({color:'#fff'})); pHat.position.y = 3.0; pHat.castShadow=true;
-        const pHatRim = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.4), new THREE.MeshLambertMaterial({color:'#eee'})); pHatRim.position.y = 2.3; pHatRim.castShadow=true;
-        playerMesh.add(pBody, pHead, pHat, pHatRim); scene.add(playerMesh);
-
-        let draggedStation = null; let originalDragPos = {x:0, z:0};
-        let groups = []; let bots = [];
-
-        function createItemMesh(type) {
-            const grp = new THREE.Group();
-            if(type === 'raw') { 
-                const m = new THREE.Mesh(geoCyl, matRaw); m.scale.set(1, 0.3, 1); m.position.y = 0.15; m.castShadow = true; grp.add(m); 
-            } 
-            else if (type === 'cooked') { 
-                // Bottom bun - smaller and more detailed
-                const bunBottom = new THREE.Mesh(new THREE.SphereGeometry(0.78, 8, 6), matBun); bunBottom.scale.set(0.95, 0.32, 0.95); bunBottom.position.y = 0.12; bunBottom.castShadow = true; grp.add(bunBottom);
-                
-                // Meat patty - smaller with texture bumps
-                const patty = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), matMeat); patty.position.y = 0.42; patty.castShadow = true; grp.add(patty);
-                
-                // Add texture bumps to patty
-                for(let i = 0; i < 5; i++) {
-                    const bump = new THREE.Mesh(new THREE.SphereGeometry(0.08, 4, 4), new THREE.MeshLambertMaterial({color: '#5C4033'}));
-                    const angle = (i / 5) * Math.PI * 2;
-                    bump.position.set(Math.cos(angle) * 0.2, 0.43, Math.sin(angle) * 0.2);
-                    bump.castShadow = true;
-                    grp.add(bump);
-                }
-                
-                // Cheese - smaller
-                const cheese = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.07, 1.3), matCheese); cheese.position.y = 0.6; cheese.castShadow = true; grp.add(cheese);
-                
-                // Tomato slice - smaller
-                const tomato = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.09, 12), matTomato); tomato.position.y = 0.71; grp.add(tomato);
-                
-                // Top bun - smaller
-                const bunTop = new THREE.Mesh(new THREE.SphereGeometry(0.78, 8, 6), matBun); bunTop.scale.set(0.95, 0.36, 0.95); bunTop.position.y = 0.93; bunTop.castShadow = true; grp.add(bunTop);
-            } 
-            else if (type === 'plate') { 
-                const p = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.1, 20), matPlate); p.position.y = 0.05; p.castShadow = true; p.receiveShadow = true; grp.add(p); 
+        for(let xi = 0; xi < rW; xi += 1) {
+            for(let yi = 0; yi < 2; yi++) {
+                const tile = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.05), matWhite);
+                tile.position.set(bounds.l + xi + 0.5, 0.5 + yi*0.9 + 0.2, bounds.t - wallThick + 0.35);
+                tile.receiveShadow = true; roomGrp.add(tile);
             }
-            else if (type === 'dirty_plate') {
-                // Clean plate base
-                const p = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.1, 20), matPlate); p.position.y = 0.05; p.castShadow = true; p.receiveShadow = true; grp.add(p);
-                
-                // Add food particles scattered on plate
-                const particleColors = [new THREE.Color('#654321'), new THREE.Color('#8B4513'), new THREE.Color('#A0522D'), new THREE.Color('#6B8E23')];
-                for(let i = 0; i < 8; i++) {
-                    const particleSize = 0.08 + Math.random() * 0.06;
-                    const particle = new THREE.Mesh(new THREE.SphereGeometry(particleSize, 4, 4), new THREE.MeshLambertMaterial({color: particleColors[Math.floor(Math.random() * particleColors.length)]}));
-                    const angle = Math.random() * Math.PI * 2;
-                    const dist = 0.2 + Math.random() * 0.6;
-                    particle.position.set(Math.cos(angle) * dist, 0.11, Math.sin(angle) * dist);
-                    particle.castShadow = true;
-                    grp.add(particle);
-                }
-            } 
-            else if (type === 'plated_burger') { 
-                grp.add(createItemMesh('plate')); 
-                const b = createItemMesh('cooked'); 
-                b.position.y = 0.1; 
-                grp.add(b); 
-            }
-            return grp;
         }
 
-        // --- INPUTS ---
-        window.addEventListener('keydown', e => { if (e.key === 'w' || e.key === 'ArrowUp') keys.w = true; if (e.key === 's' || e.key === 'ArrowDown') keys.s = true; if (e.key === 'a' || e.key === 'ArrowLeft') keys.a = true; if (e.key === 'd' || e.key === 'ArrowRight') keys.d = true; if (e.key === ' ' && !isActionPressed) { isActionPressed = true; handleAction(); } });
-        window.addEventListener('keyup', e => { if (e.key === 'w' || e.key === 'ArrowUp') keys.w = false; if (e.key === 's' || e.key === 'ArrowDown') keys.s = false; if (e.key === 'a' || e.key === 'ArrowLeft') keys.a = false; if (e.key === 'd' || e.key === 'ArrowRight') keys.d = false; if (e.key === ' ') isActionPressed = false; });
+        const signBackdrop = new THREE.Mesh(new THREE.BoxGeometry(rW * 0.7, 1.8, 0.3), matSign);
+        signBackdrop.position.set(cx, wallH + 1.2, bounds.t - 0.4); 
+        signBackdrop.castShadow = true; worldGrp.add(signBackdrop);
+        
+        const letters = ['B','U','R','G','E','R',' ','B','O','S','S'];
+        letters.forEach((l, i) => {
+            if(l === ' ') return;
+            const letterBlock = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.15), matSignText);
+            letterBlock.position.set(cx - 3 + i * 0.7, wallH + 1.2, bounds.t - 0.25);
+            worldGrp.add(letterBlock);
+        });
 
-        const jZone = document.getElementById('joystick-zone'), jKnob = document.getElementById('joystick-knob');
-        let joyTouchId = null, joyCenter = { x: 0, y: 0 }; const maxJoyDist = 40;
+        const pole1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.5, 0.2), new THREE.MeshLambertMaterial({color:'#9E9E9E'}));
+        pole1.position.set(cx - rW*0.35 + 0.5, wallH + 0.5, bounds.t - 0.4); worldGrp.add(pole1);
+        const pole2 = pole1.clone();
+        pole2.position.set(cx + rW*0.35 - 0.5, wallH + 0.5, bounds.t - 0.4); worldGrp.add(pole2);
 
-        jZone.addEventListener('pointerdown', e => { e.preventDefault(); if (joyTouchId === null) { jZone.setPointerCapture(e.pointerId); joyTouchId = e.pointerId; const rect = jZone.getBoundingClientRect(); joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 }; jKnob.style.background = 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(200,200,200,1) 100%)'; updateJoy(e.clientX, e.clientY); } });
-        jZone.addEventListener('pointermove', e => { e.preventDefault(); if (e.pointerId === joyTouchId) updateJoy(e.clientX, e.clientY); });
-        function endJoy(e) { if (e.pointerId === joyTouchId) { joyTouchId = null; joyVector = {x:0, z:0}; jKnob.style.transform = `translate(0px, 0px)`; jKnob.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(230,230,230,0.95) 100%)'; } }
-        jZone.addEventListener('pointerup', endJoy); jZone.addEventListener('pointercancel', endJoy);
+        const awningW = frontGapWidth + 2;
+        const awning = new THREE.Mesh(new THREE.BoxGeometry(awningW, 0.25, 2.5), new THREE.MeshLambertMaterial({color:'#C62828'}));
+        awning.position.set(cx, wallH - 0.1, bounds.b + 1.0); awning.castShadow = true; worldGrp.add(awning);
+        for(let i = 0; i < awningW; i += 0.8) {
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.28, 2.5), new THREE.MeshLambertMaterial({color:'#FFFFFF'}));
+            stripe.position.set(cx - awningW/2 + i, wallH - 0.1, bounds.b + 1.0); worldGrp.add(stripe);
+        }
+        
+        for(let i = 0; i < awningW*2; i++) {
+            const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), new THREE.MeshLambertMaterial({color:'#B71C1C'}));
+            fringe.position.set(cx - awningW/2 + i*0.5, wallH - 0.5, bounds.b + 2.2); worldGrp.add(fringe);
+        }
 
-        function updateJoy(tx, ty) { let dx = tx - joyCenter.x, dy = ty - joyCenter.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist > maxJoyDist) { dx = (dx/dist)*maxJoyDist; dy = (dy/dist)*maxJoyDist; } const translateX = Math.round(dx * 10) / 10; const translateY = Math.round(dy * 10) / 10; jKnob.style.transform = `translate(${translateX}px, ${translateY}px)`; joyVector.x = dx/maxJoyDist; joyVector.z = dy/maxJoyDist; }
+        const planterPositions = [
+            {x: bounds.l - 1.5, z: bounds.b + 2},
+            {x: bounds.r + 1.5, z: bounds.b + 2}
+        ];
+        planterPositions.forEach(p => {
+            const pot = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.0, 1.5), matPot);
+            pot.position.set(p.x, 0.5, p.z); pot.castShadow = true; worldGrp.add(pot);
+            const soil = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.2, 1.3), new THREE.MeshLambertMaterial({color:'#5D4037'}));
+            soil.position.set(p.x, 1.1, p.z); worldGrp.add(soil);
+            const bush = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), matPlant);
+            bush.scale.set(1, 0.8, 1); bush.position.set(p.x, 1.7, p.z); bush.castShadow = true; worldGrp.add(bush);
+            const flowerColors = ['#FF1744','#FF9100','#FFEA00','#F06292'];
+            for(let f = 0; f < 6; f++) {
+                const fl = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 4), new THREE.MeshLambertMaterial({color:flowerColors[f%4]}));
+                fl.position.set(p.x + (Math.random()-0.5)*0.9, 2.0 + Math.random()*0.3, p.z + (Math.random()-0.5)*0.9);
+                worldGrp.add(fl);
+            }
+        });
 
-        document.getElementById('action-btn').addEventListener('pointerdown', e => { e.preventDefault(); document.getElementById('action-btn').setPointerCapture(e.pointerId); document.getElementById('action-btn').style.transform = 'scale(0.95)'; handleAction(); });
-        document.getElementById('action-btn').addEventListener('pointerup', e => { document.getElementById('action-btn').style.transform = 'scale(1)'; });
-        document.getElementById('action-btn').addEventListener('pointercancel', e => { document.getElementById('action-btn').style.transform = 'scale(1)'; });
+        const lampPositions = [
+            {x: bounds.l - 4, z: bounds.b + sidewalkW - 1},
+            {x: bounds.r + 4, z: bounds.b + sidewalkW - 1}
+        ];
+        lampPositions.forEach(lp => {
+            const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 7, 8), new THREE.MeshLambertMaterial({color:'#37474F'}));
+            lampPole.position.set(lp.x, 3.5, lp.z); lampPole.castShadow = true; worldGrp.add(lampPole);
+            const lampHead = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 0.8), new THREE.MeshLambertMaterial({color:'#263238'}));
+            lampHead.position.set(lp.x, 7.2, lp.z); lampHead.castShadow = true; worldGrp.add(lampHead);
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), new THREE.MeshBasicMaterial({color:'#FFF9C4'}));
+            bulb.position.set(lp.x, 7.0, lp.z); worldGrp.add(bulb);
+        });
 
-        // --- DYNAMIC SPAWNING & EDIT MODE ---
-        function getValidSpawn() {
-            let cx = Math.floor((bounds.l + bounds.r)/4)*2, cz = Math.floor((bounds.t + bounds.b)/4)*2;
-            for (let r = 0; r < 40; r+=2) {
-                for (let dx = -r; dx <= r; dx+=2) {
-                    for (let dz = -r; dz <= r; dz+=2) {
-                        if (cx+dx > bounds.l+1 && cx+dx < bounds.r-1 && cz+dz > bounds.t+1 && cz+dz < bounds.b-1) {
-                            if (!checkCollision(cx + dx, cz + dz, true)) return new THREE.Vector3(cx + dx, 0, cz + dz);
+        const patioPositions = [
+            {x: cx - 6, z: bounds.b + 4},
+            {x: cx + 6, z: bounds.b + 4},
+        ];
+        patioPositions.forEach(pp => {
+            const ptop = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.15, 16), new THREE.MeshLambertMaterial({color:'#EEEEEE'}));
+            ptop.position.set(pp.x, 1.8, pp.z); ptop.castShadow = true; worldGrp.add(ptop);
+            const pleg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.8, 8), new THREE.MeshLambertMaterial({color:'#9E9E9E'}));
+            pleg.position.set(pp.x, 0.9, pp.z); worldGrp.add(pleg);
+            const upole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 5.5, 8), matUmbrellaPole);
+            upole.position.set(pp.x, 2.75, pp.z); worldGrp.add(upole);
+            const ucanopy = new THREE.Mesh(new THREE.ConeGeometry(2.2, 0.8, 8), matUmbrella);
+            ucanopy.position.set(pp.x, 5.5, pp.z); ucanopy.castShadow = true; worldGrp.add(ucanopy);
+            for(let us = 0; us < 4; us++) {
+                const ustripe = new THREE.Mesh(new THREE.ConeGeometry(2.21, 0.82, 8), new THREE.MeshLambertMaterial({color:'#FFFFFF', transparent:true, opacity:0.4}));
+                ustripe.rotation.y = us * Math.PI/4 + 0.2;
+                ustripe.position.set(pp.x, 5.5, pp.z); worldGrp.add(ustripe);
+            }
+            for(let ci = -1; ci <= 1; ci += 2) {
+                const chairSeat = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.8), new THREE.MeshLambertMaterial({color:'#90A4AE'}));
+                chairSeat.position.set(pp.x + ci*1.8, 0.9, pp.z); chairSeat.castShadow = true; worldGrp.add(chairSeat);
+                const chairBack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.1), new THREE.MeshLambertMaterial({color:'#90A4AE'}));
+                chairBack.position.set(pp.x + ci*1.8, 1.4, pp.z - 0.35); worldGrp.add(chairBack);
+                for(let leg = 0; leg < 4; leg++) {
+                    const chairLeg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 0.08), new THREE.MeshLambertMaterial({color:'#78909C'}));
+                    chairLeg.position.set(pp.x + ci*1.8 + (leg<2?-0.3:0.3), 0.45, pp.z + (leg%2===0?-0.3:0.3));
+                    worldGrp.add(chairLeg);
+                }
+            }
+        });
+
+        const treePositions = [
+            {x: bounds.l - 8, z: bounds.t - 5},
+            {x: bounds.r + 8, z: bounds.t - 5},
+            {x: bounds.l - 10, z: bounds.b + 8},
+            {x: bounds.r + 10, z: bounds.b + 8},
+            {x: cx - 15, z: bounds.b + sidewalkW + 5},
+            {x: cx + 15, z: bounds.b + sidewalkW + 5},
+        ];
+        treePositions.forEach(tp => {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 3, 8), new THREE.MeshLambertMaterial({color:'#795548'}));
+            trunk.position.set(tp.x, 1.5, tp.z); trunk.castShadow = true; worldGrp.add(trunk);
+            const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 6), new THREE.MeshLambertMaterial({color:'#2E7D32'}));
+            foliage1.position.set(tp.x, 5.5, tp.z); foliage1.castShadow = true; worldGrp.add(foliage1);
+            const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(1.6, 8, 6), new THREE.MeshLambertMaterial({color:'#388E3C'}));
+            foliage2.position.set(tp.x + 0.8, 6.5, tp.z - 0.5); foliage2.castShadow = true; worldGrp.add(foliage2);
+        });
+
+        for(let ps = -2; ps <= 2; ps++) {
+            const spot = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.03, 6), new THREE.MeshLambertMaterial({color:'#546E7A', transparent:true, opacity:0.6}));
+            spot.position.set(cx + ps * 4, -0.15, bounds.b + sidewalkW + 10); worldGrp.add(spot);
+            const line1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 6), new THREE.MeshLambertMaterial({color:'#CFD8DC'}));
+            line1.position.set(cx + ps * 4 - 1.75, -0.13, bounds.b + sidewalkW + 10); worldGrp.add(line1);
+            const line2 = line1.clone(); line2.position.x = cx + ps * 4 + 1.75; worldGrp.add(line2);
+        }
+    }
+
+    function updateRoomVisuals() {
+        buildOutdoorWorld();
+    }
+
+    const highlightRing = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 8, 24), new THREE.MeshBasicMaterial({color: 0xffff00}));
+    highlightRing.rotation.x = -Math.PI/2; highlightRing.position.y = 0.1; highlightRing.visible = false; scene.add(highlightRing);
+    const placementFootprint = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 1), new THREE.MeshBasicMaterial({color: 0x00ff00, transparent: true, opacity: 0.6}));
+    placementFootprint.visible = false; scene.add(placementFootprint);
+    const gridHelper = new THREE.GridHelper(60, 30, 0x444444, 0x555555);
+    gridHelper.position.set(0, 0.15, 0); gridHelper.material.opacity = 0.15; gridHelper.material.transparent = true; gridHelper.visible = false; scene.add(gridHelper); gridHelper.renderOrder = -1;
+
+    // --- STATIONS ---
+    const stationGrp = new THREE.Group(); scene.add(stationGrp);
+
+    function buildFridge() {
+        const grp = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(3, 5, 3), matSilver); body.position.y = 2.5; body.castShadow = true; body.receiveShadow = true;
+        const door1 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.5, 0.5), new THREE.MeshLambertMaterial({color: '#87CEEB', transparent:true, opacity:0.7})); door1.position.set(0, 3, 1.5); door1.castShadow = true;
+        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.5, 0.3), matBlack); handle.position.set(1.2, 3, 1.8); handle.castShadow = true;
+        const label = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 0.06), new THREE.MeshLambertMaterial({color:'#1565C0'}));
+        label.position.set(0, 1.5, 1.53); grp.add(label);
+        grp.add(body, door1, handle); return grp;
+    }
+    function buildSink() {
+        const grp = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), matSilver); base.position.y = 1.5; base.castShadow = true; base.receiveShadow = true;
+        const basin = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 2.4), new THREE.MeshLambertMaterial({color: '#A9A9A9'})); basin.position.set(0, 3, 0); basin.receiveShadow = true;
+        const water = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 2.2), new THREE.MeshLambertMaterial({color: '#6DB3F2', transparent: true, opacity: 0.7})); water.position.set(0, 3.1, 0);
+        const faucet = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 2), matSilver); faucet.position.set(0, 3.7, -1.2); faucet.castShadow = true;
+        grp.add(base, basin, water, faucet); return grp;
+    }
+    function buildGrill() {
+        const grp = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 3), matDarkGrey); base.position.y = 1.5; base.castShadow = true; base.receiveShadow = true;
+        const coals = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.2, 2.0), matGlowRed); coals.position.set(0, 3, 0.2); coals.receiveShadow = true;
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.2, 0.6), matDarkGrey); hood.position.set(0, 4.1, -1.2); hood.castShadow = true; hood.receiveShadow = true;
+        const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 3, 8), new THREE.MeshLambertMaterial({color:'#546E7A'}));
+        vent.position.set(0, 5.5, -1.2); vent.castShadow = true; grp.add(vent);
+        grp.add(base, coals, hood); return grp;
+    }
+    function buildTrash() {
+        const grp = new THREE.Group(); 
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.6, 2.5, 16), new THREE.MeshLambertMaterial({color: '#228B22'})); body.position.y = 1.25; body.castShadow = true; body.receiveShadow = true;
+        const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.1, 16), matBlack); hole.position.y = 2.5;
+        const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.2, 16), new THREE.MeshLambertMaterial({color: '#1a6b1a'})); lid.position.y = 2.65; lid.castShadow = true;
+        grp.add(body, hole, lid); return grp;
+    }
+    function buildCounter(w, d) {
+        const grp = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.BoxGeometry(w, 2.8, d), new THREE.MeshLambertMaterial({color: '#8B4513'})); base.position.y = 1.4; base.castShadow=true; base.receiveShadow = true;
+        const top = new THREE.Mesh(new THREE.BoxGeometry(w+0.2, 0.2, d+0.2), new THREE.MeshLambertMaterial({color: '#DCDCDC'})); top.position.y = 2.9; top.castShadow = true; top.receiveShadow = true;
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(w+0.4, 0.1, d+0.4), new THREE.MeshLambertMaterial({color: '#696969'})); edge.position.y = 3.0; edge.castShadow = true;
+        grp.add(base, top, edge); return grp;
+    }
+    function buildTable() {
+        const grp = new THREE.Group();
+        const tMesh = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#8B4513'})); tMesh.scale.set(2.5, 2, 2.5); tMesh.position.y = 1; tMesh.castShadow=true; tMesh.receiveShadow=true; grp.add(tMesh);
+        const tTop = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#D2B48C'})); tTop.scale.set(2.7, 0.2, 2.7); tTop.position.y = 2.1; tTop.receiveShadow=true; tTop.castShadow = true; grp.add(tTop);
+        const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8), new THREE.MeshLambertMaterial({color:'#FFFDE7'}));
+        candle.position.set(0, 2.4, 0); grp.add(candle);
+        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), new THREE.MeshBasicMaterial({color:'#FF9100'}));
+        flame.position.set(0, 2.7, 0); grp.add(flame);
+        const s1 = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#654321'})); s1.scale.set(1.0, 1.0, 1.0); s1.position.set(-3.0, 0.5, 0); s1.castShadow=true; s1.receiveShadow=true; grp.add(s1);
+        const s2 = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color: '#654321'})); s2.scale.set(1.0, 1.0, 1.0); s2.position.set(3.0, 0.5, 0); s2.castShadow=true; s2.receiveShadow=true; grp.add(s2);
+        return grp;
+    }
+
+    const stations = {};
+    function addStation(id, type, x, z, w, d) {
+        let s = { id: id, type: type, x: x, z: z, w: w, d: d, visuals: [] };
+        if (type === 'fridge') s.mesh = buildFridge();
+        if (type === 'sink') s.mesh = buildSink();
+        if (type === 'grill') { s.mesh = buildGrill(); s.slots = [null, null]; }
+        if (type === 'prep') { s.mesh = buildCounter(w, d); s.slots = [null, null]; }
+        if (type === 'counter') { s.mesh = buildCounter(w, d); s.cleanPlates = 8; }
+        if (type === 'trash') s.mesh = buildTrash();
+        if (type === 'table') { s.mesh = buildTable(); s.r = 2.5; s.group = null; s.served = 0; s.dirtyPlates = 0; }
+        
+        s.mesh.position.set(x, 0, z); stationGrp.add(s.mesh); stations[id] = s;
+    }
+
+    addStation('fridge', 'fridge', -8, -8, 3, 3);
+    addStation('sink', 'sink', -4, -8, 3, 3);
+    addStation('grill', 'grill', 2, -8, 5, 3);
+    addStation('prep', 'prep', 7, -8, 3, 3);
+    addStation('counter', 'counter', 7, -2, 3, 3);
+    addStation('trash', 'trash', 7, 4, 2, 2);
+    addStation('table0', 'table', 0, 2, 5, 5);
+
+    updateRoomVisuals();
+
+    // --- GAME DATA ---
+    let gameState = 'start'; 
+    let eco = { cash: 0, day: 0, floorLevel: 1 };
+    let upg = { speedLevel: 0, speedMult: 1, grillLevel: 0, grillMult: 1, decorLevel: 0, patienceMult: 1, tables: 1, bussers: 0, chefs: 0 };
+    let stats = { groupsServed: 0, totalStars: 0, cashEarned: 0, groupsRemaining: 0, spawnTimer: 0 };
+    let globalStats = { lifetimeStars: 0, lifetimeGroups: 0 };
+
+    let joyVector = { x: 0, z: 0 }; let keys = { w: false, a: false, s: false, d: false }; let isActionPressed = false;
+
+    // Player
+    const player = { pos: new THREE.Vector3(0, 0, 0), dir: 0, radius: 0.8, speed: 0.22, holding: null, wobble: 0 };
+    const playerMesh = new THREE.Group();
+
+    const pBody = new THREE.Mesh(geoCyl, new THREE.MeshLambertMaterial({color:'#ffffff'}));
+    pBody.scale.set(1.4, 1.6, 1.4); pBody.position.y = 0.8; pBody.castShadow = true;
+
+    const pHead = new THREE.Mesh(geoSphere, matSkin);
+    pHead.scale.set(1.2, 1.2, 1.2); pHead.position.y = 1.9; pHead.castShadow = true;
+
+    // --- IMPROVED CHEF HAT ---
+    // Wide flat brim band at the base
+    const pHatRim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.95, 0.95, 0.35, 16),
+        new THREE.MeshLambertMaterial({color:'#eeeeee'})
+    );
+    pHatRim.position.y = 2.35; pHatRim.castShadow = true;
+
+    // Cylindrical body that tapers slightly toward the top (toque shape)
+    const pHatBody = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.65, 0.85, 1.6, 16),
+        new THREE.MeshLambertMaterial({color:'#ffffff'})
+    );
+    pHatBody.position.y = 3.15; pHatBody.castShadow = true;
+
+    // Flattened dome cap on top
+    const pHatTop = new THREE.Mesh(
+        new THREE.SphereGeometry(0.65, 16, 8),
+        new THREE.MeshLambertMaterial({color:'#ffffff'})
+    );
+    pHatTop.scale.set(1, 0.55, 1); // flatten into a dome
+    pHatTop.position.y = 3.97; pHatTop.castShadow = true;
+
+    playerMesh.add(pBody, pHead, pHatRim, pHatBody, pHatTop);
+    scene.add(playerMesh);
+
+    let draggedStation = null; let originalDragPos = {x:0, z:0};
+    let groups = []; let bots = [];
+
+    function createItemMesh(type) {
+        const grp = new THREE.Group();
+        if(type === 'raw') { 
+            const m = new THREE.Mesh(geoCyl, matRaw); m.scale.set(1, 0.3, 1); m.position.y = 0.15; m.castShadow = true; grp.add(m); 
+        } 
+        else if (type === 'cooked') { 
+            const bunBottom = new THREE.Mesh(new THREE.SphereGeometry(0.78, 8, 6), matBun); bunBottom.scale.set(0.95, 0.32, 0.95); bunBottom.position.y = 0.12; bunBottom.castShadow = true; grp.add(bunBottom);
+            const patty = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.26, 12), matMeat); patty.position.y = 0.42; patty.castShadow = true; grp.add(patty);
+            for(let i = 0; i < 5; i++) {
+                const bump = new THREE.Mesh(new THREE.SphereGeometry(0.08, 4, 4), new THREE.MeshLambertMaterial({color: '#5C4033'}));
+                const angle = (i / 5) * Math.PI * 2;
+                bump.position.set(Math.cos(angle) * 0.2, 0.43, Math.sin(angle) * 0.2);
+                grp.add(bump);
+            }
+            const cheese = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.07, 1.3), matCheese); cheese.position.y = 0.6; grp.add(cheese);
+            const tomato = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.09, 12), matTomato); tomato.position.y = 0.71; grp.add(tomato);
+            const bunTop = new THREE.Mesh(new THREE.SphereGeometry(0.78, 8, 6), matBun); bunTop.scale.set(0.95, 0.36, 0.95); bunTop.position.y = 0.93; bunTop.castShadow = true; grp.add(bunTop);
+        } 
+        else if (type === 'plate') { 
+            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.1, 20), matPlate); p.position.y = 0.05; p.castShadow = true; p.receiveShadow = true; grp.add(p); 
+        }
+        else if (type === 'dirty_plate') {
+            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.1, 20), matPlate); p.position.y = 0.05; grp.add(p);
+            const particleColors = [new THREE.Color('#654321'), new THREE.Color('#8B4513'), new THREE.Color('#A0522D'), new THREE.Color('#6B8E23')];
+            for(let i = 0; i < 8; i++) {
+                const ps = 0.08 + Math.random() * 0.06;
+                const particle = new THREE.Mesh(new THREE.SphereGeometry(ps, 4, 4), new THREE.MeshLambertMaterial({color: particleColors[Math.floor(Math.random() * particleColors.length)]}));
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 0.2 + Math.random() * 0.6;
+                particle.position.set(Math.cos(angle) * dist, 0.11, Math.sin(angle) * dist);
+                grp.add(particle);
+            }
+        } 
+        else if (type === 'plated_burger') { 
+            grp.add(createItemMesh('plate')); 
+            const b = createItemMesh('cooked'); 
+            b.position.y = 0.1; 
+            grp.add(b); 
+        }
+        return grp;
+    }
+
+    // --- INPUTS ---
+    window.addEventListener('keydown', e => { if (e.key === 'w' || e.key === 'ArrowUp') keys.w = true; if (e.key === 's' || e.key === 'ArrowDown') keys.s = true; if (e.key === 'a' || e.key === 'ArrowLeft') keys.a = true; if (e.key === 'd' || e.key === 'ArrowRight') keys.d = true; if (e.key === ' ' && !isActionPressed) { isActionPressed = true; handleAction(); } });
+    window.addEventListener('keyup', e => { if (e.key === 'w' || e.key === 'ArrowUp') keys.w = false; if (e.key === 's' || e.key === 'ArrowDown') keys.s = false; if (e.key === 'a' || e.key === 'ArrowLeft') keys.a = false; if (e.key === 'd' || e.key === 'ArrowRight') keys.d = false; if (e.key === ' ') isActionPressed = false; });
+
+    const jZone = document.getElementById('joystick-zone'), jKnob = document.getElementById('joystick-knob');
+    let joyTouchId = null, joyCenter = { x: 0, y: 0 }; const maxJoyDist = 40;
+
+    jZone.addEventListener('pointerdown', e => { e.preventDefault(); if (joyTouchId === null) { jZone.setPointerCapture(e.pointerId); joyTouchId = e.pointerId; const rect = jZone.getBoundingClientRect(); joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 }; jKnob.style.background = 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(200,200,200,1) 100%)'; updateJoy(e.clientX, e.clientY); } });
+    jZone.addEventListener('pointermove', e => { e.preventDefault(); if (e.pointerId === joyTouchId) updateJoy(e.clientX, e.clientY); });
+    function endJoy(e) { if (e.pointerId === joyTouchId) { joyTouchId = null; joyVector = {x:0, z:0}; jKnob.style.transform = `translate(0px, 0px)`; jKnob.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(230,230,230,0.95) 100%)'; } }
+    jZone.addEventListener('pointerup', endJoy); jZone.addEventListener('pointercancel', endJoy);
+    function updateJoy(tx, ty) { let dx = tx - joyCenter.x, dy = ty - joyCenter.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist > maxJoyDist) { dx = (dx/dist)*maxJoyDist; dy = (dy/dist)*maxJoyDist; } jKnob.style.transform = `translate(${Math.round(dx*10)/10}px, ${Math.round(dy*10)/10}px)`; joyVector.x = dx/maxJoyDist; joyVector.z = dy/maxJoyDist; }
+
+    document.getElementById('action-btn').addEventListener('pointerdown', e => { e.preventDefault(); document.getElementById('action-btn').setPointerCapture(e.pointerId); document.getElementById('action-btn').style.transform = 'scale(0.95)'; handleAction(); });
+    document.getElementById('action-btn').addEventListener('pointerup', e => { document.getElementById('action-btn').style.transform = 'scale(1)'; });
+    document.getElementById('action-btn').addEventListener('pointercancel', e => { document.getElementById('action-btn').style.transform = 'scale(1)'; });
+
+    // --- DYNAMIC SPAWNING & EDIT MODE ---
+    function getValidSpawn() {
+        let rcx = Math.round((bounds.l + bounds.r)/2), rcz = Math.round((bounds.t + bounds.b)/2);
+        for (let r = 0; r < 20; r+=2) {
+            for (let dx = -r; dx <= r; dx+=2) {
+                for (let dz = -r; dz <= r; dz+=2) {
+                    let tx = rcx + dx, tz = rcz + dz;
+                    if (tx > bounds.l+1 && tx < bounds.r-1 && tz > bounds.t+1 && tz < bounds.b-1) {
+                        if (!checkCollision(tx, tz, true)) return new THREE.Vector3(tx, 0, tz);
+                    }
+                }
+            }
+        }
+        return new THREE.Vector3(rcx, 0, rcz); 
+    }
+
+    function startEditMode() {
+        gameState = 'edit';
+        document.getElementById('start-screen').style.display = 'none'; document.getElementById('shop-screen').style.display = 'none';
+        document.getElementById('edit-hud').style.display = 'block';
+        player.pos = getValidSpawn(); playerMesh.position.copy(player.pos);
+        draggedStation = null; gridHelper.visible = true;
+        document.getElementById('action-btn').style.background = '#03A9F4'; document.getElementById('action-btn').style.borderColor = '#0288D1';
+        document.getElementById('action-btn').innerHTML = 'Grab';
+    }
+
+    function saveEditMode() {
+        if (draggedStation) { 
+            draggedStation.mesh.position.set(originalDragPos.x, 0, originalDragPos.z);
+            draggedStation.x = originalDragPos.x; draggedStation.z = originalDragPos.z;
+            draggedStation = null; placementFootprint.visible = false;
+        }
+        document.getElementById('edit-hud').style.display = 'none';
+        document.getElementById('action-btn').style.background = '#FFC107'; document.getElementById('action-btn').style.borderColor = '#FF9800';
+        document.getElementById('action-btn').innerHTML = '✋<div class="hint">SPACE</div>';
+        gridHelper.visible = false; highlightRing.visible = false;
+
+        if (eco.day === 0) document.getElementById('start-screen').style.display = 'flex';
+        else document.getElementById('shop-screen').style.display = 'flex';
+        gameState = 'start'; 
+    }
+    window.startEditMode = startEditMode; window.saveEditMode = saveEditMode;
+
+    // --- PROGRESSION & SHOP LOGIC ---
+    function getCumulativeRating() { return globalStats.lifetimeGroups === 0 ? 0 : (globalStats.lifetimeStars / globalStats.lifetimeGroups).toFixed(1); }
+    function updateCashUI() { document.getElementById('cash-val').innerText = `$${eco.cash}`; document.getElementById('rating-val').innerText = `⭐ ${getCumulativeRating()}`; }
+
+    function startNextDay() {
+        eco.day++; 
+        let spawnWait = Math.max(120, 600 - (eco.day * 60)) + Math.random() * 100; 
+        stats = { groupsServed: 0, totalStars: 0, cashEarned: 0, groupsRemaining: eco.day + 2, spawnTimer: spawnWait };
+        
+        document.getElementById('start-screen').style.display = 'none'; document.getElementById('shop-screen').style.display = 'none';
+        document.getElementById('day-banner').innerHTML = `DAY ${eco.day}<br><span id="day-sub" style="font-size: 14px; color: #666;">Groups Left: ${stats.groupsRemaining}</span>`;
+        updateCashUI();
+        
+        if(stations.counter) stations.counter.cleanPlates = 8; 
+        if(stations.grill) stations.grill.slots = [null, null]; 
+        if(stations.prep) stations.prep.slots = [null, null];
+        player.holding = null; updatePlayerHolding();
+        
+        groups.forEach(g => scene.remove(g.mesh)); groups = [];
+        for(let key in stations) if (stations[key].type === 'table') { stations[key].group = null; stations[key].served = 0; stations[key].dirtyPlates = 0; }
+        updateStationVisuals();
+        
+        player.pos = getValidSpawn(); playerMesh.position.copy(player.pos);
+        gameState = 'playing';
+        
+        bots.forEach(b => scene.remove(b.mesh)); bots = [];
+        for(let i=0; i<upg.bussers; i++) spawnBot('busser');
+        for(let i=0; i<upg.chefs; i++) spawnBot('chef');
+    }
+
+    function buyUpgrade(type, cost) {
+        if (eco.cash >= cost) {
+            eco.cash -= cost;
+            if(type === 'speed') upg.speedLevel++; 
+            if(type === 'grill') { upg.grillLevel++; upg.grillMult += 0.35; }
+            if(type === 'decor') { upg.decorLevel++; upg.patienceMult += 0.35; }
+            if(type === 'table') { addStation('table'+upg.tables, 'table', bounds.r-3, bounds.t+3, 5, 5); upg.tables++; }
+            if(type === 'floor') { 
+                eco.floorLevel++; 
+                if(eco.floorLevel===2) bounds = {l:-15, r:15, t:-10, b:10}; 
+                if(eco.floorLevel===3) bounds = {l:-20, r:20, t:-15, b:15}; 
+                updateRoomVisuals(); 
+            }
+            if(type === 'chef') upg.chefs++;
+            if(type === 'busser') upg.bussers++;
+            updateCashUI(); updateShopButtons();
+        }
+    }
+    window.buyUpgrade = buyUpgrade; 
+
+    function updateShopButtons() {
+        let sItems = [
+            { id: 'table', title: '🪑 Add Table', desc: 'Serve more customers', isMax: upg.tables >= 4, cost: 100 * upg.tables },
+            { id: 'floor', title: '📐 Expand Floor', desc: 'Bigger restaurant space', isMax: eco.floorLevel >= 3, cost: 200 * eco.floorLevel },
+            { id: 'chef', title: '🤖 Chef Bot', desc: 'Auto-places raw meat on grill', isMax: false, cost: 150 + upg.chefs*100 },
+            { id: 'busser', title: '🤖 Busser Bot', desc: 'Auto-washes & stacks dirty plates', isMax: false, cost: 150 + upg.bussers*100 },
+            { id: 'speed', title: '⚡ Roller Skates', desc: 'Move faster', isMax: upg.speedLevel >= 3, cost: 30 + upg.speedLevel*20 },
+            { id: 'grill', title: '🔥 Turbo Grill', desc: 'Cook faster', isMax: upg.grillLevel >= 3, cost: 50 + upg.grillLevel*30 },
+            { id: 'decor', title: '🌸 Fancy Decor', desc: 'Customers more patient', isMax: upg.decorLevel >= 3, cost: 40 + upg.decorLevel*25 }
+        ];
+
+        sItems.sort((a, b) => {
+            if (a.isMax && !b.isMax) return 1;
+            if (!a.isMax && b.isMax) return -1;
+            return a.cost - b.cost;
+        });
+
+        let shopHtml = '';
+        sItems.forEach(item => {
+            let btnHtml = item.isMax ? `<button class="buy-btn" disabled>MAX</button>` : 
+                `<button class="buy-btn" onclick="buyUpgrade('${item.id}', ${item.cost})" ${eco.cash < item.cost ? 'disabled' : ''}>$${item.cost}</button>`;
+            shopHtml += `<div class="upgrade-item"><div><strong>${item.title}</strong><br><span style="font-size:12px; color:#aaa;">${item.desc}</span></div>${btnHtml}</div>`;
+        });
+        document.getElementById('dynamic-shop').innerHTML = shopHtml;
+    }
+
+    function endDay() {
+        globalStats.lifetimeStars += stats.totalStars; globalStats.lifetimeGroups += stats.groupsServed;
+        let cumRating = parseFloat(getCumulativeRating());
+        if (eco.day >= 5 && cumRating < 2.0) {
+            gameState = 'gameover'; document.getElementById('fail-days').innerText = eco.day;
+            document.getElementById('game-over-screen').style.display = 'flex'; return;
+        }
+        gameState = 'shop'; document.getElementById('shop-earned').innerText = `+$${stats.cashEarned}`;
+        let avgStars = stats.groupsServed > 0 ? Math.round(stats.totalStars / stats.groupsServed) : 0;
+        document.getElementById('shop-stars').innerText = `⭐ ${cumRating} (Today: ${avgStars})`;
+        updateShopButtons(); document.getElementById('shop-screen').style.display = 'flex'; highlightRing.visible = false;
+    }
+
+    // --- BOTS AI ---
+    function spawnBot(type) {
+        let b = { type: type, pos: getValidSpawn(), target: null, state: 'idle', holding: null, mesh: new THREE.Group(), timer: 0 };
+        const m = new THREE.Mesh(geoSphere, matBot); m.scale.set(1.2, 1.2, 1.2); m.position.y = 1.2; m.castShadow=true;
+        const eye = new THREE.Mesh(geoBox, new THREE.MeshBasicMaterial({color: type==='chef'?'#ffeb3b':'#00bcd4'})); eye.scale.set(0.8, 0.3, 0.3); eye.position.set(0, 1.4, 0.5);
+        b.mesh.add(m, eye); b.mesh.position.copy(b.pos); scene.add(b.mesh); bots.push(b);
+    }
+
+    let deltaScale = 1;
+
+    function updateBots() {
+        bots.forEach(b => {
+            b.mesh.position.y = Math.sin(Date.now()/200)*0.2; 
+            if(b.state === 'idle') {
+                if (b.type === 'chef' && stations.grill && stations.fridge) {
+                    let emptySlot = stations.grill.slots.indexOf(null);
+                    if (emptySlot !== -1) { b.target = stations.fridge; b.state = 'fetching_raw'; }
+                } else if (b.type === 'busser' && stations.sink && stations.counter) {
+                    let dirtyTable = null;
+                    for(let key in stations) if(stations[key].type === 'table' && stations[key].dirtyPlates > 0) dirtyTable = stations[key];
+                    if (dirtyTable) { b.target = dirtyTable; b.state = 'fetching_dirty'; }
+                }
+            } 
+            else {
+                let tx = b.target.x, tz = b.target.z;
+                let dx = tx - b.pos.x, dz = tz - b.pos.z; let dist = Math.sqrt(dx*dx + dz*dz);
+                if (dist > 3) {
+                    b.pos.x += (dx/dist)*0.15*deltaScale; b.pos.z += (dz/dist)*0.15*deltaScale;
+                    b.mesh.position.x = b.pos.x; b.mesh.position.z = b.pos.z;
+                    b.mesh.rotation.y = Math.atan2(dx, dz);
+                } else {
+                    if (b.type === 'chef') {
+                        if (b.state === 'fetching_raw') { b.holding = 'raw'; b.target = stations.grill; b.state = 'taking_to_grill'; }
+                        else if (b.state === 'taking_to_grill') {
+                            let emptySlot = stations.grill.slots.indexOf(null);
+                            if (emptySlot !== -1) stations.grill.slots[emptySlot] = { state: 'raw', progress: 0 };
+                            b.holding = null; b.state = 'idle'; updateStationVisuals();
+                        }
+                    } else if (b.type === 'busser') {
+                        if (b.state === 'fetching_dirty') {
+                            if(b.target.dirtyPlates > 0) { b.target.dirtyPlates--; b.holding = 'dirty_plate'; b.target = stations.sink; b.state = 'taking_to_sink'; updateStationVisuals(); }
+                            else b.state = 'idle';
+                        } else if (b.state === 'taking_to_sink') { b.holding = 'plate'; b.timer = 60; b.state = 'washing'; 
+                        } else if (b.state === 'washing') {
+                            b.timer -= deltaScale; if(b.timer<=0) { b.target = stations.counter; b.state = 'taking_to_counter'; }
+                        } else if (b.state === 'taking_to_counter') {
+                            if (stations.counter.cleanPlates < 20) stations.counter.cleanPlates++;
+                            b.holding = null; b.state = 'idle'; updateStationVisuals();
                         }
                     }
                 }
             }
-            return new THREE.Vector3(0,0,0); 
-        }
+        });
+    }
 
-        function startEditMode() {
-            gameState = 'edit';
-            document.getElementById('start-screen').style.display = 'none'; document.getElementById('shop-screen').style.display = 'none';
-            document.getElementById('edit-hud').style.display = 'block';
-            player.pos = getValidSpawn(); playerMesh.position.copy(player.pos);
-            draggedStation = null; gridHelper.visible = true;
-            document.getElementById('action-btn').style.background = '#03A9F4'; document.getElementById('action-btn').style.borderColor = '#0288D1';
-            document.getElementById('action-btn').innerHTML = 'Grab';
-        }
+    function getDoorX() { return (bounds.r + bounds.l) / 2; }
 
-        function saveEditMode() {
-            if (draggedStation) { 
-                draggedStation.mesh.position.set(originalDragPos.x, 0, originalDragPos.z);
-                draggedStation.x = originalDragPos.x; draggedStation.z = originalDragPos.z;
-                draggedStation = null; placementFootprint.visible = false;
+    // --- CUSTOMER AI ---
+    function spawnGroup() {
+        let size = Math.random() > 0.5 ? 2 : 1;
+        const spawnX = getDoorX() + (Math.random()-0.5)*2;
+        const spawnZ = bounds.b + 10;
+        let g = { id: Math.random(), size: size, state: 'approach_door', 
+            waitPatience: 1800 * upg.patienceMult, maxWait: 1800 * upg.patienceMult,
+            foodPatience: (size * 1200) * upg.patienceMult, maxFood: (size * 1200) * upg.patienceMult,
+            eatTimer: 0, pos: new THREE.Vector3(spawnX, 0, spawnZ), target: new THREE.Vector3(spawnX, 0, spawnZ),
+            mesh: new THREE.Group(), wobble: 0
+        };
+
+        for(let i=0; i<size; i++) {
+            let m = new THREE.Group();
+            const body = new THREE.Mesh(geoCyl, matCustColors[Math.floor(Math.random()*matCustColors.length)]); body.scale.set(1.2, 1.4, 1.2); body.position.y = 0.7; body.castShadow=true; body.receiveShadow=true;
+            const head = new THREE.Mesh(geoSphere, matSkin); head.scale.set(1, 1, 1); head.position.y = 1.6; head.castShadow=true; head.receiveShadow=true;
+            m.add(body, head); m.position.set(i*1.8 - (size>1?0.9:0), 0, i*0.5); g.mesh.add(m);
+        }
+        scene.add(g.mesh); groups.push(g);
+        stats.groupsRemaining--; document.getElementById('day-sub').innerText = `Groups Left: ${stats.groupsRemaining}`;
+    }
+
+    function collidesWallSeg(nx, nz, pR, x1, x2, z1, z2) {
+        return nx > x1 - pR && nx < x2 + pR && nz > z1 - pR && nz < z2 + pR;
+    }
+
+    function checkCollision(nx, nz, ignoreEditCheck = false) {
+        const pR = player.radius;
+        const wt = 0.6;
+        const cx = (bounds.r + bounds.l) / 2;
+        const doorHalfW = 2.5;
+        const doorLeft  = cx - doorHalfW;
+        const doorRight = cx + doorHalfW;
+
+        if (collidesWallSeg(nx, nz, pR, bounds.l - wt, bounds.r + wt, bounds.t - wt, bounds.t)) return true;
+        if (collidesWallSeg(nx, nz, pR, bounds.l - wt, bounds.l, bounds.t, bounds.b + wt)) return true;
+        if (collidesWallSeg(nx, nz, pR, bounds.r, bounds.r + wt, bounds.t, bounds.b + wt)) return true;
+        if (collidesWallSeg(nx, nz, pR, bounds.l, doorLeft, bounds.b, bounds.b + wt)) return true;
+        if (collidesWallSeg(nx, nz, pR, doorRight, bounds.r, bounds.b, bounds.b + wt)) return true;
+
+        if (nx < bounds.l - 20 || nx > bounds.r + 20 || nz < bounds.t - 5 || nz > bounds.b + 25) return true;
+
+        for(let key in stations) {
+            let s = stations[key];
+            if (!ignoreEditCheck && draggedStation && s.id === draggedStation.id) continue; 
+            let dist = Math.sqrt((nx - s.x)**2 + (nz - s.z)**2);
+            if (s.type === 'table') { if (dist < pR + s.r) return true; } 
+            else { if (nx > s.x - s.w/2 - pR && nx < s.x + s.w/2 + pR && nz > s.z - s.d/2 - pR && nz < s.z + s.d/2 + pR) return true; }
+        }
+        return false;
+    }
+
+    function isValidPlacement(station, nx, nz) {
+        let left = nx - station.w/2, right = nx + station.w/2, top = nz - station.d/2, bottom = nz + station.d/2;
+        if (left < bounds.l || right > bounds.r || top < bounds.t || bottom > bounds.b) return false;
+        if (nx > bounds.l+4 && nx < bounds.l+12 && nz > bounds.b-4) return false;
+        if (nx > -4 && nx < 4 && nz > bounds.b-4) return false;
+        for (let key in stations) {
+            let s2 = stations[key]; if (s2.id === station.id) continue;
+            if (s2.type === 'table') { if (Math.sqrt((nx - s2.x)**2 + (nz - s2.z)**2) < s2.r + Math.max(station.w, station.d)/2) return false; } 
+            else { if (!(right <= s2.x-s2.w/2 || left >= s2.x+s2.w/2 || bottom <= s2.z-s2.d/2 || top >= s2.z+s2.d/2)) return false; }
+        }
+        return true;
+    }
+
+    function getClosestInteractable() {
+        let aimX = player.pos.x + Math.sin(player.dir) * 3.0;
+        let aimZ = player.pos.z + Math.cos(player.dir) * 3.0;
+        let closest = null; let minDist = 4.5; 
+        for(let key in stations) {
+            let s = stations[key]; if (draggedStation && s.id === draggedStation.id) continue;
+            let dist = Math.sqrt((aimX - s.x)**2 + (aimZ - s.z)**2);
+            if (s.type === 'table') dist -= s.r * 0.5; 
+            if (dist < minDist) { minDist = dist; closest = s; }
+        }
+        return closest;
+    }
+
+    let heldMesh = null;
+    function updatePlayerHolding() {
+        if(heldMesh) { playerMesh.remove(heldMesh); heldMesh = null; }
+        if(player.holding) { heldMesh = createItemMesh(player.holding); heldMesh.position.set(0, 1.4, 1.2); playerMesh.add(heldMesh); }
+    }
+
+    function updateStationVisuals() {
+        for(let key in stations) { if(stations[key].visuals) { stations[key].visuals.forEach(v => scene.remove(v)); stations[key].visuals = []; } else stations[key].visuals = []; }
+        const grillY = 3.2; const prepY = 3.0; const countY = 3.0; const tableY = 2.2;
+        
+        if(stations.grill) stations.grill.slots.forEach((s, i) => { if(s) { let m = createItemMesh(s.state); m.position.set(stations.grill.x - 1.5 + i*3, grillY, stations.grill.z); scene.add(m); stations.grill.visuals.push(m); } });
+        if(stations.prep) stations.prep.slots.forEach((s, i) => { if(s) { let m = createItemMesh(s); m.position.set(stations.prep.x, prepY, stations.prep.z - 0.8 + i*1.6); scene.add(m); stations.prep.visuals.push(m); } });
+        if(stations.counter) for(let i=0; i<stations.counter.cleanPlates; i++) { let p = createItemMesh('plate'); p.position.set(stations.counter.x, countY + i*0.2, stations.counter.z); scene.add(p); stations.counter.visuals.push(p); }
+        
+        for(let key in stations) {
+            let t = stations[key];
+            if (t.type === 'table') {
+                if (t.served > 0) { for(let i=0; i<t.served; i++) { let m = createItemMesh('plated_burger'); m.position.set(t.x - 1 + i*2, tableY, t.z); scene.add(m); t.visuals.push(m); } } 
+                else if (t.dirtyPlates > 0) { for(let i=0; i<t.dirtyPlates; i++) { let m = createItemMesh('dirty_plate'); m.position.set(t.x - 1 + i*2, tableY, t.z); scene.add(m); t.visuals.push(m); } }
             }
-            document.getElementById('edit-hud').style.display = 'none';
-            document.getElementById('action-btn').style.background = '#FFC107'; document.getElementById('action-btn').style.borderColor = '#FF9800';
-            document.getElementById('action-btn').innerHTML = '✋<div class="hint">SPACE</div>';
-            gridHelper.visible = false; highlightRing.visible = false;
-
-            if (eco.day === 0) document.getElementById('start-screen').style.display = 'flex';
-            else document.getElementById('shop-screen').style.display = 'flex';
-            gameState = 'start'; 
         }
-        window.startEditMode = startEditMode; window.saveEditMode = saveEditMode;
+    }
 
-        // --- PROGRESSION & SHOP LOGIC ---
-        function getCumulativeRating() { return globalStats.lifetimeGroups === 0 ? 0 : (globalStats.lifetimeStars / globalStats.lifetimeGroups).toFixed(1); }
-        function updateCashUI() { document.getElementById('cash-val').innerText = `$${eco.cash}`; document.getElementById('rating-val').innerText = `⭐ ${getCumulativeRating()}`; }
-
-        function startNextDay() {
-            eco.day++; 
-            let spawnWait = Math.max(120, 600 - (eco.day * 60)) + Math.random() * 100; 
-            stats = { groupsServed: 0, totalStars: 0, cashEarned: 0, groupsRemaining: eco.day + 2, spawnTimer: spawnWait };
-            
-            document.getElementById('start-screen').style.display = 'none'; document.getElementById('shop-screen').style.display = 'none';
-            document.getElementById('day-banner').innerHTML = `DAY ${eco.day}<br><span id="day-sub" style="font-size: 14px; color: #666;">Groups Left: ${stats.groupsRemaining}</span>`;
-            updateCashUI();
-            
-            if(stations.counter) stations.counter.cleanPlates = 8; 
-            if(stations.grill) stations.grill.slots = [null, null]; 
-            if(stations.prep) stations.prep.slots = [null, null];
-            player.holding = null; updatePlayerHolding();
-            
-            groups.forEach(g => scene.remove(g.mesh)); groups = [];
-            for(let key in stations) if (stations[key].type === 'table') { stations[key].group = null; stations[key].served = 0; stations[key].dirtyPlates = 0; }
-            updateStationVisuals();
-            
-            player.pos = getValidSpawn(); playerMesh.position.copy(player.pos);
-            gameState = 'playing';
-            
-            bots.forEach(b => scene.remove(b.mesh)); bots = [];
-            for(let i=0; i<upg.bussers; i++) spawnBot('busser');
-            for(let i=0; i<upg.chefs; i++) spawnBot('chef');
-        }
-
-        function buyUpgrade(type, cost) {
-            if (eco.cash >= cost) {
-                eco.cash -= cost;
-                if(type === 'speed') upg.speedLevel++; 
-                if(type === 'grill') { upg.grillLevel++; upg.grillMult += 0.35; }
-                if(type === 'decor') { upg.decorLevel++; upg.patienceMult += 0.35; }
-                if(type === 'table') { addStation('table'+upg.tables, 'table', bounds.r-3, bounds.t+3, 5, 5); upg.tables++; }
-                if(type === 'floor') { 
-                    eco.floorLevel++; 
-                    if(eco.floorLevel===2) bounds = {l:-15, r:15, t:-10, b:10}; 
-                    if(eco.floorLevel===3) bounds = {l:-20, r:20, t:-15, b:15}; 
-                    updateRoomVisuals(); 
+    function handleAction() {
+        if (gameState === 'edit') {
+            if (draggedStation) {
+                let frontX = Math.round((player.pos.x + Math.sin(player.dir) * 4));
+                let frontZ = Math.round((player.pos.z + Math.cos(player.dir) * 4));
+                if (isValidPlacement(draggedStation, frontX, frontZ)) {
+                    draggedStation.x = frontX; draggedStation.z = frontZ; draggedStation.mesh.position.set(frontX, 0, frontZ);
+                    draggedStation = null; placementFootprint.visible = false; updateStationVisuals();
                 }
-                if(type === 'chef') upg.chefs++;
-                if(type === 'busser') upg.bussers++;
-                updateCashUI(); updateShopButtons();
+            } else {
+                let target = getClosestInteractable();
+                if (target) { draggedStation = target; originalDragPos = {x: target.x, z: target.z}; placementFootprint.scale.set(target.w + 0.5, 1, target.d + 0.5); }
             }
+            return;
         }
-        window.buyUpgrade = buyUpgrade; 
 
-        function updateShopButtons() {
-            let sItems = [
-                { id: 'table', title: 'Add Table', desc: 'Serve more customers', isMax: upg.tables >= 4, cost: 100 * upg.tables },
-                { id: 'floor', title: 'Expand Floor', desc: 'Bigger restaurant space', isMax: eco.floorLevel >= 3, cost: 200 * eco.floorLevel },
-                { id: 'chef', title: 'Chef Bot', desc: 'Auto-places raw meat on grill', isMax: false, cost: 150 + upg.chefs*100 },
-                { id: 'busser', title: 'Busser Bot', desc: 'Auto-washes & stacks dirty plates', isMax: false, cost: 150 + upg.bussers*100 },
-                { id: 'speed', title: 'Roller Skates', desc: 'Move faster', isMax: upg.speedLevel >= 3, cost: 30 + upg.speedLevel*20 },
-                { id: 'grill', title: 'Turbo Grill', desc: 'Cook faster', isMax: upg.grillLevel >= 3, cost: 50 + upg.grillLevel*30 },
-                { id: 'decor', title: 'Fancy Decor', desc: 'Customers more patient', isMax: upg.decorLevel >= 3, cost: 40 + upg.decorLevel*25 }
-            ];
+        if (gameState !== 'playing') return;
+        let target = getClosestInteractable(); if (!target) return;
+        let id = target.type; let handled = false; 
 
-            sItems.sort((a, b) => {
-                if (a.isMax && !b.isMax) return 1;
-                if (!a.isMax && b.isMax) return -1;
-                return a.cost - b.cost;
+        if (id === 'fridge' && !player.holding) { player.holding = 'raw'; handled = true; }
+        else if (id === 'sink' && player.holding === 'dirty_plate') { player.holding = 'plate'; handled = true; }
+        else if (id === 'grill') {
+            if (player.holding === 'raw') { let idx = target.slots.indexOf(null); if(idx !== -1) { target.slots[idx] = { state: 'raw', progress: 0 }; player.holding = null; handled = true; } }
+            else if (!player.holding) { let idx = target.slots.findIndex(s => s && s.state === 'cooked'); if(idx !== -1) { target.slots[idx] = null; player.holding = 'cooked'; handled = true; } }
+            else if (player.holding === 'plate') { let idx = target.slots.findIndex(s => s && s.state === 'cooked'); if(idx !== -1) { target.slots[idx] = null; player.holding = 'plated_burger'; handled = true; } }
+        }
+        else if (id === 'prep') {
+            if (player.holding) { let idx = target.slots.indexOf(null); if(idx !== -1) { target.slots[idx] = player.holding; player.holding = null; handled = true; } }
+            else { let idx = target.slots.findIndex(s => s !== null); if(idx !== -1) { player.holding = target.slots[idx]; target.slots[idx] = null; handled = true; } }
+        }
+        else if (id === 'trash') {
+            if (player.holding === 'raw' || player.holding === 'cooked') { player.holding = null; handled = true; }
+            else if (player.holding === 'plated_burger') { player.holding = 'plate'; handled = true; }
+        }
+        else if (id === 'counter') {
+            if (!player.holding && target.cleanPlates > 0) { player.holding = 'plate'; target.cleanPlates--; handled = true; }
+            else if (player.holding === 'cooked' && target.cleanPlates > 0) { player.holding = 'plated_burger'; target.cleanPlates--; handled = true; }
+            else if (player.holding === 'plate') { player.holding = null; target.cleanPlates++; handled = true; }
+        }
+        else if (id === 'table') {
+            if (player.holding === 'plated_burger' && target.group && target.group.state === 'ordering' && target.served < target.group.size) {
+                player.holding = null; target.served++; handled = true;
+                if (target.served >= target.group.size) { target.group.eatTimer = 200; target.group.state = 'eating'; }
+            } else if (!player.holding && target.dirtyPlates > 0) { player.holding = 'dirty_plate'; target.dirtyPlates--; handled = true; }
+        }
+        if (handled) { updatePlayerHolding(); updateStationVisuals(); }
+    }
+
+    const uiContainer = document.getElementById('floating-ui');
+    function getScreenPos(vec3) {
+        let pos = vec3.clone(); pos.project(camera);
+        return { x: (pos.x*.5+.5)*window.innerWidth, y: (pos.y*-.5+.5)*window.innerHeight, z: pos.z };
+    }
+    function drawFloatingUI() {
+        let html = ''; 
+        if(gameState === 'playing') {
+            if(stations.grill) stations.grill.slots.forEach((s, i) => {
+                if(s && s.state === 'raw') {
+                    let p = getScreenPos(new THREE.Vector3(stations.grill.x - 1.5 + i*3, 5, stations.grill.z));
+                    if(p.z < 1) html += `<div class="float-bar-container" style="left:${p.x}px; top:${p.y}px;"><div class="float-bar-fill" style="width:${(s.progress / 200 * 100)}%"></div></div>`;
+                }
             });
-
-            let shopHtml = '';
-            sItems.forEach(item => {
-                let btnHtml = item.isMax ? `<button class="buy-btn" disabled>MAX</button>` : 
-                    `<button class="buy-btn" onclick="buyUpgrade('${item.id}', ${item.cost})" ${eco.cash < item.cost ? 'disabled' : ''}>$${item.cost}</button>`;
-                shopHtml += `<div class="upgrade-item"><div><strong>${item.title}</strong><br><span style="font-size:12px; color:#aaa;">${item.desc}</span></div>${btnHtml}</div>`;
+            groups.forEach(g => {
+                if(g.state === 'queue') {
+                    let p = getScreenPos(new THREE.Vector3(g.pos.x, 4, g.pos.z));
+                    if(p.z < 1) html += `<div class="float-bar-container" style="left:${p.x}px; top:${p.y}px; width:40px;"><div class="float-bar-fill" style="width:${Math.max(0, (g.waitPatience / g.maxWait) * 100)}%; background:#03A9F4;"></div></div>`;
+                }
             });
-            document.getElementById('dynamic-shop').innerHTML = shopHtml;
-        }
-
-        function endDay() {
-            globalStats.lifetimeStars += stats.totalStars; globalStats.lifetimeGroups += stats.groupsServed;
-            let cumRating = parseFloat(getCumulativeRating());
-            if (eco.day >= 5 && cumRating < 2.0) {
-                gameState = 'gameover'; document.getElementById('fail-days').innerText = eco.day;
-                document.getElementById('game-over-screen').style.display = 'flex'; return;
-            }
-            gameState = 'shop'; document.getElementById('shop-earned').innerText = `+$${stats.cashEarned}`;
-            let avgStars = stats.groupsServed > 0 ? Math.round(stats.totalStars / stats.groupsServed) : 0;
-            document.getElementById('shop-stars').innerText = `⭐ ${cumRating} (Today: ${avgStars})`;
-            updateShopButtons(); document.getElementById('shop-screen').style.display = 'flex'; highlightRing.visible = false;
-        }
-
-        // --- BOTS AI ---
-        function spawnBot(type) {
-            let b = { type: type, pos: getValidSpawn(), target: null, state: 'idle', holding: null, mesh: new THREE.Group(), timer: 0 };
-            const m = new THREE.Mesh(geoSphere, matBot); m.scale.set(1.2, 1.2, 1.2); m.position.y = 1.2; m.castShadow=true;
-            const eye = new THREE.Mesh(geoBox, new THREE.MeshBasicMaterial({color: type==='chef'?'#ffeb3b':'#00bcd4'})); eye.scale.set(0.8, 0.3, 0.3); eye.position.set(0, 1.4, 0.5);
-            b.mesh.add(m, eye); b.mesh.position.copy(b.pos); scene.add(b.mesh); bots.push(b);
-        }
-
-        function updateBots() {
-            bots.forEach(b => {
-                b.mesh.position.y = Math.sin(Date.now()/200)*0.2; 
-                if(b.state === 'idle') {
-                    if (b.type === 'chef' && stations.grill && stations.fridge) {
-                        let emptySlot = stations.grill.slots.indexOf(null);
-                        if (emptySlot !== -1) { b.target = stations.fridge; b.state = 'fetching_raw'; }
-                    } else if (b.type === 'busser' && stations.sink && stations.counter) {
-                        let dirtyTable = null;
-                        for(let key in stations) if(stations[key].type === 'table' && stations[key].dirtyPlates > 0) dirtyTable = stations[key];
-                        if (dirtyTable) { b.target = dirtyTable; b.state = 'fetching_dirty'; }
+            for(let key in stations) {
+                let ts = stations[key];
+                if(ts.type === 'table' && ts.group && ts.group.state === 'ordering') {
+                    let p = getScreenPos(new THREE.Vector3(ts.x, 5, ts.z));
+                    if(p.z < 1) {
+                        let str = ''; for(let i=0; i<ts.group.size; i++) str += (i < ts.served) ? '✔️' : '🍔';
+                        html += `<div class="float-bubble" style="left:${p.x}px; top:${p.y - 20}px;">${str}</div>`;
+                        let pPct = Math.max(0, ts.group.foodPatience / ts.group.maxFood);
+                        let color = pPct > 0.5 ? '#4CAF50' : pPct > 0.25 ? '#FFEB3B' : '#F44336';
+                        html += `<div class="float-bar-container" style="left:${p.x}px; top:${p.y}px; width:80px;"><div class="float-bar-fill" style="width:${pPct*100}%; background:${color};"></div></div>`;
                     }
-                } 
-                else {
-                    let tx = b.target.x, tz = b.target.z;
-                    let dx = tx - b.pos.x, dz = tz - b.pos.z; let dist = Math.sqrt(dx*dx + dz*dz);
-                    if (dist > 3) {
-                        b.pos.x += (dx/dist)*0.15*deltaScale; b.pos.z += (dz/dist)*0.15*deltaScale;
-                        b.mesh.position.x = b.pos.x; b.mesh.position.z = b.pos.z;
-                        b.mesh.rotation.y = Math.atan2(dx, dz);
-                    } else {
-                        if (b.type === 'chef') {
-                            if (b.state === 'fetching_raw') { b.holding = 'raw'; b.target = stations.grill; b.state = 'taking_to_grill'; }
-                            else if (b.state === 'taking_to_grill') {
-                                let emptySlot = stations.grill.slots.indexOf(null);
-                                if (emptySlot !== -1) stations.grill.slots[emptySlot] = { state: 'raw', progress: 0 };
-                                b.holding = null; b.state = 'idle'; updateStationVisuals();
-                            }
-                        } else if (b.type === 'busser') {
-                            if (b.state === 'fetching_dirty') {
-                                if(b.target.dirtyPlates > 0) { b.target.dirtyPlates--; b.holding = 'dirty_plate'; b.target = stations.sink; b.state = 'taking_to_sink'; updateStationVisuals(); }
-                                else b.state = 'idle';
-                            } else if (b.state === 'taking_to_sink') { b.holding = 'plate'; b.timer = 60; b.state = 'washing'; 
-                            } else if (b.state === 'washing') {
-                                b.timer -= deltaScale; if(b.timer<=0) { b.target = stations.counter; b.state = 'taking_to_counter'; }
-                            } else if (b.state === 'taking_to_counter') {
-                                if (stations.counter.cleanPlates < 20) stations.counter.cleanPlates++;
-                                b.holding = null; b.state = 'idle'; updateStationVisuals();
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // --- CUSTOMER AI ---
-        function spawnGroup() {
-            let size = Math.random() > 0.5 ? 2 : 1;
-            let g = { id: Math.random(), size: size, state: 'queue', 
-                waitPatience: 1800 * upg.patienceMult, maxWait: 1800 * upg.patienceMult,
-                foodPatience: (size * 1200) * upg.patienceMult, maxFood: (size * 1200) * upg.patienceMult,
-                eatTimer: 0, pos: new THREE.Vector3(bounds.l+6, 0, bounds.b + 5), target: new THREE.Vector3(bounds.l+6, 0, bounds.b + 5),
-                mesh: new THREE.Group(), wobble: 0
-            };
-
-            for(let i=0; i<size; i++) {
-                let m = new THREE.Group();
-                const body = new THREE.Mesh(geoCyl, matCustColors[Math.floor(Math.random()*matCustColors.length)]); body.scale.set(1.2, 1.4, 1.2); body.position.y = 0.7; body.castShadow=true; body.receiveShadow=true;
-                const head = new THREE.Mesh(geoSphere, matSkin); head.scale.set(1, 1, 1); head.position.y = 1.6; head.castShadow=true; head.receiveShadow=true;
-                m.add(body, head); m.position.set(i*1.8 - (size>1?0.9:0), 0, i*0.5); g.mesh.add(m);
-            }
-            scene.add(g.mesh); groups.push(g);
-            stats.groupsRemaining--; document.getElementById('day-sub').innerText = `Groups Left: ${stats.groupsRemaining}`;
-        }
-
-        // --- PHYSICS & LOGIC ---
-        function checkCollision(nx, nz, ignoreEditCheck = false) {
-            if (nx < bounds.l+1 || nx > bounds.r-1 || nz < bounds.t+1 || nz > bounds.b-1) return true; 
-            let pR = player.radius;
-            for(let key in stations) {
-                let s = stations[key];
-                if (!ignoreEditCheck && draggedStation && s.id === draggedStation.id) continue; 
-                let dist = Math.sqrt((nx - s.x)**2 + (nz - s.z)**2);
-                if (s.type === 'table') { if (dist < pR + s.r) return true; } 
-                else { if (nx > s.x - s.w/2 - pR && nx < s.x + s.w/2 + pR && nz > s.z - s.d/2 - pR && nz < s.z + s.d/2 + pR) return true; }
-            }
-            return false;
-        }
-
-        function isValidPlacement(station, nx, nz) {
-            let left = nx - station.w/2, right = nx + station.w/2, top = nz - station.d/2, bottom = nz + station.d/2;
-            if (left < bounds.l || right > bounds.r || top < bounds.t || bottom > bounds.b) return false;
-            if (nx > bounds.l+4 && nx < bounds.l+12 && nz > bounds.b-4) return false; // Wait area
-            if (nx > -4 && nx < 4 && nz > bounds.b-4) return false; // Door area
-
-            for (let key in stations) {
-                let s2 = stations[key]; if (s2.id === station.id) continue;
-                if (s2.type === 'table') { if (Math.sqrt((nx - s2.x)**2 + (nz - s2.z)**2) < s2.r + Math.max(station.w, station.d)/2) return false; } 
-                else { if (!(right <= s2.x-s2.w/2 || left >= s2.x+s2.w/2 || bottom <= s2.z-s2.d/2 || top >= s2.z+s2.d/2)) return false; }
-            }
-            return true;
-        }
-
-        function getClosestInteractable() {
-            let aimX = player.pos.x + Math.sin(player.dir) * 3.0;
-            let aimZ = player.pos.z + Math.cos(player.dir) * 3.0;
-            let closest = null; let minDist = 4.5; 
-            
-            for(let key in stations) {
-                let s = stations[key]; if (draggedStation && s.id === draggedStation.id) continue;
-                let dist = Math.sqrt((aimX - s.x)**2 + (aimZ - s.z)**2);
-                if (s.type === 'table') dist -= s.r * 0.5; 
-                if (dist < minDist) { minDist = dist; closest = s; }
-            }
-            return closest;
-        }
-
-        // --- VISUAL UPDATES ---
-        let heldMesh = null;
-        function updatePlayerHolding() {
-            if(heldMesh) { playerMesh.remove(heldMesh); heldMesh = null; }
-            if(player.holding) { heldMesh = createItemMesh(player.holding); heldMesh.position.set(0, 1.4, 1.2); playerMesh.add(heldMesh); }
-        }
-
-        function updateStationVisuals() {
-            for(let key in stations) { if(stations[key].visuals) { stations[key].visuals.forEach(v => scene.remove(v)); stations[key].visuals = []; } else stations[key].visuals = []; }
-            const grillY = 3.2; const prepY = 3.0; const countY = 3.0; const tableY = 2.2;
-            
-            if(stations.grill) stations.grill.slots.forEach((s, i) => { if(s) { let m = createItemMesh(s.state); m.position.set(stations.grill.x - 1.5 + i*3, grillY, stations.grill.z); scene.add(m); stations.grill.visuals.push(m); } });
-            if(stations.prep) stations.prep.slots.forEach((s, i) => { if(s) { let m = createItemMesh(s); m.position.set(stations.prep.x, prepY, stations.prep.z - 0.8 + i*1.6); scene.add(m); stations.prep.visuals.push(m); } });
-            if(stations.counter) for(let i=0; i<stations.counter.cleanPlates; i++) { let p = createItemMesh('plate'); p.position.set(stations.counter.x, countY + i*0.2, stations.counter.z); scene.add(p); stations.counter.visuals.push(p); }
-            
-            for(let key in stations) {
-                let t = stations[key];
-                if (t.type === 'table') {
-                    if (t.served > 0) { for(let i=0; i<t.served; i++) { let m = createItemMesh('plated_burger'); m.position.set(t.x - 1 + i*2, tableY, t.z); scene.add(m); t.visuals.push(m); } } 
-                    else if (t.dirtyPlates > 0) { for(let i=0; i<t.dirtyPlates; i++) { let m = createItemMesh('dirty_plate'); m.position.set(t.x - 1 + i*2, tableY, t.z); scene.add(m); t.visuals.push(m); } }
                 }
             }
         }
+        uiContainer.innerHTML = html;
+    }
 
-        function handleAction() {
+    // --- DELTA TIME SYSTEM ---
+    let lastFrameTime = performance.now();
+    let deltaTime = 0;
+    const TARGET_DELTA = 1 / 60;
+
+    // Animate clouds
+    const cloudMeshes = [];
+    for(let c = 0; c < 8; c++) {
+        const cloudGrp = new THREE.Group();
+        const cx2 = (Math.random()-0.5) * 100;
+        const cz2 = -40 + Math.random() * -60;
+        for(let part = 0; part < 4; part++) {
+            const cloudPuff = new THREE.Mesh(
+                new THREE.SphereGeometry(2.5 + Math.random()*2, 8, 6),
+                new THREE.MeshLambertMaterial({color:'#ffffff', transparent:true, opacity:0.85})
+            );
+            cloudPuff.position.set((Math.random()-0.5)*5, Math.random()*2, (Math.random()-0.5)*3);
+            cloudPuff.castShadow = false;
+            cloudGrp.add(cloudPuff);
+        }
+        cloudGrp.position.set(cx2, 20 + Math.random()*8, cz2);
+        cloudGrp._speed = 0.008 + Math.random() * 0.012;
+        scene.add(cloudGrp);
+        cloudMeshes.push(cloudGrp);
+    }
+
+    // --- MAIN LOOP ---
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        const currentTime = performance.now();
+        deltaTime = Math.min((currentTime - lastFrameTime) / 1000, 0.1);
+        lastFrameTime = currentTime;
+        deltaScale = deltaTime / TARGET_DELTA;
+
+        cloudMeshes.forEach(c => {
+            c.position.x += c._speed * deltaScale;
+            if(c.position.x > 70) c.position.x = -70;
+        });
+
+        if (gameState === 'playing' || gameState === 'edit') {
             if (gameState === 'edit') {
                 if (draggedStation) {
                     let frontX = Math.round((player.pos.x + Math.sin(player.dir) * 4));
                     let frontZ = Math.round((player.pos.z + Math.cos(player.dir) * 4));
-                    if (isValidPlacement(draggedStation, frontX, frontZ)) {
-                        draggedStation.x = frontX; draggedStation.z = frontZ; draggedStation.mesh.position.set(frontX, 0, frontZ);
-                        draggedStation = null; placementFootprint.visible = false; updateStationVisuals();
-                    }
-                } else {
-                    let target = getClosestInteractable();
-                    if (target) { draggedStation = target; originalDragPos = {x: target.x, z: target.z}; placementFootprint.scale.set(target.w + 0.5, 1, target.d + 0.5); }
-                }
-                return;
-            }
-
-            if (gameState !== 'playing') return;
-            let target = getClosestInteractable(); if (!target) return;
-            let id = target.type; let handled = false; 
-
-            if (id === 'fridge' && !player.holding) { player.holding = 'raw'; handled = true; }
-            else if (id === 'sink' && player.holding === 'dirty_plate') { player.holding = 'plate'; handled = true; }
-            else if (id === 'grill') {
-                if (player.holding === 'raw') { let idx = target.slots.indexOf(null); if(idx !== -1) { target.slots[idx] = { state: 'raw', progress: 0 }; player.holding = null; handled = true; } }
-                else if (!player.holding) { let idx = target.slots.findIndex(s => s && s.state === 'cooked'); if(idx !== -1) { target.slots[idx] = null; player.holding = 'cooked'; handled = true; } }
-                else if (player.holding === 'plate') { let idx = target.slots.findIndex(s => s && s.state === 'cooked'); if(idx !== -1) { target.slots[idx] = null; player.holding = 'plated_burger'; handled = true; } }
-            }
-            else if (id === 'prep') {
-                if (player.holding) { let idx = target.slots.indexOf(null); if(idx !== -1) { target.slots[idx] = player.holding; player.holding = null; handled = true; } }
-                else { let idx = target.slots.findIndex(s => s !== null); if(idx !== -1) { player.holding = target.slots[idx]; target.slots[idx] = null; handled = true; } }
-            }
-            else if (id === 'trash') {
-                if (player.holding === 'raw' || player.holding === 'cooked') { player.holding = null; handled = true; }
-                else if (player.holding === 'plated_burger') { player.holding = 'plate'; handled = true; }
-            }
-            else if (id === 'counter') {
-                if (!player.holding && target.cleanPlates > 0) { player.holding = 'plate'; target.cleanPlates--; handled = true; }
-                else if (player.holding === 'cooked' && target.cleanPlates > 0) { player.holding = 'plated_burger'; target.cleanPlates--; handled = true; }
-                else if (player.holding === 'plate') { player.holding = null; target.cleanPlates++; handled = true; }
-            }
-            else if (id === 'table') {
-                if (player.holding === 'plated_burger' && target.group && target.group.state === 'ordering' && target.served < target.group.size) {
-                    player.holding = null; target.served++; handled = true;
-                    if (target.served >= target.group.size) { target.group.eatTimer = 200; target.group.state = 'eating'; }
-                } else if (!player.holding && target.dirtyPlates > 0) { player.holding = 'dirty_plate'; target.dirtyPlates--; handled = true; }
-            }
-            if (handled) { updatePlayerHolding(); updateStationVisuals(); }
-        }
-
-        // --- HTML UI HELPERS ---
-        const uiContainer = document.getElementById('floating-ui');
-        function getScreenPos(vec3) {
-            let pos = vec3.clone(); pos.project(camera);
-            return { x: (pos.x*.5+.5)*window.innerWidth, y: (pos.y*-.5+.5)*window.innerHeight, z: pos.z };
-        }
-        function drawFloatingUI() {
-            let html = ''; 
-            if(gameState === 'playing') {
-                if(stations.grill) stations.grill.slots.forEach((s, i) => {
-                    if(s && s.state === 'raw') {
-                        let p = getScreenPos(new THREE.Vector3(stations.grill.x - 1.5 + i*3, 5, stations.grill.z));
-                        if(p.z < 1) html += `<div class="float-bar-container" style="left:${p.x}px; top:${p.y}px;"><div class="float-bar-fill" style="width:${(s.progress / 200 * 100)}%"></div></div>`;
-                    }
-                });
-                groups.forEach(g => {
-                    if(g.state === 'queue') {
-                        let p = getScreenPos(new THREE.Vector3(g.pos.x, 4, g.pos.z));
-                        if(p.z < 1) html += `<div class="float-bar-container" style="left:${p.x}px; top:${p.y}px; width:40px;"><div class="float-bar-fill" style="width:${Math.max(0, (g.waitPatience / g.maxWait) * 100)}%; background:#03A9F4;"></div></div>`;
-                    }
-                });
-                for(let key in stations) {
-                    let ts = stations[key];
-                    if(ts.type === 'table' && ts.group && ts.group.state === 'ordering') {
-                        let p = getScreenPos(new THREE.Vector3(ts.x, 5, ts.z));
-                        if(p.z < 1) {
-                            let str = ''; for(let i=0; i<ts.group.size; i++) str += (i < ts.served) ? '✔️' : '🍔';
-                            html += `<div class="float-bubble" style="left:${p.x}px; top:${p.y - 20}px;">${str}</div>`;
-                            let pPct = Math.max(0, ts.group.foodPatience / ts.group.maxFood);
-                            let color = pPct > 0.5 ? '#4CAF50' : pPct > 0.25 ? '#FFEB3B' : '#F44336';
-                            html += `<div class="float-bar-container" style="left:${p.x}px; top:${p.y}px; width:80px;"><div class="float-bar-fill" style="width:${pPct*100}%; background:${color};"></div></div>`;
-                        }
-                    }
-                }
-            }
-            uiContainer.innerHTML = html;
-        }
-
-        // --- DELTA TIME SYSTEM ---
-        let lastFrameTime = performance.now();
-        let deltaTime = 0;
-        const TARGET_DELTA = 1 / 60; // Normalize to 60fps
-
-        // --- MAIN LOOP ---
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            // Calculate delta time for frame-independent updates
-            const currentTime = performance.now();
-            deltaTime = Math.min((currentTime - lastFrameTime) / 1000, 0.1); // Cap at 100ms to prevent jumps
-            lastFrameTime = currentTime;
-            const deltaScale = deltaTime / TARGET_DELTA; // Scale relative to 60fps target
-
-            if (gameState === 'playing' || gameState === 'edit') {
-                if (gameState === 'edit') {
-                    if (draggedStation) {
-                        let frontX = Math.round((player.pos.x + Math.sin(player.dir) * 4));
-                        let frontZ = Math.round((player.pos.z + Math.cos(player.dir) * 4));
-                        draggedStation.mesh.position.lerp(new THREE.Vector3(frontX, 0, frontZ), 0.3);
-                        placementFootprint.visible = true; placementFootprint.position.set(frontX, 0.1, frontZ);
-                        placementFootprint.material.color.setHex(isValidPlacement(draggedStation, frontX, frontZ) ? 0x00ff00 : 0xff0000);
-                        highlightRing.visible = false;
-                    } else {
-                        placementFootprint.visible = false;
-                        let target = getClosestInteractable();
-                        if (target) { highlightRing.visible = true; highlightRing.position.set(target.x, 0.1, target.z); } else highlightRing.visible = false; 
-                    }
+                    draggedStation.mesh.position.lerp(new THREE.Vector3(frontX, 0, frontZ), 0.3);
+                    placementFootprint.visible = true; placementFootprint.position.set(frontX, 0.1, frontZ);
+                    placementFootprint.material.color.setHex(isValidPlacement(draggedStation, frontX, frontZ) ? 0x00ff00 : 0xff0000);
+                    highlightRing.visible = false;
                 } else {
                     placementFootprint.visible = false;
                     let target = getClosestInteractable();
                     if (target) { highlightRing.visible = true; highlightRing.position.set(target.x, 0.1, target.z); } else highlightRing.visible = false; 
                 }
+            } else {
+                placementFootprint.visible = false;
+                let target = getClosestInteractable();
+                if (target) { highlightRing.visible = true; highlightRing.position.set(target.x, 0.1, target.z); } else highlightRing.visible = false; 
+            }
 
-                // Movement
-                let pSpeed = player.speed + (upg.speedLevel * 0.05); 
-                let vx = joyVector.x * pSpeed * deltaScale, vz = joyVector.z * pSpeed * deltaScale;
-                if (keys.w) vz = -pSpeed * deltaScale; if (keys.s) vz = pSpeed * deltaScale;
-                if (keys.a) vx = -pSpeed * deltaScale; if (keys.d) vx = pSpeed * deltaScale;
+            // Movement
+            let pSpeed = player.speed + (upg.speedLevel * 0.05); 
+            let vx = joyVector.x * pSpeed * deltaScale, vz = joyVector.z * pSpeed * deltaScale;
+            if (keys.w) vz = -pSpeed * deltaScale; if (keys.s) vz = pSpeed * deltaScale;
+            if (keys.a) vx = -pSpeed * deltaScale; if (keys.d) vx = pSpeed * deltaScale;
 
-                let nx = player.pos.x + vx, nz = player.pos.z + vz;
-                if (!checkCollision(nx, nz)) { player.pos.x = nx; player.pos.z = nz; }
-                else if (!checkCollision(nx, player.pos.z)) { player.pos.x = nx; }
-                else if (!checkCollision(player.pos.x, nz)) { player.pos.z = nz; }
+            let nx = player.pos.x + vx, nz = player.pos.z + vz;
+            if (!checkCollision(nx, nz)) { player.pos.x = nx; player.pos.z = nz; }
+            else if (!checkCollision(nx, player.pos.z)) { player.pos.x = nx; }
+            else if (!checkCollision(player.pos.x, nz)) { player.pos.z = nz; }
 
-                // Rotation
-                if (vx !== 0 || vz !== 0) {
-                    let targetAngle = Math.atan2(vx, vz); 
-                    let diff = targetAngle - player.dir;
-                    while(diff < -Math.PI) diff += Math.PI*2; while(diff > Math.PI) diff -= Math.PI*2;
-                    player.dir += diff * 0.3; playerMesh.rotation.y = player.dir;
-                    player.wobble += (0.3 * deltaScale); pBody.rotation.z = Math.sin(player.wobble) * 0.1;
-                    playerMesh.position.y = Math.abs(Math.sin(player.wobble)) * 0.2;
-                } else { player.wobble = 0; pBody.rotation.z = 0; playerMesh.position.y = 0; }
-                
-                playerMesh.position.x = player.pos.x; playerMesh.position.z = player.pos.z;
+            if (vx !== 0 || vz !== 0) {
+                let targetAngle = Math.atan2(vx, vz); 
+                let diff = targetAngle - player.dir;
+                while(diff < -Math.PI) diff += Math.PI*2; while(diff > Math.PI) diff -= Math.PI*2;
+                player.dir += diff * 0.3; playerMesh.rotation.y = player.dir;
+                player.wobble += (0.3 * deltaScale); pBody.rotation.z = Math.sin(player.wobble) * 0.1;
+                playerMesh.position.y = Math.abs(Math.sin(player.wobble)) * 0.2;
+            } else { player.wobble = 0; pBody.rotation.z = 0; playerMesh.position.y = 0; }
+            
+            playerMesh.position.x = player.pos.x; playerMesh.position.z = player.pos.z;
 
-                // CAMERA TRACKING
-                camera.position.x = player.pos.x; camera.position.z = player.pos.z + (frustumSize * 1.0); 
-                camera.lookAt(player.pos.x, 0, player.pos.z);
+            // CAMERA TRACKING
+            camera.position.x = player.pos.x; camera.position.z = player.pos.z + (frustumSize * 1.0); 
+            camera.lookAt(player.pos.x, 0, player.pos.z);
 
-                // --- LOGIC ---
-                if (gameState === 'playing') {
-                    updateBots();
+            if (gameState === 'playing') {
+                updateBots();
 
-                    let needVisUpdate = false;
-                    if(stations.grill) stations.grill.slots.forEach(slot => {
-                        if (slot && slot.state === 'raw') { slot.progress += (1 * upg.grillMult * deltaScale); if (slot.progress >= 200) { slot.state = 'cooked'; needVisUpdate = true; } }
-                    });
-                    if(needVisUpdate) updateStationVisuals();
+                let needVisUpdate = false;
+                if(stations.grill) stations.grill.slots.forEach(slot => {
+                    if (slot && slot.state === 'raw') { slot.progress += (1 * upg.grillMult * deltaScale); if (slot.progress >= 200) { slot.state = 'cooked'; needVisUpdate = true; } }
+                });
+                if(needVisUpdate) updateStationVisuals();
 
-                    if (stats.spawnTimer > 0) stats.spawnTimer -= deltaScale;
-                    if (stats.groupsRemaining > 0 && stats.spawnTimer <= 0) { 
-                        spawnGroup(); stats.spawnTimer = Math.max(120, 500 - (eco.day * 60)) + Math.random() * 200; 
+                if (stats.spawnTimer > 0) stats.spawnTimer -= deltaScale;
+                if (stats.groupsRemaining > 0 && stats.spawnTimer <= 0) { 
+                    spawnGroup(); stats.spawnTimer = Math.max(120, 500 - (eco.day * 60)) + Math.random() * 200; 
+                }
+
+                let anyDirty = false; for(let k in stations) if (stations[k].type === 'table' && stations[k].dirtyPlates > 0) anyDirty = true;
+                if (stats.groupsRemaining === 0 && groups.length === 0 && !anyDirty && stations.counter && stations.counter.cleanPlates >= 8 && !player.holding && !bots.some(b=>b.holding)) {
+                    endDay(); return;
+                }
+
+                let qIdx = 0;
+                for (let i = groups.length - 1; i >= 0; i--) {
+                    let g = groups[i];
+                    if (g.state === 'approach_door') {
+                        g.target.set(getDoorX(), 0, bounds.b - 2);
+                        if (moveGroupToTarget(g, deltaScale)) g.state = 'queue';
                     }
-
-                    // End check: No groups, no dirty plates ANYWHERE
-                    let anyDirty = false; for(let k in stations) if (stations[k].type === 'table' && stations[k].dirtyPlates > 0) anyDirty = true;
-                    if (stats.groupsRemaining === 0 && groups.length === 0 && !anyDirty && stations.counter && stations.counter.cleanPlates >= 8 && !player.holding && !bots.some(b=>b.holding)) {
-                        endDay(); return;
+                    else if (g.state === 'queue') {
+                        g.target.set(bounds.l + 6 + (qIdx%2)*3, 0, bounds.b - 6 + Math.floor(qIdx/2)*3);
+                        moveGroupToTarget(g, deltaScale);
+                        g.waitPatience -= deltaScale;
+                        if (g.waitPatience <= 0) { g.state = 'exit_door'; stats.groupsServed++; } 
+                        else if (qIdx === 0) {
+                            let targetTable = null;
+                            for(let key in stations) {
+                                let s = stations[key]; if (s.type === 'table' && !s.group && s.dirtyPlates === 0) { targetTable = s; break; }
+                            }
+                            if (targetTable) { g.state = 'walking_to_table'; targetTable.group = g; targetTable.served = 0; g.targetTable = targetTable; }
+                        }
+                        qIdx++;
+                    } 
+                    else if (g.state === 'walking_to_table') {
+                        g.target.set(g.targetTable.x - 4, 0, g.targetTable.z);
+                        if (moveGroupToTarget(g, deltaScale)) g.state = 'ordering';
                     }
-
-                    let qIdx = 0;
-                    for (let i = groups.length - 1; i >= 0; i--) {
-                        let g = groups[i];
-                        if (g.state === 'queue') {
-                            g.target.set(bounds.l + 6 + (qIdx%2)*3, 0, bounds.b - 6 + Math.floor(qIdx/2)*3);
-                            moveGroupToTarget(g, deltaScale);
-                            g.waitPatience -= deltaScale;
-                            if (g.waitPatience <= 0) { g.state = 'angry'; stats.groupsServed++; } 
-                            else if (qIdx === 0) {
-                                let targetTable = null;
-                                for(let key in stations) {
-                                    let s = stations[key]; if (s.type === 'table' && !s.group && s.dirtyPlates === 0) { targetTable = s; break; }
-                                }
-                                if (targetTable) { g.state = 'walking_to_table'; targetTable.group = g; targetTable.served = 0; g.targetTable = targetTable; }
-                            }
-                            qIdx++;
-                        } 
-                        else if (g.state === 'walking_to_table') {
-                            g.target.set(g.targetTable.x - 4, 0, g.targetTable.z);
-                            if (moveGroupToTarget(g, deltaScale)) g.state = 'ordering';
+                    else if (g.state === 'ordering') {
+                        g.foodPatience -= deltaScale;
+                        if (g.foodPatience <= 0) { g.state = 'exit_door'; stats.groupsServed++; g.targetTable.group = null; g.targetTable.served = 0; }
+                    }
+                    else if (g.state === 'eating') {
+                        g.eatTimer -= deltaScale;
+                        if (g.eatTimer <= 0) {
+                            let waitScore = Math.max(0, g.waitPatience / g.maxWait), foodScore = Math.max(0, g.foodPatience / g.maxFood);
+                            let totalScore = (waitScore * 0.3) + (foodScore * 0.7);
+                            let stars = totalScore > 0.8 ? 5 : totalScore > 0.6 ? 4 : totalScore > 0.4 ? 3 : totalScore > 0.2 ? 2 : 1;
+                            let cash = g.size * 10 * (stars/5);
+                            eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++; updateCashUI();
+                            g.targetTable.dirtyPlates = g.targetTable.served; g.targetTable.served = 0; g.targetTable.group = null; updateStationVisuals();
+                            g.state = 'exit_door';
                         }
-                        else if (g.state === 'ordering') {
-                            g.foodPatience -= deltaScale;
-                            if (g.foodPatience <= 0) { g.state = 'angry'; stats.groupsServed++; g.targetTable.group = null; g.targetTable.served = 0; }
-                        }
-                        else if (g.state === 'eating') {
-                            g.eatTimer -= deltaScale;
-                            if (g.eatTimer <= 0) {
-                                let waitScore = Math.max(0, g.waitPatience / g.maxWait), foodScore = Math.max(0, g.foodPatience / g.maxFood);
-                                let totalScore = (waitScore * 0.3) + (foodScore * 0.7);
-                                let stars = totalScore > 0.8 ? 5 : totalScore > 0.6 ? 4 : totalScore > 0.4 ? 3 : totalScore > 0.2 ? 2 : 1;
-                                let cash = g.size * 10 * (stars/5);
-                                eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++; updateCashUI();
-                                
-                                g.targetTable.dirtyPlates = g.targetTable.served; g.targetTable.served = 0; g.targetTable.group = null; updateStationVisuals();
-                                g.state = 'leaving';
-                            }
-                        }
-                        else if (g.state === 'leaving' || g.state === 'angry') {
-                            g.target.set(0, 0, bounds.b + 5);
-                            if (moveGroupToTarget(g, deltaScale)) { scene.remove(g.mesh); groups.splice(i, 1); }
-                        }
+                    }
+                    else if (g.state === 'exit_door') {
+                        g.target.set(getDoorX(), 0, bounds.b + 2);
+                        if (moveGroupToTarget(g, deltaScale)) g.state = 'leaving';
+                    }
+                    else if (g.state === 'leaving') {
+                        g.target.set(getDoorX() + (g.id % 1 - 0.5) * 6, 0, bounds.b + 16);
+                        if (moveGroupToTarget(g, deltaScale)) { scene.remove(g.mesh); groups.splice(i, 1); }
                     }
                 }
-                drawFloatingUI();
             }
-            renderer.render(scene, camera);
+            drawFloatingUI();
         }
+        renderer.render(scene, camera);
+    }
 
-        function moveGroupToTarget(g, scale = 1) {
-            let speed = 0.08 * scale; let dx = g.target.x - g.pos.x, dz = g.target.z - g.pos.z; let dist = Math.sqrt(dx*dx + dz*dz);
-            if (dist < 0.2) { g.wobble = 0; g.mesh.position.y = 0; return true; }
-            g.pos.x += (dx/dist) * speed; g.pos.z += (dz/dist) * speed;
-            g.mesh.position.x = g.pos.x; g.mesh.position.z = g.pos.z;
-            g.wobble += (0.2 * scale); g.mesh.position.y = Math.abs(Math.sin(g.wobble)) * 0.2;
-            let targetAngle = Math.atan2(dx, dz); let diff = targetAngle - g.mesh.rotation.y;
-            while(diff < -Math.PI) diff += Math.PI*2; while(diff > Math.PI) diff -= Math.PI*2;
-            g.mesh.rotation.y += diff * 0.2; return false;
-        }
+    function moveGroupToTarget(g, scale = 1) {
+        let speed = 0.08 * scale; let dx = g.target.x - g.pos.x, dz = g.target.z - g.pos.z; let dist = Math.sqrt(dx*dx + dz*dz);
+        if (dist < 0.2) { g.wobble = 0; g.mesh.position.y = 0; return true; }
+        g.pos.x += (dx/dist) * speed; g.pos.z += (dz/dist) * speed;
+        g.mesh.position.x = g.pos.x; g.mesh.position.z = g.pos.z;
+        g.wobble += (0.2 * scale); g.mesh.position.y = Math.abs(Math.sin(g.wobble)) * 0.2;
+        let targetAngle = Math.atan2(dx, dz); let diff = targetAngle - g.mesh.rotation.y;
+        while(diff < -Math.PI) diff += Math.PI*2; while(diff > Math.PI) diff -= Math.PI*2;
+        g.mesh.rotation.y += diff * 0.2; return false;
+    }
 
-        animate();
-    </script>
+    animate();
+</script>
+
 </body>
 </html>
