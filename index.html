@@ -79,6 +79,25 @@
         #edit-hud { padding: 12px 20px; font-size: 14px; top: 10px; }
         #edit-hud span { font-size: 12px; }
     }
+    /* Results screen animations */
+    @keyframes starBurst {
+        0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+        60%  { transform: scale(1.35) rotate(8deg); opacity: 1; }
+        80%  { transform: scale(0.9) rotate(-4deg); }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    @keyframes cashCount {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes totalPop {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(1.22); color: #ffc107; }
+        100% { transform: scale(1); }
+    }
+    .star-slot { font-size: 42px; opacity: 0; display: inline-block; }
+    .star-slot.lit { animation: starBurst 0.55s cubic-bezier(.22,.68,0,1.2) forwards; }
+    .star-slot.dim { opacity: 0.18; font-size: 42px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -110,6 +129,7 @@
 
     <div id="start-screen" class="overlay-screen" style="display: flex;">
         <h1 style="font-size: 45px; margin: 0; color: #ffc107; text-shadow: 0 4px 0 #e65100;">BURGER BOSS 3D</h1>
+        <div id="start-save-info" style="font-size:14px;color:rgba(255,255,255,0.5);margin:6px 0 0;display:none;">💾 Save found — Day <span id="start-day-num">1</span> · <span id="start-cash-num">$0</span></div>
         <p style="font-size: 16px; text-align: center; max-width: 480px; line-height: 1.5; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; margin-top: 15px;">
             <b>Start small, dream big!</b><br><br>
             Serve burgers to earn cash. Buy expansions, tables, and robot workers!<br><br>
@@ -117,14 +137,50 @@
         </p>
         <button class="start-btn" onclick="startNextDay()">START SHIFT</button>
         <button class="edit-btn" onclick="startEditMode()">REORGANIZE</button>
+        <button style="background:none;border:none;color:rgba(255,255,255,0.35);font-size:12px;margin-top:14px;cursor:pointer;font-family:inherit;" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save</button>
     </div>
 
+    <!-- RESULTS SCREEN (shown before shop) -->
+    <div id="results-screen" class="overlay-screen">
+        <div id="results-inner" style="display:flex;flex-direction:column;align-items:center;gap:0;width:100%;max-width:460px;">
+            <div id="results-day-label" style="font-size:15px;font-weight:900;letter-spacing:3px;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:6px;opacity:0;transition:opacity 0.4s;">Day Complete</div>
+            <div id="results-title" style="font-size:46px;font-weight:900;color:#ffc107;text-shadow:0 3px 0 #b06000;margin:0 0 18px;opacity:0;transform:scale(0.7);transition:opacity 0.4s,transform 0.4s;">✦ RESULTS ✦</div>
+
+            <!-- Stars row -->
+            <div style="background:rgba(0,0,0,0.45);border-radius:18px;padding:20px 28px;width:100%;box-sizing:border-box;margin-bottom:14px;">
+                <div style="font-size:13px;font-weight:900;letter-spacing:2px;color:rgba(255,255,255,0.45);text-transform:uppercase;margin-bottom:10px;">Today's Rating</div>
+                <div id="results-stars-row" style="display:flex;justify-content:center;gap:10px;margin-bottom:10px;">
+                    <!-- stars injected by JS -->
+                </div>
+                <div id="results-rating-num" style="font-size:28px;font-weight:900;color:#ffc107;opacity:0;transition:opacity 0.5s;">⭐ 0.0</div>
+            </div>
+
+            <!-- Cash row -->
+            <div style="background:rgba(0,0,0,0.45);border-radius:18px;padding:20px 28px;width:100%;box-sizing:border-box;margin-bottom:20px;">
+                <div style="font-size:13px;font-weight:900;letter-spacing:2px;color:rgba(255,255,255,0.45);text-transform:uppercase;margin-bottom:8px;">Cash Earned</div>
+                <div id="results-cash-earned" style="font-size:36px;font-weight:900;color:#66BB6A;opacity:0;transform:translateY(10px);transition:opacity 0.4s,transform 0.4s;">+$0</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;opacity:0;transition:opacity 0.5s;" id="results-total-row">
+                    <div style="font-size:14px;color:rgba(255,255,255,0.5);">Previous</div>
+                    <div id="results-prev-cash" style="font-size:20px;font-weight:900;color:rgba(255,255,255,0.7);">$0</div>
+                    <div style="font-size:18px;color:#ffc107;font-weight:900;">+</div>
+                    <div id="results-earned-small" style="font-size:20px;font-weight:900;color:#66BB6A;">$0</div>
+                    <div style="font-size:18px;color:#ffc107;font-weight:900;">=</div>
+                    <div id="results-new-total" style="font-size:26px;font-weight:900;color:#fff;">$0</div>
+                </div>
+            </div>
+
+            <button class="start-btn" id="results-next-btn" onclick="showShop()" style="opacity:0;transform:translateY(12px);transition:opacity 0.4s,transform 0.4s;pointer-events:none;">TO THE SHOP →</button>
+        </div>
+    </div>
+
+    <!-- SHOP SCREEN -->
     <div id="shop-screen" class="overlay-screen">
-        <h1 style="font-size: 40px; margin: 0; color: #4CAF50;">DAY COMPLETE!</h1>
-        <div style="font-size: 20px; margin: 5px 0;">Earned: <span id="shop-earned" style="color:#4CAF50; font-weight:bold;">$0</span></div>
-        <div style="font-size: 20px; margin-bottom: 15px;">Overall Rating: <span id="shop-stars" style="color:#ffc107;">⭐ 0.0</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:500px;margin-bottom:12px;">
+            <h1 style="font-size:32px;margin:0;color:#4CAF50;">UPGRADE SHOP</h1>
+            <div style="background:rgba(102,187,106,0.2);border:2px solid #4CAF50;border-radius:16px;padding:8px 18px;font-size:22px;font-weight:900;color:#fff;">💰 <span id="shop-cash-display">$0</span></div>
+        </div>
         <div class="shop-container" id="dynamic-shop"></div>
-        <button class="start-btn" onclick="startNextDay()">START NEXT DAY</button>
+        <button class="start-btn" onclick="startNextDay()" style="margin-top:12px;">START NEXT DAY</button>
         <button class="edit-btn" onclick="startEditMode()">REORGANIZE</button>
     </div>
 
@@ -548,12 +604,53 @@
 
     updateRoomVisuals();
 
-    // --- GAME DATA ---
+    // --- GAME DATA (with localStorage persistence) ---
+    function defaultEco()        { return { cash: 0, day: 0, floorLevel: 1 }; }
+    function defaultUpg()        { return { speedLevel: 0, speedMult: 1, grillLevel: 0, grillMult: 1, decorLevel: 0, patienceMult: 1, tables: 1, bussers: 0, chefs: 0 }; }
+    function defaultGlobalStats(){ return { lifetimeStars: 0, lifetimeGroups: 0 }; }
+
+    function loadSave() {
+        try {
+            const raw = localStorage.getItem('burgerBoss_save');
+            if (!raw) return;
+            const s = JSON.parse(raw);
+            if (s.eco)         eco         = Object.assign(defaultEco(),         s.eco);
+            if (s.upg)         upg         = Object.assign(defaultUpg(),         s.upg);
+            if (s.globalStats) globalStats = Object.assign(defaultGlobalStats(), s.globalStats);
+            // Restore bounds from floor level
+            if (eco.floorLevel === 2) bounds = {l:-15, r:15, t:-10, b:10};
+            if (eco.floorLevel === 3) bounds = {l:-20, r:20, t:-15, b:15};
+            // Re-add any extra tables
+            for (let i = 1; i < upg.tables; i++) {
+                if (!stations['table'+i]) addStation('table'+i, 'table', bounds.r-3, bounds.t+3, 5, 5);
+            }
+            updateRoomVisuals();
+        } catch(e) { console.warn('Save load failed', e); }
+    }
+
+    function saveGame() {
+        try {
+            localStorage.setItem('burgerBoss_save', JSON.stringify({ eco, upg, globalStats }));
+        } catch(e) {}
+    }
+
     let gameState = 'start'; 
-    let eco = { cash: 0, day: 0, floorLevel: 1 };
-    let upg = { speedLevel: 0, speedMult: 1, grillLevel: 0, grillMult: 1, decorLevel: 0, patienceMult: 1, tables: 1, bussers: 0, chefs: 0 };
-    let stats = { groupsServed: 0, totalStars: 0, cashEarned: 0, groupsRemaining: 0, spawnTimer: 0 };
-    let globalStats = { lifetimeStars: 0, lifetimeGroups: 0 };
+    let eco         = defaultEco();
+    let upg         = defaultUpg();
+    let stats       = { groupsServed: 0, totalStars: 0, cashEarned: 0, groupsRemaining: 0, spawnTimer: 0 };
+    let globalStats = defaultGlobalStats();
+
+    loadSave();
+    updateCashUI();
+    // Show save info on title screen if a save exists
+    if (eco.day > 0) {
+        const si = document.getElementById('start-save-info');
+        if (si) {
+            si.style.display = 'block';
+            document.getElementById('start-day-num').textContent = eco.day;
+            document.getElementById('start-cash-num').textContent = '$' + eco.cash;
+        }
+    }
 
     let joyVector = { x: 0, z: 0 }; let keys = { w: false, a: false, s: false, d: false }; let isActionPressed = false;
 
@@ -753,7 +850,7 @@
         gridHelper.visible = false; highlightRing.visible = false;
 
         if (eco.day === 0) document.getElementById('start-screen').style.display = 'flex';
-        else document.getElementById('shop-screen').style.display = 'flex';
+        else { document.getElementById('shop-cash-display').textContent = '$' + eco.cash; updateShopButtons(); document.getElementById('shop-screen').style.display = 'flex'; }
         gameState = 'start'; 
     }
     window.startEditMode = startEditMode; window.saveEditMode = saveEditMode;
@@ -767,7 +864,9 @@
         let spawnWait = Math.max(120, 600 - (eco.day * 60)) + Math.random() * 100; 
         stats = { groupsServed: 0, totalStars: 0, cashEarned: 0, groupsRemaining: eco.day + 2, spawnTimer: spawnWait };
         
-        document.getElementById('start-screen').style.display = 'none'; document.getElementById('shop-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('shop-screen').style.display = 'none';
+        document.getElementById('results-screen').style.display = 'none';
         document.getElementById('day-banner').innerHTML = `DAY ${eco.day}<br><span id="day-sub" style="font-size: 14px; color: #666;">Groups Left: ${stats.groupsRemaining}</span>`;
         updateCashUI();
         
@@ -803,7 +902,10 @@
             }
             if(type === 'chef') upg.chefs++;
             if(type === 'busser') upg.bussers++;
-            updateCashUI(); updateShopButtons();
+            updateCashUI();
+            document.getElementById('shop-cash-display').textContent = '$' + eco.cash;
+            updateShopButtons();
+            saveGame();
         }
     }
     window.buyUpgrade = buyUpgrade; 
@@ -835,17 +937,133 @@
     }
 
     function endDay() {
-        globalStats.lifetimeStars += stats.totalStars; globalStats.lifetimeGroups += stats.groupsServed;
+        globalStats.lifetimeStars += stats.totalStars;
+        globalStats.lifetimeGroups += stats.groupsServed;
+        highlightRing.visible = false;
+
         let cumRating = parseFloat(getCumulativeRating());
         if (eco.day >= 5 && cumRating < 2.0) {
-            gameState = 'gameover'; document.getElementById('fail-days').innerText = eco.day;
-            document.getElementById('game-over-screen').style.display = 'flex'; return;
+            gameState = 'gameover';
+            document.getElementById('fail-days').innerText = eco.day;
+            document.getElementById('game-over-screen').style.display = 'flex';
+            saveGame();
+            return;
         }
-        gameState = 'shop'; document.getElementById('shop-earned').innerText = `+$${stats.cashEarned}`;
-        let avgStars = stats.groupsServed > 0 ? Math.round(stats.totalStars / stats.groupsServed) : 0;
-        document.getElementById('shop-stars').innerText = `⭐ ${cumRating} (Today: ${avgStars})`;
-        updateShopButtons(); document.getElementById('shop-screen').style.display = 'flex'; highlightRing.visible = false;
+
+        gameState = 'results';
+        saveGame();
+        showResultsScreen();
     }
+
+    function showResultsScreen() {
+        const screen = document.getElementById('results-screen');
+        screen.style.display = 'flex';
+
+        // Reset all animated elements
+        const title       = document.getElementById('results-title');
+        const dayLabel    = document.getElementById('results-day-label');
+        const starsRow    = document.getElementById('results-stars-row');
+        const ratingNum   = document.getElementById('results-rating-num');
+        const cashEarned  = document.getElementById('results-cash-earned');
+        const totalRow    = document.getElementById('results-total-row');
+        const nextBtn     = document.getElementById('results-next-btn');
+
+        title.style.opacity = '0'; title.style.transform = 'scale(0.7)';
+        dayLabel.style.opacity = '0';
+        ratingNum.style.opacity = '0';
+        cashEarned.style.opacity = '0'; cashEarned.style.transform = 'translateY(10px)';
+        totalRow.style.opacity = '0';
+        nextBtn.style.opacity = '0'; nextBtn.style.transform = 'translateY(12px)'; nextBtn.style.pointerEvents = 'none';
+
+        // Compute values
+        let todayStars   = stats.groupsServed > 0 ? Math.round(stats.totalStars / stats.groupsServed) : 0;
+        let cumRating    = getCumulativeRating();
+        let prevCash     = eco.cash; // cash before adding today's earnings (already added during gameplay)
+        // eco.cash already includes today's earnings from the game loop
+        // We stored cashEarned in stats — previous = current - earned
+        let cashBefore   = eco.cash - stats.cashEarned;
+        let cashAfter    = eco.cash;
+
+        // Day label
+        setTimeout(() => { dayLabel.style.opacity = '1'; }, 80);
+        // Title
+        setTimeout(() => { title.style.opacity = '1'; title.style.transform = 'scale(1)'; }, 220);
+
+        // Build star slots (5 stars)
+        starsRow.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const s = document.createElement('span');
+            s.className = 'star-slot';
+            s.textContent = '⭐';
+            starsRow.appendChild(s);
+        }
+        // Burst stars in one by one
+        for (let i = 0; i < 5; i++) {
+            const delay = 550 + i * 160;
+            setTimeout(() => {
+                const slot = starsRow.children[i];
+                if (i < todayStars) {
+                    slot.classList.add('lit');
+                } else {
+                    slot.classList.add('dim');
+                    slot.style.opacity = '0.18';
+                }
+            }, delay);
+        }
+
+        // Rating number appears after last star
+        setTimeout(() => {
+            ratingNum.textContent = `⭐ ${cumRating} overall`;
+            ratingNum.style.opacity = '1';
+        }, 550 + 5 * 160 + 200);
+
+        // Cash earned appears
+        setTimeout(() => {
+            cashEarned.textContent = `+$${stats.cashEarned}`;
+            cashEarned.style.opacity = '1';
+            cashEarned.style.transform = 'translateY(0)';
+        }, 1600);
+
+        // Total row counts up
+        setTimeout(() => {
+            document.getElementById('results-prev-cash').textContent  = `$${cashBefore}`;
+            document.getElementById('results-earned-small').textContent = `$${stats.cashEarned}`;
+            totalRow.style.opacity = '1';
+
+            // Animate the total counting up
+            const totalEl = document.getElementById('results-new-total');
+            const start = cashBefore;
+            const end   = cashAfter;
+            const duration = 900;
+            const startTime = performance.now();
+            function countUp(now) {
+                const t = Math.min((now - startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - t, 3);
+                totalEl.textContent = '$' + Math.round(start + (end - start) * eased);
+                if (t < 1) requestAnimationFrame(countUp);
+                else {
+                    totalEl.style.animation = 'totalPop 0.4s ease forwards';
+                }
+            }
+            requestAnimationFrame(countUp);
+        }, 2100);
+
+        // Next button
+        setTimeout(() => {
+            nextBtn.style.opacity = '1';
+            nextBtn.style.transform = 'translateY(0)';
+            nextBtn.style.pointerEvents = 'auto';
+        }, 3100);
+    }
+
+    function showShop() {
+        document.getElementById('results-screen').style.display = 'none';
+        document.getElementById('shop-cash-display').textContent = '$' + eco.cash;
+        updateShopButtons();
+        document.getElementById('shop-screen').style.display = 'flex';
+        gameState = 'shop';
+    }
+    window.showShop = showShop;
 
     // --- BOTS AI ---
     function spawnBot(type) {
