@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Burger Bar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+*{box-sizing:border-box;}
+body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito',sans-serif;user-select:none;touch-action:none;}
+#gc{position:relative;width:100vw;height:100vh;}
+canvas{display:block;width:100%;height:100%;}
+
+/* HUD */
+#floating-ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:hidden;}
+.fbubble{position:absolute;background:#fff;padding:5px 10px;border-radius:16px;font-size:18px;font-weight:bold;transform:translate(-50%,-100%);box-shadow:0 3px 8px rgba(0,0,0,.35);border:2.5px solid #333;white-space:nowrap;}
+.fbubble::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);border-width:9px 9px 0;border-style:solid;border-color:#333 transparent transparent;}
+.fbar{position:absolute;width:56px;height:7px;background:rgba(0,0,0,.65);border-radius:3px;transform:translate(-50%,-50%);overflow:hidden;border:2px solid rgba(255,255,255,.85);}
+.fbar-fill{height:100%;background:#4CAF50;transition:width .1s,background-color .3s;}
+
+#ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;}
+#top-hud{position:absolute;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px; display:none;}
+#day-banner{background:rgba(20,20,20,.82);backdrop-filter:blur(6px);padding:8px 18px;border-radius:24px;font-size:16px;font-weight:900;color:#ffc107;border:2px solid rgba(255,193,7,.4);text-align:center;box-shadow:0 4px 6px rgba(0,0,0,0.3);}
+#cash-display{background:rgba(20,20,20,.82);backdrop-filter:blur(6px);padding:8px 16px;border-radius:20px;font-size:18px;font-weight:900;color:#fff;border:2px solid rgba(102,187,106,.5);display:flex;flex-direction:column;align-items:center;box-shadow:0 4px 6px rgba(0,0,0,0.3);}
+#rating-val{font-size:12px;color:#ffc107;}
+
+#edit-hud{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);color:#fff;padding:12px 24px;border-radius:24px;font-size:15px;font-weight:bold;text-align:center;border:2px solid #03A9F4;display:none;z-index:6;pointer-events:auto;}
+#finish-edit-btn{background:#03A9F4;color:#fff;border:none;padding:8px 18px;border-radius:16px;font-weight:bold;font-size:14px;margin-top:8px;cursor:pointer;font-family:inherit;}
+
+#role-tooltip{position:absolute;bottom:180px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:8px 18px;border-radius:16px;font-size:14px;font-weight:bold;pointer-events:none;z-index:7;display:none;border:2px solid #03A9F4;white-space:nowrap;}
+
+/* Touch controls */
+#touch-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:auto;z-index:4;}
+#joystick-zone{position:fixed;width:130px;height:130px;background:rgba(255,255,255,.15);border-radius:50%;pointer-events:none;border:2px solid rgba(255,255,255,.3);display:flex;justify-content:center;align-items:center;z-index:6;transform:translate(-50%,-50%);opacity:0;transition:opacity .12s;}
+#joystick-zone.active{opacity:1;}
+#joystick-knob{width:58px;height:58px;background:rgba(255,255,255,.9);border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.4);pointer-events:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+#action-btn{position:fixed;width:100px;height:100px;background:rgba(255,200,30,.9);border-radius:50%;pointer-events:none;border:3px solid rgba(255,160,0,.9);box-shadow:0 6px 0 rgba(180,70,0,.5);display:flex;justify-content:center;align-items:center;font-size:34px;z-index:6;transform:translate(-50%,-50%);opacity:0;transition:opacity .12s;}
+#action-btn.active{opacity:1;}
+#action-btn.pressed{box-shadow:0 1px 0 rgba(180,70,0,.5);margin-top:5px;}
+#touch-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(0,0,0,.6);font-size:12px;font-weight:bold;text-shadow:0 1px 2px rgba(255,255,255,.5);pointer-events:none;text-align:center;}
+
+/* Overlay screens */
+.overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(10,20,30,.92);color:#fff;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:10;pointer-events:auto;padding:16px;backdrop-filter:blur(6px);}
+.btn-green{background:linear-gradient(135deg,#66BB6A,#43A047);padding:13px 36px;border-radius:26px;font-size:20px;color:#fff;border:none;box-shadow:0 5px 0 #1B5E20;font-family:inherit;font-weight:900;margin-top:12px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;text-shadow:0 2px 2px rgba(0,0,0,0.3);}
+.btn-green:active{transform:translateY(5px);box-shadow:0 0 0 #1B5E20;}
+.btn-green:disabled{background:#555;box-shadow:0 5px 0 #333;color:#888;cursor:not-allowed;}
+.btn-blue{background:linear-gradient(135deg,#42A5F5,#1E88E5);padding:13px 36px;border-radius:26px;font-size:17px;color:#fff;border:none;box-shadow:0 5px 0 #0D47A1;font-family:inherit;font-weight:900;margin-top:12px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;text-shadow:0 2px 2px rgba(0,0,0,0.3);}
+.btn-blue:active{transform:translateY(5px);box-shadow:0 0 0 #0D47A1;}
+.btn-red{background:linear-gradient(135deg,#EF5350,#D32F2F);padding:13px 36px;border-radius:26px;font-size:17px;color:#fff;border:none;box-shadow:0 5px 0 #B71C1C;font-family:inherit;font-weight:900;margin-top:12px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;text-shadow:0 2px 2px rgba(0,0,0,0.3);}
+.btn-red:active{transform:translateY(5px);box-shadow:0 0 0 #B71C1C;}
+
+/* Shop */
+.shop-wrap{background:rgba(0,0,0,.6);padding:16px;border-radius:14px;border:2px solid rgba(255,255,255,.1);width:100%;max-width:520px;max-height:52vh;overflow-y:auto;}
+.shop-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.shop-tab{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;transition:all .15s;}
+.shop-tab.active{background:rgba(255,193,7,.2);border-color:#ffc107;color:#ffc107;}
+.upg-item{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.07);padding:12px 14px;border-radius:10px;margin-bottom:8px;border-left:3px solid #66BB6A;}
+.upg-item.locked{border-left-color:#555;opacity:.55;}
+.buy-btn{background:linear-gradient(135deg,#FFCA28,#FBC02D);color:#333;border:none;padding:8px 16px;border-radius:16px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 #E65100;font-family:inherit;text-transform:uppercase;font-size:12px;}
+.buy-btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 0 0 #E65100;}
+.buy-btn:disabled{background:#555;color:#888;box-shadow:0 3px 0 #333;cursor:not-allowed;}
+.buy-btn.max{background:#444;color:#888;box-shadow:0 3px 0 #222;}
+
+/* Results screen */
+@keyframes starBurst{0%{transform:scale(0) rotate(-25deg);opacity:0;}60%{transform:scale(1.3) rotate(6deg);opacity:1;}80%{transform:scale(.92);}100%{transform:scale(1);opacity:1;}}
+@keyframes totalPop{0%{transform:scale(1);}40%{transform:scale(1.2);color:#ffc107;}100%{transform:scale(1);}}
+.star-slot{font-size:40px;opacity:0;display:inline-block;}
+.star-slot.lit{animation:starBurst .5s cubic-bezier(.22,.68,0,1.2) forwards;}
+.star-slot.dim{opacity:.18!important;}
+
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-thumb{background:#ffc107;border-radius:3px;}
+
+/* Expansion picker */
+#expand-picker{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(10,14,18,.92);display:none;flex-direction:column;justify-content:center;align-items:center;z-index:12;pointer-events:auto;gap:14px;}
+.expand-option{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.2);color:#fff;padding:16px 32px;border-radius:18px;font-size:17px;font-weight:900;cursor:pointer;font-family:inherit;width:260px;text-align:center;transition:all .15s;}
+.expand-option:hover{background:rgba(255,193,7,.15);border-color:#ffc107;color:#ffc107;}
+.expand-option:disabled{opacity:.35;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<div id="gc">
+  <canvas id="gameCanvas"></canvas>
+  <div id="floating-ui"></div>
+  <div id="ui-layer">
+    <div id="top-hud">
+      <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:12px;color:rgba(255,255,255,.5);">Customers: 0</span></div>
+      <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span></div>
+    </div>
+    <div id="touch-overlay"></div>
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <div id="action-btn">✋</div>
+    <div id="touch-hint">Left thumb · move &nbsp;&nbsp; Right thumb · act</div>
+    <div id="role-tooltip"></div>
+  </div>
+  
+  <div id="edit-hud">
+    EDIT MODE — face item + act to move/cycle role<br>
+    <button id="finish-edit-btn" onclick="saveEditMode()">DONE ✓</button>
+  </div>
+
+  <div id="expand-picker">
+    <div style="font-size:22px;font-weight:900;color:#ffc107;margin-bottom:8px;">CHOOSE EXPANSION DIRECTION</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;">Each wing adds floor space + a connecting doorway</div>
+    <button class="expand-option" id="exp-left"  onclick="confirmExpand('left')">◀ Left Wing</button>
+    <button class="expand-option" id="exp-right" onclick="confirmExpand('right')">Right Wing ▶</button>
+    <button class="expand-option" id="exp-back"  onclick="confirmExpand('back')">Back Extension ▲</button>
+    <button class="expand-option" style="background:none;border-color:rgba(255,255,255,.15);font-size:14px;color:rgba(255,255,255,.4);" onclick="closeExpandPicker()">Cancel</button>
+  </div>
+
+  <!-- START MENU -->
+  <div id="start-screen" class="overlay" style="display:flex;"></div>
+
+  <!-- EVENT POPUPS -->
+  <div id="alert-popup" class="overlay" style="z-index: 25; background:rgba(0,0,0,0.85);">
+    <h1 id="alert-title" style="font-size:36px;margin:0;color:#F44336;">WARNING</h1>
+    <p id="alert-desc" style="font-size:16px;text-align:center;max-width:440px;margin-top:18px;"></p>
+    <button class="btn-green" onclick="document.getElementById('alert-popup').style.display='none'">GOT IT</button>
+  </div>
+
+  <!-- DECISION POPUP (DAY 5) -->
+  <div id="decision-popup" class="overlay" style="z-index: 30; background:rgba(0,0,0,0.9);">
+    <div style="background:rgba(20,25,30,1); border: 3px solid #ffc107; border-radius: 16px; padding: 24px; max-width: 480px; text-align:center;">
+      <h1 style="font-size:30px;margin:0;color:#ffc107;">BUSINESS DECISION</h1>
+      <p style="font-size:15px;line-height:1.5;margin-top:16px;color:#fff;">
+        Your customers are thirsty. Should we expand the menu and install a <b>Soda Fountain</b>?<br><br>
+        <span style="color:#66BB6A;"><b>ACCEPT ($150):</b> Unlock Combo Meals (🍔🥤) for higher profits.</span><br><br>
+        <span style="color:#EF5350;"><b>DECLINE:</b> Refuse to innovate. Takes a permanent -15% penalty to daily customer traffic.</span>
+      </p>
+      <div style="display:flex; justify-content:center; gap:16px; margin-top:20px;">
+        <button class="btn-green" id="decision-buy-btn" onclick="decisionBuySoda()">BUY ($150)</button>
+        <button class="btn-red" onclick="decisionDeclineSoda()">DECLINE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div id="results-screen" class="overlay">
+    <div style="width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:0;">
+      <div id="res-day-lbl" style="font-size:13px;letter-spacing:3px;color:rgba(255,255,255,.4);text-transform:uppercase;opacity:0;transition:opacity .4s;">Day Complete</div>
+      <div id="res-title" style="font-size:42px;font-weight:900;color:#ffc107;margin:4px 0 16px;opacity:0;transform:scale(.75);transition:opacity .4s,transform .4s;">✦ RESULTS ✦</div>
+      <div style="background:rgba(0,0,0,.4);border-radius:16px;padding:18px 24px;width:100%;margin-bottom:12px;text-align:center;">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">Today's Rating</div>
+        <div id="res-stars-row" style="display:flex;justify-content:center;gap:8px;margin-bottom:8px;"></div>
+        <div id="res-rating-num" style="font-size:24px;font-weight:900;color:#ffc107;opacity:0;transition:opacity .4s;">⭐ 0.0</div>
+      </div>
+      <div style="background:rgba(0,0,0,.4);border-radius:16px;padding:18px 24px;width:100%;margin-bottom:16px;text-align:center;">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">Cash Earned</div>
+        <div id="res-cash-earned" style="font-size:34px;font-weight:900;color:#66BB6A;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s;">+$0.00</div>
+        <div id="res-total-row" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;opacity:0;transition:opacity .4s;font-size:15px;">
+          <span id="res-prev" style="color:rgba(255,255,255,.6);">$0.00</span>
+          <span style="color:#ffc107;font-weight:900;">+</span>
+          <span id="res-earn-sm" style="color:#66BB6A;font-weight:900;">$0.00</span>
+          <span style="color:#ffc107;font-weight:900;">=</span>
+          <span id="res-new-total" style="font-size:24px;font-weight:900;color:#fff;">$0.00</span>
+        </div>
+      </div>
+      <button class="btn-green" id="res-next-btn" onclick="showStartMenu()" style="opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;pointer-events:none;">CONTINUE →</button>
+    </div>
+  </div>
+
+  <!-- SHOP SCREEN -->
+  <div id="shop-screen" class="overlay">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:520px;margin-bottom:10px;">
+      <h1 style="font-size:28px;margin:0;color:#4CAF50;">UPGRADE SHOP</h1>
+      <div style="background:rgba(102,187,106,.18);border:2px solid #4CAF50;border-radius:14px;padding:7px 16px;font-size:20px;font-weight:900;">💰 <span id="shop-cash-display">$0.00</span></div>
+    </div>
+    <div class="shop-wrap">
+      <div class="shop-tabs" id="shop-tabs"></div>
+      <div id="shop-items"></div>
+    </div>
+    <button class="btn-green" onclick="closeShop()" style="margin-top:10px;">BACK TO MENU ▶</button>
+    <button class="btn-blue" onclick="startEditMode()">REORGANIZE</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover-screen" class="overlay">
+    <h1 style="font-size:46px;margin:0;color:#F44336;text-shadow:0 3px 0 #B71C1C;">STORE CLOSED!</h1>
+    <p style="font-size:16px;text-align:center;max-width:440px;background:rgba(0,0,0,.45);padding:18px;border-radius:14px;margin-top:18px;">
+      Rating dropped below 2.0★ — the health inspector shut you down.<br><br>
+      <b>Days Survived: <span id="fail-days">0</span></b>
+    </p>
+    <button class="btn-green" onclick="localStorage.removeItem('burgerBoss_save');location.reload()">RESTART</button>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  AUDIO ENGINE
+// ─────────────────────────────────────────────────────────────
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+window.addEventListener('pointerdown', initAudio, {once: true});
+window.addEventListener('keydown', initAudio, {once: true});
+
+function playSound(type) {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  const t = audioCtx.currentTime;
+  if (type === 'coin') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.exponentialRampToValueAtTime(2000, t + 0.1);
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+    osc.start(t); osc.stop(t + 0.1);
+  } else if (type === 'error') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(100, t + 0.2);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+    osc.start(t); osc.stop(t + 0.2);
+  } else if (type === 'sizzle') {
+    const bufSize = audioCtx.sampleRate * 0.2; 
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buf;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass'; filter.frequency.value = 1000;
+    noise.connect(filter); filter.connect(gain);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+    noise.start(t);
+  } else if (type === 'dump') {
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.3);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+    osc.start(t); osc.stop(t + 0.3);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RENDERER + SCENE
+// ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#87CEEB'); 
+scene.fog = new THREE.Fog('#87CEEB', 50, 110);
+
+let frustumSize = 26;
+const camera = new THREE.OrthographicCamera(1,1,1,1,1,1000);
+camera.position.set(0,38,38); camera.lookAt(0,0,0);
+
+function resize(){
+  const a = window.innerWidth/window.innerHeight;
+  let f = a<1 ? frustumSize/a : frustumSize;
+  camera.left=-f*a/2; camera.right=f*a/2; camera.top=f/2; camera.bottom=-f/2;
+  camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', resize); resize();
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 0.5);
+sun.position.set(25,50,25); sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-60; sun.shadow.camera.right=60;
+sun.shadow.camera.top=60; sun.shadow.camera.bottom=-60;
+sun.shadow.bias=-0.001; scene.add(sun);
+const fillLight = new THREE.DirectionalLight(0x88bbff, 0.2);
+fillLight.position.set(-15,20,-10); scene.add(fillLight);
+
+// ─────────────────────────────────────────────────────────────
+//  MATERIALS
+// ─────────────────────────────────────────────────────────────
+const M = (c,o)=>{ const m=new THREE.MeshLambertMaterial({color:c}); if(o!==undefined){m.transparent=true;m.opacity=o;} return m; };
+const MB = c => new THREE.MeshBasicMaterial({color:c});
+
+const matGrass      = M('#66cc44'); 
+const matSidewalk   = M('#aab5b8');
+const matRoad       = M('#4a5a6a');
+const matRoadLine   = M('#ffcc00');
+const matDFloor     = M('#e6c27a'); 
+const matWallOut    = M('#fff0d4'); 
+const matWallKitch  = M('#cce0e5'); 
+const matWallCap    = M('#c29b57');
+const matFrameDark  = M('#5D4037');
+const matSilver     = M('#b8c8ce');
+const matDark       = M('#2a3a40');
+const matBlack      = M('#111');
+const matGlowRed    = MB('#ff3300');
+const matSkin       = M('#ffccaa');
+const matBun        = M('#e6b873');
+const matMeat       = M('#6a4220');
+const matRaw        = M('#cc4040');
+const matCharred    = M('#222222');
+const matTray       = M('#eeeeee');
+const matCheese     = M('#ffcc00');
+const matTomato     = M('#e62030');
+const matCup        = M('#e53935');
+const matSign       = M('#ff5722'); 
+const matSignTxt    = M('#ffffff');
+const matPlant      = M('#309030');
+const matUmbrella   = M('#e63030');
+const matPoleGray   = M('#a0a0a0');
+const matWood       = M('#8a6045');
+const matTrashBag   = M('#4CAF50');
+
+const custColors = ['#e91e63','#ff9800','#00bcd4','#4caf50','#9c27b0', '#111111'].map(c=>M(c));
+
+const GBox = (w,h,d)=>new THREE.BoxGeometry(w,h,d);
+const GCyl = (r,h,s=12)=>new THREE.CylinderGeometry(r,r,h,s);
+const GSph = (r,s=12)=>new THREE.SphereGeometry(r,s,s);
+
+// ─────────────────────────────────────────────────────────────
+//  WORLD GROUPS
+// ─────────────────────────────────────────────────────────────
+const worldGrp = new THREE.Group(); scene.add(worldGrp);
+const roomGrp  = new THREE.Group(); scene.add(roomGrp);
+const stGrp    = new THREE.Group(); scene.add(stGrp);
+
+let baseBounds = {l:-10, r:10, t:-10, b:10};
+let wings = [];
+let collEdges = [];
+
+function computeBounds(){
+  let b = {...baseBounds};
+  for(const w of wings){
+    b.l = Math.min(b.l, w.l); b.r = Math.max(b.r, w.r);
+    b.t = Math.min(b.t, w.t); b.b = Math.max(b.b, w.b);
+  }
+  return b;
+}
+
+function updateBoundsFromLevel() {
+  let l = -10, r = 10, t = -10, b = 10;
+  if (eco.floorLevel >= 1) { l -= 5; r += 5; } // 30w x 20d
+  if (eco.floorLevel >= 2) { t -= 10; }        // 30w x 30d
+  if (eco.floorLevel >= 3) { l -= 5; r += 5; } // 40w x 30d
+  if (eco.floorLevel >= 4) { t -= 10; }        // 40w x 40d
+  if (eco.floorLevel >= 5) { l -= 5; r += 5; } // 50w x 40d
+  if (eco.floorLevel >= 6) { t -= 10; }        // 50w x 50d
+  baseBounds = {l, r, t, b};
+  bounds = computeBounds();
+}
+
+let bounds = computeBounds();
+const WING_SIZE = 10;
+
+function addMesh(parent, geo, mat, x,y,z, rx=0,ry=0,rz=0, castShadow=true){
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x,y,z); m.rotation.set(rx,ry,rz);
+  m.castShadow=castShadow; m.receiveShadow=true;
+  parent.add(m); return m;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  BUILD WORLD
+// ─────────────────────────────────────────────────────────────
+function buildWorld(){
+  while(worldGrp.children.length) worldGrp.remove(worldGrp.children[0]);
+  const b = bounds;
+  const rW = b.r-b.l, rD = b.b-b.t;
+  const cx = (b.r+b.l)/2, cz = (b.b+b.t)/2;
+  const sw = 6;
+
+  addMesh(worldGrp, GBox(120,.5,120), matGrass, 0,-.75,0, 0,0,0, false);
+  addMesh(worldGrp, GBox(rW+sw*2,.3,rD+sw*2), matSidewalk, cx,-.2,cz, 0,0,0, false);
+  addMesh(worldGrp, GBox(100,.2,12), matRoad, cx,-.25, b.b+sw+6, 0,0,0, false);
+  for(let i=-4;i<=4;i++) addMesh(worldGrp, GBox(4,.05,.4), matRoadLine, cx+i*10,-.15, b.b+sw+6, 0,0,0, false);
+  addMesh(worldGrp, GBox(rW+sw*2+2,.4,.5), matSilver, cx,-.1, b.b+sw, 0,0,0, false);
+
+  for(const lx of [b.l-4, b.r+4]){
+    addMesh(worldGrp, GCyl(.12,7,8), M('#455A64'), lx,3.5, b.b+sw-1);
+    addMesh(worldGrp, GBox(1,.5,.8), M('#37474F'), lx,7.2, b.b+sw-1);
+    addMesh(worldGrp, GSph(.22,8), MB('#ffffff'), lx,7.0, b.b+sw-1, 0,0,0, false);
+  }
+
+  const dcx = (baseBounds.l+baseBounds.r)/2;
+  for(const px of [dcx-8, dcx+8]){
+    addMesh(worldGrp, GBox(1.5,1,1.5), matWood, px,.5, b.b+2);
+    addMesh(worldGrp, GBox(1.3,.2,1.3), matFrameDark, px,1.1, b.b+2, 0,0,0, false);
+    addMesh(worldGrp, GSph(.65,8), matPlant, px,1.7, b.b+2);
+  }
+
+  const treePos=[
+    {x:b.l-8,  z:b.t-6}, {x:b.r+8,  z:b.t-6},
+    {x:b.l-10, z:cz},    {x:b.r+10, z:cz},
+    {x:b.l-10, z:b.b+4}, {x:b.r+10, z:b.b+4},
+  ];
+  for(const tp of treePos){
+    addMesh(worldGrp, GCyl(.35,3,8), M('#8d6e63'), tp.x,1.5,tp.z);
+    addMesh(worldGrp, GSph(2.1,8), M('#4caf50'), tp.x,5.5,tp.z);
+    addMesh(worldGrp, GSph(1.5,8), M('#66bb6a'), tp.x+.7,6.4,tp.z-.4);
+  }
+
+  for(const px of [dcx-7, dcx+7]){
+    addMesh(worldGrp, GCyl(1.15,.15,16), M('#eeeeee'), px,1.8, b.b+4.5);
+    addMesh(worldGrp, GCyl(.1,1.8,8), matPoleGray, px,.9, b.b+4.5);
+    addMesh(worldGrp, GCyl(.06,5.5,8), matPoleGray, px,2.75, b.b+4.5);
+    addMesh(worldGrp, new THREE.ConeGeometry(2.1,.75,8), matUmbrella, px,5.4, b.b+4.5);
+  }
+
+  const bz = b.t;
+  addMesh(worldGrp, GBox(rW*.65,1.7,.28), matSign, cx, 4.1, bz-.35);
+  ['B','U','R','G','E','R',' ','B','A','R'].forEach((l,i)=>{
+    if(l===' ') return;
+    addMesh(worldGrp, GBox(.55,1.1,.14), matSignTxt, cx-3.5+i*.7, 4.1, bz-.22);
+  });
+  addMesh(worldGrp, GBox(.18,2.4,.18), matSilver, cx-rW*.3, 3.2, bz-.35);
+  addMesh(worldGrp, GBox(.18,2.4,.18), matSilver, cx+rW*.3, 3.2, bz-.35);
+
+  if(!window._cloudsBuilt){
+    window._cloudsBuilt=true;
+    window._clouds=[];
+    for(let c=0;c<8;c++){
+      const cg=new THREE.Group();
+      for(let p=0;p<4;p++){
+        const cp=new THREE.Mesh(new THREE.SphereGeometry(2.4+Math.random()*1.8,8,6), M('#ffffff',.8));
+        cp.position.set((Math.random()-.5)*5,Math.random()*2,(Math.random()-.5)*3);
+        cg.add(cp);
+      }
+      cg.position.set((Math.random()-.5)*100, 22+Math.random()*8, -40+Math.random()*-60);
+      cg._spd = .008+Math.random()*.012;
+      scene.add(cg); window._clouds.push(cg);
+    }
+  }
+}
+
+function buildArchway(parent, cx, cz, wH, dir){
+  const isX = (dir==='left'||dir==='right');
+  const fw=.35, fh=wH, fd=.35, hw=2.5;
+  if(isX){
+    addMesh(parent, GBox(fw,fh,fd), matFrameDark, cx, fh/2, cz-hw);
+    addMesh(parent, GBox(fw,fh,fd), matFrameDark, cx, fh/2, cz+hw);
+    addMesh(parent, GBox(fw,.3,hw*2+fw*2), matFrameDark, cx, fh-.1, cz);
+  } else {
+    addMesh(parent, GBox(hw*2+fw*2,.3,fd), matFrameDark, cx, fh-.1, cz);
+    addMesh(parent, GBox(fd,fh,fw), matFrameDark, cx-hw, fh/2, cz);
+    addMesh(parent, GBox(fd,fh,fw), matFrameDark, cx+hw, fh/2, cz);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  BUILD ROOM
+// ─────────────────────────────────────────────────────────────
+function buildRoom(){
+  while(roomGrp.children.length) roomGrp.remove(roomGrp.children[0]);
+  collEdges = [];
+  
+  const b = bounds;
+  const w = b.r - b.l, d = b.b - b.t;
+  const cx = (b.r + b.l) / 2, cz = (b.b + b.t) / 2;
+  
+  addMesh(roomGrp, GBox(w,.25,d), matDFloor, cx,.05,cz, 0,0,0,false);
+  for(let xi=0;xi<w;xi+=1.5) addMesh(roomGrp, GBox(.05,.01,d), M('#c2a057'), b.l+xi,.18,cz, 0,0,0,false);
+
+  const wH=2.8, wT=0.55, doorHalfW = 2.5;
+  function wallSeg(x,y,z,sw,sh,sd,isK){
+    addMesh(roomGrp, GBox(sw,sh,sd), isK?matWallKitch:matWallOut, x,y,z);
+    addMesh(roomGrp, GBox(sw+.08,.2,sd+.08), matWallCap, x,y+sh/2+.1,z);
+  }
+
+  const edges = [];
+  
+  edges.push({ axis:'x', fixed:baseBounds.b+wT/2, min:baseBounds.l, max:baseBounds.r, type:'maindoor', isK:false });
+  edges.push({ axis:'x', fixed:baseBounds.t-wT/2, min:baseBounds.l, max:baseBounds.r, type: 'solid', isK:true });
+  edges.push({ axis:'z', fixed:baseBounds.l-wT/2, min:baseBounds.t, max:baseBounds.b, type: 'solid', isK:false });
+  edges.push({ axis:'z', fixed:baseBounds.r+wT/2, min:baseBounds.t, max:baseBounds.b, type: 'solid', isK:false });
+  
+  collEdges = edges; 
+
+  for(const e of edges) {
+    let holes = [];
+    const ecx = (e.min+e.max)/2;
+    if(e.type === 'maindoor') holes.push({center: ecx, halfW: doorHalfW});
+    if(e.type === 'archway')  holes.push({center: ecx, halfW: doorHalfW});
+
+    let cursor = e.min;
+    for(const hole of holes){
+      const segEnd = hole.center - hole.halfW;
+      if(segEnd > cursor+.1){
+        const segW = segEnd-cursor; const segC = cursor+segW/2;
+        if(e.axis==='x') wallSeg(segC, wH/2, e.fixed, segW, wH, wT, e.isK);
+        else             wallSeg(e.fixed, wH/2, segC, wT, wH, segW, e.isK);
+      }
+      cursor = hole.center + hole.halfW;
+    }
+    if(e.max > cursor+.1){
+      const segW=e.max-cursor; const segC=cursor+segW/2;
+      if(e.axis==='x') wallSeg(segC, wH/2, e.fixed, segW, wH, wT, e.isK);
+      else             wallSeg(e.fixed, wH/2, segC, wT, wH, segW, e.isK);
+    }
+
+    if(e.type === 'maindoor') {
+      const pw = doorHalfW*2/2-.2, ph=wH-.08;
+      addMesh(roomGrp, GBox(doorHalfW*2+wT*.5,.22,wT), matFrameDark, ecx, wH, e.fixed);
+      const dl=new THREE.Mesh(GBox(pw,ph,.1), M('#8D6E63',.9)); dl.position.set(ecx-pw/2-.18,ph/2,e.fixed); dl.rotation.y=.08; roomGrp.add(dl);
+      const dr=new THREE.Mesh(GBox(pw,ph,.1), M('#8D6E63',.9)); dr.position.set(ecx+pw/2+.18,ph/2,e.fixed); dr.rotation.y=-.08; roomGrp.add(dr);
+    }
+  }
+
+  for(let xi=0;xi<w;xi+=1){
+    for(let yi=0;yi<2;yi++) addMesh(roomGrp, GBox(.82,.82,.05), M('#ffffff'), b.l+xi+.5, .5+yi*.88+.18, b.t-wT+.32, 0,0,0,false);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  STATION BUILDERS
+// ─────────────────────────────────────────────────────────────
+function buildFridge(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(3,5,3), matSilver, 0,2.5,0);
+  const d=new THREE.Mesh(GBox(2.8,3.5,.45), M('#8ab8d0',.8)); d.position.set(0,3,1.5); g.add(d);
+  addMesh(g, GBox(.28,1.4,.28), matBlack, 1.15,3,1.78);
+  addMesh(g, GBox(1.4,.55,.05), M('#1565C0'), 0,1.4,1.53);
+  return g;
+}
+function buildSink(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(1.8,2.8,1.8), matSilver, 0,1.4,0);
+  addMesh(g, GBox(1.6,.3,1.6), M('#b0bec5'), 0,2.95,0);
+  addMesh(g, GBox(1.4,.2,1.4), M('#81d4fa',.8), 0,3.0,0);
+  addMesh(g, GBox(.12,.8,.8), matSilver, 0,3.5,-0.6);
+  return g;
+}
+function buildTrayRack(w,d){
+  const g=new THREE.Group();
+  addMesh(g, GBox(w,2.8,d), M('#5D4037'), 0,1.4,0); 
+  addMesh(g, GBox(w+.1,.1,d+.1), matSilver, 0,2.85,0); 
+  addMesh(g, GBox(w-.2,.3,.05), matSilver, 0,3.0,-d/2+.1); 
+  return g;
+}
+function buildGrill(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(3.5,3,2.5), matDark, 0,1.5,0);
+  addMesh(g, GBox(3.0,.18,1.5), matGlowRed, 0,3,.2, 0,0,0,false);
+  addMesh(g, GBox(3.6,2.1,.4), matDark, 0,4.05,-1.05);
+  addMesh(g, GCyl(.2,3.2,8), matSilver, 0,5.3,-1.05);
+  for(let i=-1.2;i<=1.2;i+=.4) addMesh(g, GBox(3.0,.08,.08), M('#333'), i,3.1,.2, 0,Math.PI/2,0, false);
+  return g;
+}
+function buildSodaFountain(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(2,2.8,2), M('#8d6e63'), 0,1.4,0);
+  addMesh(g, GBox(2.2,.18,2.2), M('#eeeeee'), 0,2.89,0);
+  addMesh(g, GBox(1.4, 1.5, 1.0), matSilver, 0, 3.65, -0.4);
+  addMesh(g, GBox(1.2, 0.4, 0.8), matBlack, 0, 4.2, -0.3);
+  addMesh(g, GBox(1.4, 0.1, 1.2), matSilver, 0, 3.0, 0.1); 
+  for(let i=-0.4; i<=0.4; i+=0.4) {
+    addMesh(g, GCyl(0.05, 0.2, 8), matSilver, i, 3.3, 0);
+    addMesh(g, GBox(0.2, 0.3, 0.1), M('#f44336'), i, 3.6, 0.1);
+  }
+  return g;
+}
+function buildTrash(){
+  const g=new THREE.Group();
+  addMesh(g, new THREE.CylinderGeometry(.78,.6,2.5,16), M('#2e7d32'), 0,1.25,0);
+  addMesh(g, new THREE.CylinderGeometry(.84,.84,.18,16), M('#1b5e20'), 0,2.6,0);
+  return g;
+}
+function buildDumpster(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(4, 3, 3), M('#1b5e20'), 0, 1.5, 0); 
+  addMesh(g, GBox(4.2, 0.2, 3.2), matBlack, 0, 3.1, 0); 
+  addMesh(g, GBox(0.2, 3.2, 0.2), matSilver, -2.1, 1.6, 0); 
+  addMesh(g, GBox(0.2, 3.2, 0.2), matSilver, 2.1, 1.6, 0);
+  return g;
+}
+function buildCounter(w,d){
+  const g=new THREE.Group();
+  addMesh(g, GBox(w,2.8,d), M('#8d6e63'), 0,1.4,0);
+  addMesh(g, GBox(w+.18,.18,d+.18), M('#eeeeee'), 0,2.89,0);
+  addMesh(g, GBox(w+.32,.09,d+.32), M('#9e9e9e'), 0,2.98,0);
+  return g;
+}
+function buildTable(){
+  const g=new THREE.Group();
+  addMesh(g, new THREE.CylinderGeometry(1.2,1.2,.12,16), M('#e6c27a'), 0,2.12,0);
+  addMesh(g, GCyl(.12,2.12,8), M('#757575'), 0,1.06,0);
+  addMesh(g, GCyl(.45,.06,16), M('#9e9e9e'), 0,.06,0);
+  addMesh(g, GCyl(.08,.45,8), M('#FFFDE7'), 0,2.35,0);
+  const flame=new THREE.Mesh(GSph(.1,6), MB('#FF9100')); flame.position.set(0,2.62,0); g.add(flame);
+  
+  for(const sx of [-2.8, 2.8]){
+    addMesh(g, new THREE.CylinderGeometry(.55,.55,.09,12), M('#c29b57'), sx,.98,0);
+    addMesh(g, GCyl(.08,.98,8), M('#757575'), sx,.49,0);
+  }
+  return g;
+}
+function buildRobot(role){
+  const g=new THREE.Group();
+  const bodyColor = role==='chef'?'#00bcd4':role==='waiter'?'#e91e63':'#ff9800';
+  addMesh(g, GSph(.7,12), M(bodyColor), 0,1.4,0);
+  addMesh(g, GBox(.9,.28,.28), M('#ffffff'), 0,1.55,.58);
+  addMesh(g, GCyl(.05,.6,6), M('#ccc'), 0,2.15,0);
+  addMesh(g, GSph(.12,6), MB('#ffeb3b'), 0,2.5,0);
+  return g;
+}
+
+const stations = {};
+function addStation(id,type,x,z,w,d,opts={}){
+  if(stations[id]) return stations[id];
+  let mesh;
+  if(type==='fridge')  mesh=buildFridge();
+  if(type==='sink')    mesh=buildSink();
+  if(type==='trayrack') mesh=buildTrayRack(w,d);
+  if(type==='grill')   mesh=buildGrill();
+  if(type==='sodafountain') mesh=buildSodaFountain();
+  if(type==='counter') mesh=buildCounter(w,d);
+  if(type==='trash')   mesh=buildTrash();
+  if(type==='dumpster')mesh=buildDumpster();
+  if(type==='table')   mesh=buildTable();
+  if(type==='robot')   mesh=buildRobot(opts.role||'busser');
+  mesh.position.set(x,0,z);
+  stGrp.add(mesh);
+  const s={id,type,x,z,w,d,mesh,visuals:[],...opts};
+  if(type==='grill')   s.slots=[null,null];
+  if(type==='counter') s.item=null;
+  if(type==='sink')    s.cleanTrays=0; 
+  if(type==='trayrack') s.cleanTrays=0; 
+  if(type==='trash')   s.contents=0; 
+  if(type==='table')   { s.r=2.2; s.group=null; s.served=0; s.dirtyTrays=0; }
+  if(type==='robot')   { s.role=opts.role||'busser'; s.state='idle'; s.pos=new THREE.Vector3(x,0,z); s.target=null; s.holding=null; s.timer=0; }
+  stations[id]=s; return s;
+}
+function removeStation(id){
+  if(!stations[id]) return;
+  stGrp.remove(stations[id].mesh);
+  delete stations[id];
+}
+
+function initStations(){
+  addStation('fridge','fridge',-8,-8,3,3);
+  addStation('sink0','sink',-4.5,-8.5,1.8,1.8);
+  addStation('rack0','trayrack',-2.2,-8.5,1.8,1.8); 
+  addStation('grill0','grill',1.2,-8.5,3.5,2);
+  addStation('counter0','counter',4.8,-8.5,1.8,1.8);
+  addStation('counter1','counter',7.2,-8.5,1.8,1.8);
+  addStation('trash0','trash',-8,6,2,2);
+  addStation('dumpster0', 'dumpster', 0, bounds.b + 20, 4, 3); 
+  addStation('table0','table',0,4,5,5);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ITEM MESHES (Option B Combo Stacking)
+// ─────────────────────────────────────────────────────────────
+function itemMesh(type){
+  const g=new THREE.Group();
+  if(type==='raw'){
+    addMesh(g, new THREE.CylinderGeometry(.3,.3,.18,12), matRaw, 0,.09,0, 0,0,0,false);
+  } else if(type==='cooked'){
+    addMesh(g, new THREE.SphereGeometry(.55,8,6), matBun, 0,.1,0).scale.set(.95,.3,.95);
+    addMesh(g, new THREE.CylinderGeometry(.28,.28,.18,12), matMeat, 0,.3,0);
+    addMesh(g, GBox(.9,.05,.9), matCheese, 0,.45,0);
+    addMesh(g, new THREE.CylinderGeometry(.28,.28,.06,12), matTomato, 0,.55,0);
+    addMesh(g, new THREE.SphereGeometry(.55,8,6), matBun, 0,.75,0).scale.set(.95,.34,.95);
+  } else if(type==='charred'){
+    addMesh(g, new THREE.CylinderGeometry(.3,.3,.18,12), matCharred, 0,.09,0, 0,0,0,false);
+  } else if(type==='soda'){
+    addMesh(g, GCyl(0.18, 0.4, 12), matCup, 0, 0.28, 0); 
+    addMesh(g, GCyl(0.19, 0.05, 12), matSilver, 0, 0.5, 0); 
+    addMesh(g, GCyl(0.02, 0.2, 6), matSilver, 0, 0.6, 0); 
+  } else if(type==='tray'){
+    addMesh(g, GBox(1.6, 0.08, 1.1), matTray, 0,.04,0, 0,0,0,false); 
+    addMesh(g, GBox(1.5, 0.12, 1.0), M('#dddddd'), 0,.06,0, 0,0,0,false); 
+  } else if(type==='dirty_tray'){
+    addMesh(g, GBox(1.6, 0.08, 1.1), matTray, 0,.04,0, 0,0,0,false); 
+    const pc=[M('#8a6045'),M('#a88b73'),M('#556b2f')];
+    for(let i=0;i<6;i++){
+      const pm=new THREE.Mesh(new THREE.SphereGeometry(.05+Math.random()*.04,4,4), pc[i%3]);
+      pm.position.set((Math.random()-.5)*1.3,.1,(Math.random()-.5)*.8); g.add(pm);
+    }
+  } else if(type==='soda_on_tray'){
+    g.add(itemMesh('tray'));
+    const sm=itemMesh('soda'); sm.position.set(0, 0.04, 0); g.add(sm);
+  } else if(type==='burger_on_tray'){
+    g.add(itemMesh('tray'));
+    const bm=itemMesh('cooked'); bm.position.set(0, 0.08, 0); g.add(bm);
+  } else if(type==='burger_soda_on_tray'){
+    g.add(itemMesh('tray'));
+    const bm=itemMesh('cooked'); bm.position.set(-0.35, 0.08, 0); g.add(bm); 
+    const sm=itemMesh('soda'); sm.position.set(0.45, 0.04, 0); g.add(sm); 
+  } else if(type==='trash_bag'){
+    addMesh(g, GSph(0.6, 12), matTrashBag, 0, 0.5, 0);
+    addMesh(g, GCyl(0.1, 0.2, 8), matTrashBag, 0, 1.1, 0);
+  }
+  return g;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  GAME DATA
+// ─────────────────────────────────────────────────────────────
+function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false}; }
+function defGS()   { return {lifeStars:0, lifeGroups:0}; }
+
+let gameState='boot'; 
+let eco=defEco(), upg=defUpg(), gStats=defGS();
+let stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:0, spawnTimer:0, initialGroups:1};
+
+let floaters = [];
+function spawnFloater(pos, txt, color='#66BB6A'){
+  floaters.push({pos:pos.clone().add(new THREE.Vector3(0,2,0)), text:txt, color:color, life:1.5});
+}
+
+function getRobotLevel(bot) {
+    if(bot.hiredDay === undefined) return 1;
+    const d = eco.day - bot.hiredDay;
+    if(d < 2) return 1;
+    if(d < 5) return 2;
+    if(d < 9) return 3;
+    if(d < 14) return 4;
+    return 5;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SAVE / LOAD
+// ─────────────────────────────────────────────────────────────
+function saveGame(){
+  try{ localStorage.setItem('burgerBoss_save', JSON.stringify({eco,upg,gStats,wings})); }catch(e){}
+}
+function loadSave(){
+  try{
+    const raw=localStorage.getItem('burgerBoss_save');
+    if(!raw) return;
+    const s=JSON.parse(raw);
+    if(s.eco)    eco    = Object.assign(defEco(),  s.eco);
+    if(s.upg)    upg    = Object.assign(defUpg(),  s.upg);
+    if(s.gStats) gStats = Object.assign(defGS(),   s.gStats);
+    if(s.wings)  wings  = s.wings;
+    
+    if(typeof upg.sodaFountain === 'boolean') {
+        upg.sodaCount = upg.sodaFountain ? 1 : 0;
+        delete upg.sodaFountain;
+    }
+  }catch(e){ console.warn('Load failed',e); }
+  updateBoundsFromLevel();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PLAYER
+// ─────────────────────────────────────────────────────────────
+const player={pos:new THREE.Vector3(0,0,0), dir:0, radius:.85, speed:.15, holding:null, wobble:0};
+const pMesh=new THREE.Group(); scene.add(pMesh);
+
+const pBody=new THREE.Mesh(new THREE.CylinderGeometry(.65,.65,1.6,12), M('#ffffff')); pBody.position.y=.8; pBody.castShadow=true; pMesh.add(pBody);
+const pHead=new THREE.Mesh(GSph(.55,12), matSkin); pHead.position.y=1.95; pHead.castShadow=true; pMesh.add(pHead);
+const pHatRim=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,.32,16), M('#eeeeee')); pHatRim.position.y=2.38; pHatRim.castShadow=true; pMesh.add(pHatRim);
+const pHatBody=new THREE.Mesh(new THREE.CylinderGeometry(.6,.82,1.55,16), M('#ffffff')); pHatBody.position.y=3.15; pHatBody.castShadow=true; pMesh.add(pHatBody);
+const pHatTop=new THREE.Mesh(GSph(.6,16), M('#ffffff')); pHatTop.scale.set(1,.55,1); pHatTop.position.y=3.95; pHatTop.castShadow=true; pMesh.add(pHatTop);
+
+function applyCrown(){
+  if(!upg.burgerCrown) return;
+  pHatBody.material = M('#FFD700');
+  pHatTop.material = M('#FFC107');
+  pHatRim.material = M('#FFA000');
+}
+
+let heldMesh=null;
+function updateHolding(){
+  if(heldMesh){ pMesh.remove(heldMesh); heldMesh=null; }
+  if(player.holding){ heldMesh=itemMesh(player.holding); heldMesh.position.set(0,1.5,1.1); pMesh.add(heldMesh); }
+}
+
+const hlRing=new THREE.Mesh(new THREE.TorusGeometry(1.4,.18,8,24), MB(0xffff00));
+hlRing.rotation.x=-Math.PI/2; hlRing.position.y=.12; hlRing.visible=false; scene.add(hlRing);
+const placeGhost=new THREE.Mesh(GBox(1,.18,1), new THREE.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.55}));
+placeGhost.visible=false; scene.add(placeGhost);
+const gridH=new THREE.GridHelper(80,40,0x444,0x555);
+gridH.position.y=.16; gridH.material.opacity=.14; gridH.material.transparent=true; gridH.visible=false; scene.add(gridH);
+
+// ─────────────────────────────────────────────────────────────
+//  COLLISION
+// ─────────────────────────────────────────────────────────────
+function seg(nx,nz,pR,x1,x2,z1,z2){ return nx>x1-pR&&nx<x2+pR&&nz>z1-pR&&nz<z2+pR; }
+
+function checkColl(nx,nz,skip=null){
+  const pR = skip && skip.includes('robot') ? 0.0 : player.radius;
+  const wt = .55, b = bounds;
+
+  if(nx<b.l-18||nx>b.r+18||nz<b.t-5||nz>b.b+30) return true;
+
+  for(const e of collEdges) {
+    let hw = 2.5; 
+    let cx = (e.min + e.max) / 2;
+    if(e.axis === 'x') {
+       if(seg(nx, nz, pR, e.min, e.max, e.fixed - wt/2, e.fixed + wt/2)) {
+          if(e.type === 'solid') return true;
+          if(nx < cx - hw + pR || nx > cx + hw - pR) return true;
+       }
+    } else {
+       if(seg(nx, nz, pR, e.fixed - wt/2, e.fixed + wt/2, e.min, e.max)) {
+          if(e.type === 'solid') return true;
+          if(nz < cx - hw + pR || nz > cx + hw - pR) return true;
+       }
+    }
+  }
+
+  for(const key in stations){
+    const s=stations[key]; 
+    if(skip&&s.id===skip) continue;
+    if(s.type==='robot') continue;
+    if(s.type==='table'){
+      if(Math.sqrt((nx-s.x)**2+(nz-s.z)**2)<pR+s.r) return true;
+    } else {
+      if(nx>s.x-s.w/2-pR&&nx<s.x+s.w/2+pR&&nz>s.z-s.d/2-pR&&nz<s.z+s.d/2+pR) return true;
+    }
+  }
+  return false;
+}
+
+function validPlacement(st,nx,nz){
+  const l=nx-st.w/2, r=nx+st.w/2, t=nz-st.d/2, bt=nz+st.d/2;
+  const b=bounds;
+  
+  if(l < b.l+0.5 || r > b.r-0.5 || t < b.t+0.5 || bt > b.b-0.5) return false;
+
+  for(const key in stations){
+    const s2=stations[key]; if(s2.id===st.id) continue;
+    if(s2.type==='robot') continue;
+    if(s2.type==='table'){
+      if(Math.sqrt((nx-s2.x)**2+(nz-s2.z)**2)<s2.r+Math.max(st.w,st.d)/2+.5) return false;
+    } else {
+      if(!(r<=s2.x-s2.w/2||l>=s2.x+s2.w/2||bt<=s2.z-s2.d/2||t>=s2.z+s2.d/2)) return false;
+    }
+  }
+  return true;
+}
+
+function getClosest(){
+  const ax=player.pos.x+Math.sin(player.dir)*3.2;
+  const az=player.pos.z+Math.cos(player.dir)*3.2;
+  let best=null, bestD=5.0;
+  for(const key in stations){
+    const s=stations[key];
+    if(dragStation&&s.id===dragStation.id) continue;
+    if(s.type==='robot' && gameState !== 'edit') continue; 
+    let d;
+    if(s.type==='robot') d=Math.sqrt((ax-s.pos.x)**2+(az-s.pos.z)**2);
+    else d=Math.sqrt((ax-s.x)**2+(az-s.z)**2);
+    
+    if(s.type==='table') d-=s.r*.4;
+    if(d<bestD){ bestD=d; best=s; }
+  }
+  return best;
+}
+
+function freeSpot(){
+  const b=bounds;
+  for(let z=b.t+2;z<b.b-2;z+=2) {
+    for(let x=b.l+2;x<b.r-2;x+=2) {
+      let ok=true;
+      for(const k in stations){ 
+         const s=stations[k]; 
+         const dist = Math.sqrt((x-(s.pos?s.pos.x:s.x))**2+(z-(s.pos?s.pos.z:s.z))**2);
+         if(dist < 3.5) { ok=false; break; } 
+      }
+      if(ok&&!checkColl(x,z)) return {x,z};
+    }
+  }
+  return null; 
+}
+
+function getValidSpawn(){
+  const cx=Math.round((baseBounds.l+baseBounds.r)/2);
+  const cz=Math.round((baseBounds.t+baseBounds.b)/2);
+  for(let r=0;r<20;r+=2) for(let dx=-r;dx<=r;dx+=2) for(let dz=-r;dz<=r;dz+=2){
+    const tx=cx+dx, tz=cz+dz;
+    if(!checkColl(tx,tz,null)) return new THREE.Vector3(tx,0,tz);
+  }
+  return new THREE.Vector3(cx,0,cz);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  EDIT MODE & SHOP SYSTEM
+// ─────────────────────────────────────────────────────────────
+let dragStation=null, dragOrigPos={x:0,z:0};
+
+function startEditMode(){
+  gameState='edit';
+  ['start-screen','shop-screen','results-screen'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.style.display='none';
+  });
+  document.getElementById('edit-hud').style.display='block';
+  player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
+  dragStation=null; gridH.visible=true;
+  actionBtn.innerHTML='🔧'; actionBtn.style.background='rgba(3,169,244,.8)';
+}
+function saveEditMode(){
+  if(dragStation){
+    dragStation.mesh.position.set(dragOrigPos.x,0,dragOrigPos.z);
+    dragStation.x=dragOrigPos.x; dragStation.z=dragOrigPos.z;
+    dragStation=null; placeGhost.visible=false;
+  }
+  document.getElementById('edit-hud').style.display='none';
+  actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
+  gridH.visible=false; hlRing.visible=false;
+  showStartMenu();
+}
+window.startEditMode=startEditMode; window.saveEditMode=saveEditMode;
+
+function openExpandPicker(){
+  document.getElementById('exp-left').disabled  = wings.filter(w=>w.dir==='left').length>=3;
+  document.getElementById('exp-right').disabled = wings.filter(w=>w.dir==='right').length>=3;
+  document.getElementById('exp-back').disabled  = wings.filter(w=>w.dir==='back').length>=3;
+  document.getElementById('expand-picker').style.display='flex';
+  document.getElementById('shop-screen').style.display='none';
+}
+function closeExpandPicker(){
+  document.getElementById('expand-picker').style.display='none';
+  document.getElementById('shop-screen').style.display='flex';
+}
+function confirmExpand(dir){
+  document.getElementById('expand-picker').style.display='none';
+  let wing;
+  if(dir==='left'){
+    const leftCount  = wings.filter(w=>w.dir==='left').length;
+    if(leftCount>0){
+      const prevWing = wings.filter(w=>w.dir==='left').reduce((a,c)=>c.l<a.l?c:a, wings.find(w=>w.dir==='left'));
+      wing = {dir:'left', l:prevWing.l-WING_SIZE, r:prevWing.l, t:baseBounds.t, b:baseBounds.b};
+    } else {
+      wing = {dir:'left', l:baseBounds.l-WING_SIZE, r:baseBounds.l, t:baseBounds.t, b:baseBounds.b};
+    }
+  } else if(dir==='right'){
+    const rightCount = wings.filter(w=>w.dir==='right').length;
+    if(rightCount>0){
+      const prevWing = wings.filter(w=>w.dir==='right').reduce((a,c)=>c.r>a.r?c:a, wings.find(w=>w.dir==='right'));
+      wing = {dir:'right', l:prevWing.r, r:prevWing.r+WING_SIZE, t:baseBounds.t, b:baseBounds.b};
+    } else {
+      wing = {dir:'right', l:baseBounds.r, r:baseBounds.r+WING_SIZE, t:baseBounds.t, b:baseBounds.b};
+    }
+  } else {
+    const backCount  = wings.filter(w=>w.dir==='back').length;
+    if(backCount>0){
+      const prevWing = wings.filter(w=>w.dir==='back').reduce((a,c)=>c.t<a.t?c:a, wings.find(w=>w.dir==='back'));
+      wing = {dir:'back', l:baseBounds.l, r:baseBounds.r, t:prevWing.t-WING_SIZE, b:prevWing.t};
+    } else {
+      wing = {dir:'back', l:baseBounds.l, r:baseBounds.r, t:baseBounds.t-WING_SIZE, b:baseBounds.t};
+    }
+  }
+  wings.push(wing); eco.floorLevel++; bounds = computeBounds(); rebuildAll(); saveGame();
+  document.getElementById('shop-cash-display').textContent='$'+eco.cash.toFixed(2);
+  updateShop(); document.getElementById('shop-screen').style.display='flex';
+}
+window.confirmExpand=confirmExpand; window.closeExpandPicker=closeExpandPicker;
+
+function rebuildAll(){
+  updateBoundsFromLevel();
+  buildWorld(); buildRoom();
+  updateStationVisuals();
+}
+
+const SHOP_DEFS = [
+  // Tier 1 (Day 1)
+  {id:'trays',     label:'🍱 Buy Trays (+4)',    desc:'Start each day with more trays',       cat:'Building',  cost:()=>60,                     max:()=>eco.totalTrays>=20, unlockDay:1, action:()=>{ eco.totalTrays+=4; }},
+  {id:'speed',     label:'⚡ Roller Skates',      desc:'Move faster (stackable)',               cat:'Upgrades',  cost:()=>60+upg.speedLv*40,      max:()=>upg.speedLv>=5, unlockDay:1, action:()=>{ upg.speedLv++; }},
+  {id:'grillspd',  label:'🔥 Turbo Grill',        desc:'Cook burgers faster',                   cat:'Upgrades',  cost:()=>55+Math.floor(upg.grillMult*25), max:()=>upg.grillMult>=3, unlockDay:1, action:()=>{ upg.grillMult=Math.min(3,upg.grillMult+.35); }},
+  
+  // Tier 2 (Day 3)
+  {id:'table',     label:'🪑 Add Table',         desc:'Serve more customers at once',          cat:'Building',  cost:()=>80*(upg.tableCount+1),  max:()=>upg.tableCount>=8, unlockDay:3, action:()=>{ addStation('table'+upg.tableCount,'table', baseBounds.r-3, baseBounds.t+4,5,5); upg.tableCount++; }},
+  {id:'decor',     label:'🌸 Fancy Decor',        desc:'Customers wait longer',                 cat:'Upgrades',  cost:()=>45+Math.floor(upg.patienceMult*20), max:()=>upg.patienceMult>=3, unlockDay:3, action:()=>{ upg.patienceMult=Math.min(3,upg.patienceMult+.35); }},
+  {id:'xcounter',  label:'🍽️ Extra Counter',      desc:'More clean tray staging space',        cat:'Equipment', cost:()=>70+upg.extraCounters*50,max:()=>upg.extraCounters>=maxEquip()-1, unlockDay:3, action:()=>{ const id='counter'+(upg.extraCounters+2); const pos=freeSpot(); addStation(id,'counter',pos.x,pos.z,1.8,1.8); upg.extraCounters++; }},
+  
+  // Tier 3 (Day 5)
+  {id:'soda',      label:'🥤 Soda Fountain',      desc:'Unlock Combo Meals for higher profit!', cat:'Equipment', cost:()=>150 + upg.sodaCount*100, max:()=>upg.sodaCount>=maxEquip()-1, unlockDay:5, action:()=>{ const pos=freeSpot(); addStation('soda'+upg.sodaCount,'sodafountain',pos.x,pos.z,2,2); upg.sodaCount++; upg.sodaDeclined=false; }},
+  {id:'expand',    label:'🏗️ Expand Floorplan',  desc:'Push the walls out for more space',     cat:'Building',  cost:()=>200*(eco.floorLevel+1), max:()=>eco.floorLevel>=6,        unlockDay:5, action:()=>{ eco.floorLevel++; updateBoundsFromLevel(); rebuildAll(); }},
+  {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=maxEquip()-1, unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=freeSpot(); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
+  {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=maxEquip()-1,  unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=freeSpot(); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
+  {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>200+upg.robotCount*120, max:()=>upg.robotCount>=10, unlockDay:5, action:()=>{ 
+      const id='robot'+upg.robotCount; const pos=getValidSpawn(); addStation(id,'robot',pos.x,pos.z,1.5,1.5,{role:'busser', hiredDay:eco.day}); 
+      if(upg.robotCount === 0) {
+         setTimeout(() => {
+            const p = document.getElementById('alert-popup');
+            document.getElementById('alert-title').style.color = '#4CAF50';
+            document.getElementById('alert-title').textContent = 'NEW STAFF';
+            document.getElementById('alert-desc').innerHTML = "You hired your first Robot!<br><br>Enter <b>EDIT MODE</b> and face it to switch its job:<br><br>🧹 <b>Busser</b> (Cleans dishes)<br>👨‍🍳 <b>Chef</b> (Cooks patties)<br>🛎️ <b>Waiter</b> (Serves food)<br><br><i>Note: New robots are slow, but level up each day!</i>";
+            p.style.display = 'flex';
+         }, 100);
+      }
+      upg.robotCount++; 
+  }},
+  
+  // Day 100 Reward
+  {id:'crown',     label:'👑 Golden Burger Crown', desc:'Ultimate reward for 100 Days of service', cat:'Upgrades', cost:()=>10000, max:()=>upg.burgerCrown, unlockDay:100, action:()=>{ upg.burgerCrown=true; applyCrown(); }},
+];
+
+function maxEquip(){ return 4; }
+
+let activeShopTab = 'Upgrades';
+function updateShop(){
+  const cats = ['Upgrades', 'Building', 'Equipment', 'Automation'];
+  if(!cats.includes(activeShopTab)) activeShopTab=cats[0];
+
+  const tabsEl=document.getElementById('shop-tabs');
+  tabsEl.innerHTML='';
+  for(const cat of cats){
+    const btn=document.createElement('button');
+    btn.className='shop-tab'+(activeShopTab===cat?' active':'');
+    btn.textContent=cat;
+    btn.onclick=()=>{ activeShopTab=cat; updateShop(); };
+    tabsEl.appendChild(btn);
+  }
+
+  const itemsEl=document.getElementById('shop-items');
+  itemsEl.innerHTML='';
+  const items=SHOP_DEFS.filter(d=>d.cat===activeShopTab);
+  for(const def of items){
+    const cost=def.cost();
+    const isMax=def.max();
+    const locked=eco.day < def.unlockDay;
+    const canAfford=eco.cash>=cost;
+
+    const div=document.createElement('div');
+    div.className='upg-item'+(locked?' locked':'');
+
+    let btnHtml;
+    if(isMax)         btnHtml=`<button class="buy-btn max" disabled>MAX</button>`;
+    else if(locked)   btnHtml=`<button class="buy-btn" disabled>🔒 DAY ${def.unlockDay}</button>`;
+    else              btnHtml=`<button class="buy-btn" ${canAfford?'':'disabled'} onclick="doBuy('${def.id}')">$${cost.toFixed(2)}</button>`;
+
+    div.innerHTML=`<div><div style="font-weight:900;font-size:14px;">${def.label}</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;">${def.desc}</div></div>${btnHtml}`;
+    itemsEl.appendChild(div);
+  }
+}
+
+function doBuy(id){
+  const def=SHOP_DEFS.find(d=>d.id===id);
+  if(!def) return;
+  const cost=def.cost();
+  if(eco.cash<cost||def.max()||eco.day<def.unlockDay) return;
+
+  if(['table','xcounter','xgrill','xsink','robot','soda'].includes(id)) {
+     if(!freeSpot()) {
+        const p = document.getElementById('alert-popup');
+        document.getElementById('alert-title').style.color = '#F44336';
+        document.getElementById('alert-title').textContent = 'NO SPACE!';
+        document.getElementById('alert-desc').innerHTML = "Your restaurant is too cluttered.<br><br>Move items around in <b>EDIT MODE</b> or <b>EXPAND</b> your floorplan before buying this.";
+        p.style.display = 'flex';
+        playSound('error');
+        return; 
+     }
+  }
+
+  playSound('coin');
+  eco.cash-=cost;
+  def.action();
+  updateCashUI();
+  document.getElementById('shop-cash-display').textContent='$'+eco.cash.toFixed(2);
+  updateShop(); updateStationVisuals(); saveGame();
+}
+window.doBuy=doBuy;
+
+// ─────────────────────────────────────────────────────────────
+//  DAILY FLOW & MENUS
+// ─────────────────────────────────────────────────────────────
+function getCumRating(){ return gStats.lifeGroups===0?0:(gStats.lifeStars/gStats.lifeGroups).toFixed(1); }
+function updateCashUI(){
+  document.getElementById('cash-val').textContent='$'+eco.cash.toFixed(2);
+  document.getElementById('rating-val').textContent='⭐ '+getCumRating();
+}
+
+function showStartMenu(){
+  const scr = document.getElementById('start-screen');
+  scr.style.display = 'flex';
+  document.getElementById('results-screen').style.display = 'none';
+  document.getElementById('shop-screen').style.display = 'none';
+  document.getElementById('top-hud').style.display = 'none';
+  gameState = 'start_menu';
+
+  if (eco.day === 0) {
+      scr.innerHTML = `
+          <div style="background:rgba(0,0,0,0.85); padding:32px; border-radius:24px; border: 3px solid #66BB6A; max-width: 500px; text-align:center;">
+            <h1 style="font-size:38px;margin:0;color:#66BB6A;text-shadow:0 3px 0 #1B5E20;">WELCOME TO BURGER BAR!</h1>
+            <p style="font-size:16px;line-height:1.5;margin-top:16px;">
+              🍔 <b>1. Grab Raw Meat</b> from the fridge.<br>
+              🔥 <b>2. Cook it</b> on the grill until it sizzles.<br>
+              🍱 <b>3. Plate it</b> by grabbing a clean tray from the rack.<br>
+              🏃 <b>4. Serve it</b> to the waiting customers!<br><br>
+              <i>Use your Left Thumb to move, and your Right Thumb to Act/Grab.</i>
+            </p>
+            <button class="btn-green" onclick="startNextDay()">START DAY 1</button>
+          </div>
+      `;
+  } else {
+      scr.innerHTML = `
+          <div style="background:rgba(0,0,0,0.8); padding:32px; border-radius:24px; border: 2px solid #ffc107; text-align:center;">
+            <h1 style="font-size:42px;margin:0;color:#ffc107;text-shadow:0 3px 0 #b06000;">BURGER BAR</h1>
+            <div style="font-size:16px;color:rgba(255,255,255,.8);margin:12px 0 24px; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 12px;">
+              💾 Day <span style="font-weight:bold; color:#fff;">${eco.day}</span> &nbsp;·&nbsp;
+              <span style="font-weight:bold; color:#66BB6A;">$${eco.cash.toFixed(2)}</span> &nbsp;·&nbsp;
+              Rating <span style="font-weight:bold; color:#ffc107;">${getCumRating()}⭐</span>
+            </div>
+            <button class="btn-green" onclick="startNextDay()">START NEXT DAY</button><br>
+            <button class="btn-blue" onclick="showShop()">UPGRADE SHOP</button><br>
+            <button class="btn-blue" onclick="startEditMode()" style="margin-top:8px;">REORGANIZE</button><br>
+            <button style="background:none;border:none;color:rgba(255,255,255,.3);font-size:12px;margin-top:24px;cursor:pointer;font-family:inherit;" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save Data</button>
+          </div>
+      `;
+  }
+}
+window.showStartMenu = showStartMenu;
+
+function startNextDay(){
+  if(eco.day === 4 && upg.sodaCount === 0 && !upg.sodaDeclined) {
+      document.getElementById('decision-popup').style.display='flex';
+      document.getElementById('decision-buy-btn').disabled = (eco.cash < 150);
+      return;
+  }
+  executeDayStart();
+}
+
+function decisionBuySoda() {
+    if(eco.cash >= 150) {
+        if(!freeSpot()) {
+            const p = document.getElementById('alert-popup');
+            document.getElementById('alert-title').style.color = '#F44336';
+            document.getElementById('alert-title').textContent = 'NO SPACE!';
+            document.getElementById('alert-desc').innerHTML = "Your restaurant is too cluttered to install a Soda Fountain.<br>Move items or expand your shop first!";
+            p.style.display = 'flex';
+            playSound('error');
+            return;
+        }
+        eco.cash -= 150;
+        upg.sodaCount = 1;
+        const pos = freeSpot();
+        addStation('soda0','sodafountain',pos.x,pos.z,2,2);
+        document.getElementById('decision-popup').style.display='none';
+        executeDayStart();
+    }
+}
+
+function decisionDeclineSoda() {
+    upg.sodaDeclined = true;
+    document.getElementById('decision-popup').style.display='none';
+    executeDayStart();
+}
+
+function executeDayStart() {
+  eco.day++;
+  
+  let rating = parseFloat(getCumRating());
+  if(eco.day === 1) rating = 3.0;
+  let multi = 1.0;
+  if(rating >= 4.0) multi = 1.3;
+  if(rating < 3.0) multi = 0.7;
+  if(upg.sodaDeclined) multi *= 0.85;
+
+  const baseGroups = eco.day + 1; 
+  const groupCount = Math.max(1, Math.floor(baseGroups * multi));
+  
+  stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount, spawnTimer: 180}; // Quick first spawn
+
+  document.getElementById('top-hud').style.display='flex';
+  ['start-screen','shop-screen','results-screen'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.style.display='none';
+  });
+  
+  document.getElementById('day-banner').innerHTML=`DAY ${eco.day}<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${groupCount}</span>`;
+  updateCashUI();
+
+  let traysAssigned = false;
+  for(const k in stations){
+    const s=stations[k];
+    if(s.type==='grill') {
+       s.slots=[null,null];
+    }
+    if(s.type==='counter') s.item=null;
+    if(s.type==='sink')    s.cleanTrays=0;
+    if(s.type==='trayrack') { 
+        s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; 
+        traysAssigned = true; 
+    }
+    if(s.type==='table')   { s.group=null; s.served=0; s.dirtyTrays=0; }
+  }
+
+  player.holding=null; updateHolding();
+  groups.forEach(g=>scene.remove(g.mesh)); groups=[];
+
+  for(const k in stations) if(stations[k].type==='robot') stations[k].state='idle';
+
+  updateStationVisuals();
+  player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
+  gameState='playing';
+  actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
+  saveGame();
+
+  if(eco.day === 10) {
+     const p = document.getElementById('alert-popup');
+     document.getElementById('alert-title').style.color = '#F44336';
+     document.getElementById('alert-title').textContent = 'WARNING';
+     document.getElementById('alert-desc').innerHTML = "<b>THE VIP</b> is now visiting local restaurants.<br>Look for the black suit and angry mark (💢). Keep wait times low and serve food fast, or your rating will suffer severely! But they pay 3x as much.";
+     p.style.display = 'flex';
+  }
+}
+window.startNextDay = startNextDay;
+
+function closeShop(){
+  document.getElementById('shop-screen').style.display='none';
+  showStartMenu();
+}
+window.closeShop = closeShop;
+
+function showShop(){
+  document.getElementById('start-screen').style.display='none';
+  document.getElementById('shop-cash-display').textContent='$'+eco.cash.toFixed(2);
+  updateShop();
+  document.getElementById('shop-screen').style.display='flex';
+  gameState='shop';
+}
+window.showShop=showShop;
+
+function endDay(){
+  gStats.lifeStars+=stats.totalStars;
+  gStats.lifeGroups+=stats.groupsServed;
+  hlRing.visible=false;
+  const cum=parseFloat(getCumRating());
+  if(eco.day>=5&&cum<2.0){
+    gameState='gameover';
+    document.getElementById('fail-days').textContent=eco.day;
+    document.getElementById('gameover-screen').style.display='flex';
+    saveGame(); return;
+  }
+  gameState='results'; saveGame(); showResults();
+}
+
+function showResults(){
+  const scr=document.getElementById('results-screen');
+  scr.style.display='flex';
+  const todayStars=stats.groupsServed>0?Math.round(stats.totalStars/stats.groupsServed):0;
+  const cum=getCumRating();
+  const cashBefore=eco.cash-stats.cashEarned;
+
+  const el=id=>document.getElementById(id);
+  el('res-day-lbl').style.opacity='0'; el('res-title').style.opacity='0'; el('res-title').style.transform='scale(.75)';
+  el('res-rating-num').style.opacity='0'; el('res-cash-earned').style.opacity='0'; el('res-cash-earned').style.transform='translateY(8px)';
+  el('res-total-row').style.opacity='0'; el('res-next-btn').style.opacity='0'; el('res-next-btn').style.transform='translateY(10px)'; el('res-next-btn').style.pointerEvents='none';
+
+  setTimeout(()=>el('res-day-lbl').style.opacity='1', 80);
+  setTimeout(()=>{ el('res-title').style.opacity='1'; el('res-title').style.transform='scale(1)'; }, 220);
+
+  const row=el('res-stars-row'); row.innerHTML='';
+  for(let i=0;i<5;i++){
+    const s=document.createElement('span'); s.className='star-slot'; s.textContent='⭐'; row.appendChild(s);
+  }
+  for(let i=0;i<5;i++) setTimeout(()=>{
+    const sl=row.children[i];
+    i<todayStars ? sl.classList.add('lit') : (sl.style.opacity='.18');
+  }, 540+i*155);
+
+  setTimeout(()=>{ el('res-rating-num').textContent=`⭐ ${cum} overall`; el('res-rating-num').style.opacity='1'; }, 1480);
+  setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
+  setTimeout(()=>{
+    el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+stats.cashEarned.toFixed(2);
+    el('res-total-row').style.opacity='1';
+    const totalEl=el('res-new-total');
+    const dur=900, t0=performance.now();
+    (function tick(now){
+      const t=Math.min((now-t0)/dur,1), e=1-Math.pow(1-t,3);
+      totalEl.textContent='$'+(cashBefore+(eco.cash-cashBefore)*e).toFixed(2);
+      if(t<1) requestAnimationFrame(tick); else totalEl.style.animation='totalPop .4s ease forwards';
+    })(performance.now());
+  }, 2100);
+  setTimeout(()=>{ el('res-next-btn').style.opacity='1'; el('res-next-btn').style.transform='translateY(0)'; el('res-next-btn').style.pointerEvents='auto'; }, 3100);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CUSTOMERS
+// ─────────────────────────────────────────────────────────────
+let groups=[];
+function doorX(){ return (baseBounds.l+baseBounds.r)/2; }
+
+function spawnGroup(){
+  let type = 'normal';
+  if(eco.day >= 10) {
+     const r = Math.random();
+     if(r < 0.15) type = 'vip';
+     else if(r < 0.30) type = 'heavy';
+  }
+
+  const size = type === 'heavy' ? 1 : (Math.random()>.55?2:1);
+  const sx = doorX()+(Math.random()-.5)*2, sz = bounds.b+12;
+  
+  const g = {
+    id:Math.random(), size, type, state:'approach_door', stoodUp: false,
+    waitPatience: 1800 * upg.patienceMult * (type==='vip'?0.5:1.0), 
+    maxWait: 1800 * upg.patienceMult * (type==='vip'?0.5:1.0),
+    foodPatience: size * 1300 * upg.patienceMult, 
+    maxFood: size * 1300 * upg.patienceMult,
+    eatTimer:0, pos:new THREE.Vector3(sx,0,sz), target:new THREE.Vector3(sx,0,sz),
+    mesh:new THREE.Group(), wobble:0, 
+    orders: [], unservedOrders: [], heavyCount: type === 'heavy' ? 3 : 1
+  };
+
+  for(let i=0; i<size; i++) {
+     let orderType = 'burger_on_tray';
+     if(upg.sodaCount > 0) {
+         const r = Math.random();
+         if(r < 0.25) orderType = 'soda_on_tray';
+         else if(r < 0.70) orderType = 'burger_soda_on_tray';
+     }
+     g.orders.push(orderType);
+  }
+  g.unservedOrders = [...g.orders];
+
+  for(let i=0;i<size;i++){
+    const m=new THREE.Group();
+    const c = type === 'vip' ? custColors[5] : custColors[Math.floor(Math.random()*(custColors.length-1))];
+    addMesh(m, new THREE.CylinderGeometry(.55,.55,1.35,12), c, 0,.68,0);
+    addMesh(m, GSph(.48,10), matSkin, 0,1.55,0);
+    if(type === 'heavy') m.scale.set(1.4, 1.0, 1.4);
+    m.position.set(i*1.7-(size>1?.85:0),0,i*.4); g.mesh.add(m);
+  }
+  scene.add(g.mesh); groups.push(g);
+  stats.groupsLeft--; document.getElementById('day-sub').textContent=`Customers: ${stats.groupsLeft}`;
+}
+
+function moveToTarget(g,scale){
+  const spd=.08*scale;
+  const dx=g.target.x-g.pos.x, dz=g.target.z-g.pos.z;
+  const dist=Math.sqrt(dx*dx+dz*dz);
+  if(dist<.22){ g.wobble=0; g.mesh.position.y=0; return true; }
+  g.pos.x+=dx/dist*spd; g.pos.z+=dz/dist*spd;
+  g.mesh.position.set(g.pos.x, Math.abs(Math.sin(g.wobble))*.18, g.pos.z);
+  g.wobble+=.18*scale;
+  const ta=Math.atan2(dx,dz); let df=ta-g.mesh.rotation.y;
+  while(df<-Math.PI)df+=Math.PI*2; while(df>Math.PI)df-=Math.PI*2;
+  g.mesh.rotation.y+=df*.2; return false;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  STATION VISUALS
+// ─────────────────────────────────────────────────────────────
+function updateStationVisuals(){
+  for(const k in stations){
+    const s=stations[k];
+    s.visuals.forEach(v=>scene.remove(v)); s.visuals=[];
+    const gY=3.1, cY=3.0, tY=2.2;
+    if(s.type==='grill'&&s.slots) s.slots.forEach((sl,i)=>{
+      if(!sl) return;
+      const m=itemMesh(sl.state); m.position.set(s.x-0.8+i*1.6, gY, s.z + 0.2); scene.add(m); s.visuals.push(m);
+    });
+    if(s.type==='counter' && s.item) {
+      const m=itemMesh(s.item); m.position.set(s.x, cY, s.z); scene.add(m); s.visuals.push(m);
+    }
+    if(s.type==='trayrack') for(let i=0;i<Math.min(s.cleanTrays, 15);i++){
+      const p=itemMesh('tray'); p.position.set(s.x, 2.95+i*.12, s.z); scene.add(p); s.visuals.push(p);
+    }
+    if(s.type==='sink') for(let i=0;i<Math.min(s.cleanTrays, 15);i++){
+      const p=itemMesh('tray'); p.position.set(s.x + 0.6, 3.1+i*.12, s.z - 0.6); scene.add(p); s.visuals.push(p);
+    }
+    if(s.type==='table'){
+      if(s.served>0) for(let i=0;i<s.served;i++){
+        const itemName = s.group && s.group.orders[i] ? s.group.orders[i] : 'burger_on_tray';
+        const m=itemMesh(itemName); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+      } else if(s.dirtyTrays>0) for(let i=0;i<s.dirtyTrays;i++){
+        const m=itemMesh('dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ACTION HANDLER
+// ─────────────────────────────────────────────────────────────
+function handleAction(){
+  if(gameState==='edit'){
+    if(dragStation){
+      const fx=Math.round(player.pos.x+Math.sin(player.dir)*4), fz=Math.round(player.pos.z+Math.cos(player.dir)*4);
+      if(validPlacement(dragStation,fx,fz)){
+        dragStation.x=fx; dragStation.z=fz; dragStation.mesh.position.set(fx,0,fz);
+        dragStation=null; placeGhost.visible=false; updateStationVisuals();
+      } else {
+        playSound('error');
+      }
+    } else {
+      const t=getClosest();
+      if(t){ 
+          if(t.type === 'robot') {
+              const roles=['busser','chef','waiter'];
+              const idx=(roles.indexOf(t.role)+1)%roles.length;
+              t.role=roles[idx]; t.state='idle'; t.holding=null;
+              stGrp.remove(t.mesh); t.mesh=buildRobot(t.role); t.mesh.position.set(t.pos.x,0,t.pos.z); stGrp.add(t.mesh);
+              const tt=document.getElementById('role-tooltip');
+              tt.textContent=`${t.role==='chef'?'👨‍🍳':t.role==='waiter'?'🛎️':'🧹'} Robot set to ${t.role.toUpperCase()}`;
+              tt.style.display='block'; setTimeout(()=>tt.style.display='none', 1800);
+          } else {
+              dragStation=t; dragOrigPos={x:t.x,z:t.z}; placeGhost.scale.set(t.w+.5,1,t.d+.5); 
+          }
+      }
+    }
+    return;
+  }
+  
+  if(gameState!=='playing') return;
+
+  const t=getClosest(); if(!t) return;
+  const type=t.type; let ok=false;
+
+  if(type==='fridge'&&!player.holding){ player.holding='raw'; ok=true; }
+  else if(type==='sink'){ 
+    if(player.holding==='dirty_tray'){ player.holding='tray'; ok=true; playSound('sizzle'); }
+  }
+  else if(type==='trayrack'){
+    if(player.holding==='tray'){ player.holding=null; t.cleanTrays++; ok=true; }
+    else if(!player.holding && t.cleanTrays > 0){ player.holding='tray'; t.cleanTrays--; ok=true; }
+    else if(player.holding==='cooked' && t.cleanTrays > 0){ player.holding='burger_on_tray'; t.cleanTrays--; ok=true; }
+  }
+  else if(type==='sodafountain'){
+    if(player.holding==='tray'){ player.holding='soda_on_tray'; ok=true; playSound('sizzle'); }
+    else if(player.holding==='burger_on_tray'){ player.holding='burger_soda_on_tray'; ok=true; playSound('sizzle'); }
+  }
+  else if(type==='grill'){
+    if(player.holding==='raw'){ 
+      const i=t.slots.indexOf(null); 
+      if(i!==-1){ t.slots[i]={state:'raw',progress:0, burnTimer:0}; player.holding=null; ok=true; } 
+    }
+    else if(!player.holding){ 
+      const cIdx=t.slots.findIndex(s=>s&&(s.state==='charred'));
+      if(cIdx !== -1) { player.holding='charred'; t.slots[cIdx]=null; ok=true; }
+      else {
+        const i=t.slots.findIndex(s=>s&&(s.state==='cooked')); 
+        if(i!==-1){ player.holding='cooked'; t.slots[i]=null; ok=true; } 
+      }
+    }
+    else if(player.holding==='tray'){
+      const i=t.slots.findIndex(s=>s&&(s.state==='cooked')); 
+      if(i!==-1){ player.holding='burger_on_tray'; t.slots[i]=null; ok=true; } 
+    }
+    else if(player.holding==='soda_on_tray'){
+      const i=t.slots.findIndex(s=>s&&(s.state==='cooked')); 
+      if(i!==-1){ player.holding='burger_soda_on_tray'; t.slots[i]=null; ok=true; } 
+    }
+  }
+  else if(type==='trash'){
+    if(t.contents >= 4 && !player.holding) {
+       player.holding = 'trash_bag'; t.contents = 0; ok=true;
+    } else if (player.holding==='raw'||player.holding==='cooked'||player.holding==='charred'||player.holding==='burger_on_tray'||player.holding==='burger_soda_on_tray'||player.holding==='soda_on_tray'){ 
+       if(t.contents < 4) {
+          player.holding = (player.holding.includes('tray') ? 'tray' : null);
+          t.contents++; ok=true; playSound('error'); 
+       } else {
+          playSound('error'); 
+       }
+    }
+  }
+  else if(type==='dumpster'){
+    if(player.holding==='trash_bag'){ player.holding=null; ok=true; playSound('dump'); }
+  }
+  else if(type==='counter'){
+    if(!t.item && player.holding){ t.item=player.holding; player.holding=null; ok=true; }
+    else if(t.item && !player.holding){ player.holding=t.item; t.item=null; ok=true; }
+    
+    // Quick-Assembly Combos on Counter
+    else if(t.item==='tray' && player.holding==='cooked'){ t.item=null; player.holding='burger_on_tray'; ok=true; }
+    else if(t.item==='cooked' && player.holding==='tray'){ t.item=null; player.holding='burger_on_tray'; ok=true; }
+    
+    else if(t.item==='burger_on_tray' && player.holding==='soda_on_tray'){ t.item=null; player.holding='burger_soda_on_tray'; ok=true; }
+    else if(t.item==='soda_on_tray' && player.holding==='burger_on_tray'){ t.item=null; player.holding='burger_soda_on_tray'; ok=true; }
+    
+    else if(t.item==='soda_on_tray' && player.holding==='cooked'){ t.item=null; player.holding='burger_soda_on_tray'; ok=true; }
+    else if(t.item==='cooked' && player.holding==='soda_on_tray'){ t.item=null; player.holding='burger_soda_on_tray'; ok=true; }
+  }
+  else if(type==='table'){
+    if(player.holding && (player.holding.includes('burger') || player.holding.includes('soda')) && t.group && t.group.state==='ordering'){
+      const idx = t.group.unservedOrders.indexOf(player.holding);
+      if(idx !== -1) {
+         t.group.unservedOrders.splice(idx, 1);
+         player.holding=null; t.served++; ok=true;
+         if(t.group.unservedOrders.length === 0){ t.group.eatTimer=200; t.group.state='eating'; }
+      }
+    } else if(!player.holding && t.dirtyTrays>0){ player.holding='dirty_tray'; t.dirtyTrays--; ok=true; }
+  }
+
+  if(ok){ updateHolding(); updateStationVisuals(); }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ROBOT AI
+// ─────────────────────────────────────────────────────────────
+function updateRobots(ds){
+  for(const k in stations){
+    const bot=stations[k]; if(bot.type!=='robot') continue;
+    bot.mesh.position.y=Math.sin(Date.now()/180)*.15;
+
+    const lvl = getRobotLevel(bot);
+    const botSpeed = 0.02 + (lvl * 0.025); // Nerfed Level 1 base speed
+
+    if(bot.state==='idle'){
+      if(bot.role==='chef'){
+        if(bot.holding === 'charred') {
+            const trash = Object.values(stations).find(s => s.type === 'trash');
+            if(trash) { bot.target = trash; bot.state = 'moving'; }
+        } else if (bot.holding === 'cooked') {
+            const c = Object.values(stations).find(s => s.type === 'counter' && (!s.item || s.item === 'tray'));
+            if(c) { bot.target = c; bot.state = 'moving'; }
+        } else if (bot.holding === 'raw') {
+            const g = Object.values(stations).find(s => s.type === 'grill' && s.slots.includes(null));
+            if(g) { bot.target = g; bot.state = 'moving'; }
+        } else if (!bot.holding) {
+            const gCharred = Object.values(stations).find(s => s.type === 'grill' && s.slots.some(sl => sl && sl.state === 'charred'));
+            if(gCharred) { bot.target = gCharred; bot.state = 'moving'; }
+            else {
+                const gCooked = Object.values(stations).find(s => s.type === 'grill' && s.slots.some(sl => sl && sl.state === 'cooked'));
+                if(gCooked) { bot.target = gCooked; bot.state = 'moving'; }
+                else {
+                    const gEmpty = Object.values(stations).find(s => s.type === 'grill' && s.slots.includes(null));
+                    if(gEmpty) {
+                        const fridge = Object.values(stations).find(s => s.type === 'fridge');
+                        if(fridge) { bot.target = fridge; bot.state = 'moving'; bot._grillTarget = gEmpty; }
+                    }
+                }
+            }
+        }
+      } 
+      else if(bot.role==='busser'){
+        if(bot.holding === 'dirty_tray') {
+            const sink = Object.values(stations).find(s => s.type === 'sink');
+            if(sink) { bot.target = sink; bot.state = 'moving'; }
+        } else if(bot.holding === 'tray') {
+            if(bot.timer > 0) {
+                bot.timer -= ds;
+                if(bot.timer <= 0) {
+                    const rack = Object.values(stations).find(s => s.type === 'trayrack');
+                    if(rack) { bot.target = rack; bot.state = 'moving'; }
+                }
+            } else {
+                const rack = Object.values(stations).find(s => s.type === 'trayrack');
+                if(rack) { bot.target = rack; bot.state = 'moving'; }
+            }
+        } else if(!bot.holding) {
+            const t = Object.values(stations).find(s => s.type === 'table' && s.dirtyTrays > 0);
+            if(t) { bot.target = t; bot.state = 'moving'; }
+        }
+      } 
+      else if(bot.role==='waiter'){
+        for(const tk in stations) {
+            const t = stations[tk];
+            if(t.type === 'table' && t.group && t.group.state === 'ordering' && t.group.unservedOrders.length > 0) {
+                const order = t.group.unservedOrders[0];
+                if(bot.holding === order) { bot.target = t; bot.state = 'moving'; break; }
+                
+                if(order === 'soda_on_tray') {
+                    if(!bot.holding) {
+                        const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
+                        if(r) { bot.target = r; bot.state = 'moving'; break; }
+                    } else if(bot.holding === 'tray') {
+                        const sf = Object.values(stations).find(s => s.type === 'sodafountain');
+                        if(sf) { bot.target = sf; bot.state = 'moving'; break; }
+                    }
+                } 
+                else if(order === 'burger_on_tray') {
+                    if(!bot.holding) {
+                        const cAssembled = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_on_tray');
+                        if(cAssembled) { bot.target = cAssembled; bot.state = 'moving'; break; }
+                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
+                        if(cCooked) {
+                            const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
+                            if(r) { bot.target = r; bot.state = 'moving'; break; }
+                        }
+                    } else if(bot.holding === 'tray') {
+                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
+                        if(cCooked) { bot.target = cCooked; bot.state = 'moving'; break; }
+                    }
+                } 
+                else if(order === 'burger_soda_on_tray') {
+                    if(!bot.holding) {
+                        const cAssembled = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_soda_on_tray');
+                        if(cAssembled) { bot.target = cAssembled; bot.state = 'moving'; break; }
+                        
+                        const cBurgerTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_on_tray');
+                        if(cBurgerTray) { bot.target = cBurgerTray; bot.state = 'moving'; break; }
+
+                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
+                        if(cCooked) {
+                            const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
+                            if(r) { bot.target = r; bot.state = 'moving'; break; }
+                        }
+                    } else if(bot.holding === 'tray') {
+                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
+                        if(cCooked) { bot.target = cCooked; bot.state = 'moving'; break; }
+                    } else if(bot.holding === 'burger_on_tray') {
+                        const sf = Object.values(stations).find(s => s.type === 'sodafountain');
+                        if(sf) { bot.target = sf; bot.state = 'moving'; break; }
+                    }
+                }
+            }
+        }
+      }
+    }
+
+    if(bot.state==='idle') continue;
+    
+    const tx=bot.target.x;
+    let tz=bot.target.z;
+    const dx_direct = tx - bot.pos.x;
+    let dz_direct = tz - bot.pos.z;
+    const dist = Math.sqrt(dx_direct*dx_direct + dz_direct*dz_direct);
+    
+    const tDist = bot.target.type === 'table' ? 3.0 : 2.0;
+
+    if(dist>tDist){
+        let dx = dx_direct / dist;
+        let dz = dz_direct / dist;
+
+        bot.pos.x += dx * botSpeed * ds;
+        bot.pos.z += dz * botSpeed * ds;
+
+        bot.mesh.position.x = bot.pos.x;
+        bot.mesh.position.z = bot.pos.z;
+        bot.mesh.rotation.y = Math.atan2(dx_direct, dz_direct);
+    } else {
+      const t = bot.target;
+      if(bot.role === 'chef') {
+          if(t.type === 'fridge') { bot.holding = 'raw'; }
+          else if(t.type === 'grill') {
+              if(bot.holding === 'raw') {
+                  const i = t.slots.indexOf(null);
+                  if(i !== -1) { t.slots[i] = {state:'raw', progress:0, burnTimer:0}; bot.holding = null; }
+              } else if (!bot.holding) {
+                  const i = t.slots.findIndex(s => s && s.state === 'charred');
+                  if(i !== -1) { bot.holding = 'charred'; t.slots[i] = null; }
+                  else {
+                      const i2 = t.slots.findIndex(s => s && s.state === 'cooked');
+                      if(i2 !== -1) { bot.holding = 'cooked'; t.slots[i2] = null; }
+                  }
+              }
+          }
+          else if(t.type === 'counter') {
+              if(bot.holding === 'cooked') {
+                  if(!t.item) { t.item = 'cooked'; bot.holding = null; }
+                  else if(t.item === 'tray') { t.item = 'burger_on_tray'; bot.holding = null; }
+              }
+          }
+          else if(t.type === 'trash') {
+              if(bot.holding === 'charred') { t.contents++; bot.holding = null; }
+          }
+          bot.state = 'idle'; updateStationVisuals();
+      }
+      else if(bot.role === 'busser') {
+          if(t.type === 'table' && !bot.holding && t.dirtyTrays > 0) {
+              t.dirtyTrays--; bot.holding = 'dirty_tray'; bot.state = 'idle'; updateStationVisuals();
+          } else if(t.type === 'sink' && bot.holding === 'dirty_tray') {
+              bot.holding = 'tray'; bot.timer = 100 - (lvl * 15); bot.state = 'idle'; 
+          } else if(t.type === 'trayrack' && bot.holding === 'tray' && bot.timer <= 0) {
+              t.cleanTrays++; bot.holding = null; bot.state = 'idle'; updateStationVisuals();
+          }
+      }
+      else if(bot.role === 'waiter') {
+          if(t.type === 'trayrack' && !bot.holding && t.cleanTrays > 0) {
+              t.cleanTrays--; bot.holding = 'tray'; bot.state = 'idle'; updateStationVisuals();
+          }
+          else if(t.type === 'sodafountain') {
+              if(bot.holding === 'tray') { bot.holding = 'soda_on_tray'; bot.state = 'idle'; updateStationVisuals(); }
+              else if(bot.holding === 'burger_on_tray') { bot.holding = 'burger_soda_on_tray'; bot.state = 'idle'; updateStationVisuals(); }
+          }
+          else if(t.type === 'counter') {
+              if(bot.holding === 'tray' && t.item === 'cooked') {
+                  t.item = null; bot.holding = 'burger_on_tray'; bot.state = 'idle'; updateStationVisuals();
+              } else if (!bot.holding && (t.item === 'burger_on_tray' || t.item === 'soda_on_tray' || t.item === 'burger_soda_on_tray')) {
+                  bot.holding = t.item; t.item = null; bot.state = 'idle'; updateStationVisuals();
+              }
+          }
+          else if(t.type === 'table') {
+              if(t.group && t.group.state === 'ordering') {
+                  const idx = t.group.unservedOrders.indexOf(bot.holding);
+                  if(idx !== -1) {
+                      t.group.unservedOrders.splice(idx, 1);
+                      t.served++; bot.holding = null; bot.state = 'idle'; updateStationVisuals();
+                      if(t.group.unservedOrders.length === 0) { t.group.eatTimer = 200; t.group.state = 'eating'; }
+                  } else { bot.state = 'idle'; }
+              } else { bot.state = 'idle'; }
+          }
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FLOATING UI
+// ─────────────────────────────────────────────────────────────
+const floatUI=document.getElementById('floating-ui');
+function scr(v){
+  const p=v.clone().project(camera);
+  return {x:(p.x*.5+.5)*window.innerWidth, y:(p.y*-.5+.5)*window.innerHeight, z:p.z};
+}
+
+function drawFloatUI(){
+  let html='';
+  
+  for(let i=floaters.length-1;i>=0;i--){
+    const f = floaters[i];
+    f.life -= ds * 0.02; f.pos.y += ds * 0.03;
+    if(f.life <= 0) { floaters.splice(i,1); continue; }
+    const p = scr(f.pos); if(p.z>=1) continue;
+    html+=`<div style="position:absolute;left:${p.x}px;top:${p.y}px;color:${f.color};font-weight:900;font-size:20px;text-shadow:0 2px 4px rgba(0,0,0,0.8);opacity:${f.life};transform:translate(-50%,-50%);pointer-events:none;">${f.text}</div>`;
+  }
+
+  if (gameState === 'edit') {
+      const t = getClosest();
+      if (t && t.type === 'robot') {
+          const p = scr(new THREE.Vector3(t.pos.x, 3.8, t.pos.z));
+          if (p.z < 1) {
+              let lvl = getRobotLevel(t);
+              html+=`<div class="fbubble" style="left:${p.x}px;top:${p.y-18}px;font-size:14px;color:#03A9F4;">Lv.${lvl} ${t.role.toUpperCase()}</div>`;
+          }
+      }
+  }
+
+  if(gameState!=='playing'){ floatUI.innerHTML=html; return; }
+
+  let stinkPenalty = false;
+  for(const k in stations){ 
+    const s=stations[k]; 
+    if(s.type==='grill') {
+      s.slots.forEach((sl,i)=>{ if(!sl) return;
+        const p=scr(new THREE.Vector3(s.x-0.8+i*1.6,5,s.z)); if(p.z>=1) return;
+        let col = sl.state === 'cooked' ? '#FF9800' : '#4CAF50';
+        let pct = sl.state === 'cooked' ? ((sl.burnTimer || 0) / 300 * 100) : (sl.progress / 200 * 100);
+        html+=`<div class="fbar" style="left:${p.x}px;top:${p.y}px"><div class="fbar-fill" style="width:${pct}%;background:${col}"></div></div>`;
+      });
+    }
+    if(s.type==='trash' && s.contents >= 4) {
+      stinkPenalty = true;
+      const p=scr(new THREE.Vector3(s.x, 3.5, s.z)); if(p.z<1) {
+        html+=`<div style="position:absolute;left:${p.x}px;top:${p.y}px;color:#8bc34a;font-size:30px;transform:translate(-50%,-50%);pointer-events:none;">♨️</div>`;
+      }
+    }
+  }
+  window._currentStinkPenalty = stinkPenalty;
+  
+  groups.forEach(g=>{ 
+    if(g.state==='queue') {
+      const p=scr(new THREE.Vector3(g.pos.x, 3.8, g.pos.z)); if(p.z>=1) return;
+      let icon = g.type === 'vip' ? '💢' : '⏳';
+      html+=`<div class="fbubble" style="left:${p.x}px;top:${p.y-18}px;padding:2px 6px;font-size:12px;">${icon}</div>`;
+      html+=`<div class="fbar" style="left:${p.x}px;top:${p.y}px;width:38px"><div class="fbar-fill" style="width:${Math.max(0,g.waitPatience/g.maxWait*100)}%;background:#03A9F4"></div></div>`;
+    }
+  });
+  
+  for(const k in stations){ const t=stations[k]; if(t.type!=='table'||!t.group||t.group.state!=='ordering') continue;
+    const p=scr(new THREE.Vector3(t.x,4.8,t.z)); if(p.z>=1) return;
+    
+    // Draw patience bar over the center of the table
+    const pct=Math.max(0,t.group.foodPatience/t.group.maxFood);
+    const col=pct>.5?'#4CAF50':pct>.25?'#FFEB3B':'#F44336';
+    html+=`<div class="fbar" style="left:${p.x}px;top:${p.y}px;width:76px"><div class="fbar-fill" style="width:${pct*100}%;background:${col}"></div></div>`;
+
+    // Draw individual order bubbles above each customer's head
+    t.group.mesh.children.forEach((c, i) => {
+       const worldPos = new THREE.Vector3();
+       c.getWorldPosition(worldPos);
+       worldPos.y += 2.8; 
+       const cp = scr(worldPos);
+       if(cp.z < 1) {
+          let icon = '';
+          if (i < t.served) {
+              icon = '✔️';
+          } else {
+              const order = t.group.orders[i];
+              if (order === 'burger_soda_on_tray') icon = '🍔🥤';
+              else if (order === 'soda_on_tray') icon = '🥤';
+              else icon = '🍔';
+          }
+          html+=`<div class="fbubble" style="left:${cp.x}px;top:${cp.y}px;padding:2px 6px;font-size:14px;">${icon}</div>`;
+       }
+    });
+  }
+  floatUI.innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  INPUT
+// ─────────────────────────────────────────────────────────────
+let joyVec={x:0,z:0}, keys={w:0,a:0,s:0,d:0}, actPressed=false;
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='w'||e.key==='ArrowUp')    keys.w=1;
+  if(e.key==='s'||e.key==='ArrowDown')  keys.s=1;
+  if(e.key==='a'||e.key==='ArrowLeft')  keys.a=1;
+  if(e.key==='d'||e.key==='ArrowRight') keys.d=1;
+  if(e.key===' '&&!actPressed){ actPressed=true; handleAction(); }
+});
+window.addEventListener('keyup',e=>{
+  if(e.key==='w'||e.key==='ArrowUp')    keys.w=0;
+  if(e.key==='s'||e.key==='ArrowDown')  keys.s=0;
+  if(e.key==='a'||e.key==='ArrowLeft')  keys.a=0;
+  if(e.key==='d'||e.key==='ArrowRight') keys.d=0;
+  if(e.key===' ') actPressed=false;
+});
+
+const jZone=document.getElementById('joystick-zone');
+const jKnob=document.getElementById('joystick-knob');
+const actionBtn=document.getElementById('action-btn');
+const touchOv=document.getElementById('touch-overlay');
+let joyId=null, joyCen={x:0,y:0}, actId=null;
+const maxJoy=50;
+
+function showJoy(x,y){ jZone.style.left=x+'px'; jZone.style.top=y+'px'; jZone.classList.add('active'); jKnob.style.transform='translate(-50%,-50%)'; }
+function hideJoy(){ jZone.classList.remove('active'); joyVec={x:0,z:0}; jKnob.style.transform='translate(-50%,-50%)'; }
+function showAct(x,y){ actionBtn.style.left=x+'px'; actionBtn.style.top=y+'px'; actionBtn.classList.add('active'); }
+function hideAct(){ actionBtn.classList.remove('active','pressed'); }
+
+function updateJoy(tx,ty){
+  let dx=tx-joyCen.x, dy=ty-joyCen.y;
+  const d=Math.sqrt(dx*dx+dy*dy);
+  if(d>maxJoy){ dx=dx/d*maxJoy; dy=dy/d*maxJoy; }
+  jKnob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  joyVec.x=dx/maxJoy; joyVec.z=dy/maxJoy;
+}
+
+touchOv.addEventListener('pointerdown',e=>{
+  e.preventDefault(); touchOv.setPointerCapture(e.pointerId);
+  const hint=document.getElementById('touch-hint'); if(hint) hint.style.opacity='0';
+  if(e.clientX < window.innerWidth/2){
+    if(joyId===null){ joyId=e.pointerId; joyCen={x:e.clientX,y:e.clientY}; showJoy(e.clientX,e.clientY); }
+  } else {
+    if(actId===null){ actId=e.pointerId; showAct(e.clientX,e.clientY); actionBtn.classList.add('pressed'); handleAction(); }
+  }
+});
+touchOv.addEventListener('pointermove',e=>{ e.preventDefault(); if(e.pointerId===joyId) updateJoy(e.clientX,e.clientY); });
+touchOv.addEventListener('pointerup',e=>{ if(e.pointerId===joyId){joyId=null;hideJoy();} if(e.pointerId===actId){actId=null;hideAct();} });
+touchOv.addEventListener('pointercancel',e=>{ if(e.pointerId===joyId){joyId=null;hideJoy();} if(e.pointerId===actId){actId=null;hideAct();} });
+
+// ─────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────
+loadSave();
+updateBoundsFromLevel(); // Ensure bounds reflect loaded save immediately
+initStations();
+
+for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
+for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
+for(let i=1;i<=upg.extraCounters;i++) { const pos=freeSpot(); if(pos) addStation('counter'+(i+1),'counter',pos.x,pos.z,1.8,1.8); }
+for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
+for(let i=0;i<upg.robotCount;i++)     { const pos=getValidSpawn(); if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role:'busser'}); }
+for(let i=0;i<upg.sodaCount;i++)      { const pos=freeSpot(); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
+
+applyCrown();
+rebuildAll();
+updateCashUI();
+
+showStartMenu();
+
+// ─────────────────────────────────────────────────────────────
+//  MAIN LOOP
+// ─────────────────────────────────────────────────────────────
+let lastT=performance.now(), ds=1;
+const TARGET=1/60;
+
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now();
+  ds=Math.min((now-lastT)/1000,0.1)/TARGET; lastT=now;
+
+  (window._clouds||[]).forEach(c=>{ c.position.x+=c._spd*ds; if(c.position.x>75) c.position.x=-75; });
+
+  if(gameState==='playing'||gameState==='edit'||gameState==='start_menu'){
+
+    if(gameState==='edit'&&dragStation){
+      const fx=Math.round(player.pos.x+Math.sin(player.dir)*4);
+      const fz=Math.round(player.pos.z+Math.cos(player.dir)*4);
+      dragStation.mesh.position.lerp(new THREE.Vector3(fx,0,fz),.28);
+      placeGhost.visible=true; placeGhost.position.set(fx,.1,fz);
+      placeGhost.material.color.setHex(validPlacement(dragStation,fx,fz)?0x00ff00:0xff0000);
+      hlRing.visible=false;
+    } else if (gameState==='edit' || gameState==='playing') {
+      placeGhost.visible=false;
+      const t=getClosest();
+      if(t){ 
+          hlRing.visible=true; 
+          if(t.type === 'robot') hlRing.position.set(t.pos.x, .12, t.pos.z);
+          else hlRing.position.set(t.x, .12, t.z); 
+      } else {
+          hlRing.visible=false;
+      }
+    } else {
+      hlRing.visible=false;
+    }
+
+    const spd=player.speed+upg.speedLv*.035;
+    let vx=joyVec.x*spd*ds, vz=joyVec.z*spd*ds;
+    if(keys.w) vz=-spd*ds; if(keys.s) vz=spd*ds;
+    if(keys.a) vx=-spd*ds; if(keys.d) vx=spd*ds;
+    const nx=player.pos.x+vx, nz=player.pos.z+vz;
+    
+    if(!checkColl(nx,nz)){ player.pos.x=nx; player.pos.z=nz; }
+    else if(!checkColl(nx,player.pos.z)) player.pos.x=nx;
+    else if(!checkColl(player.pos.x,nz)) player.pos.z=nz;
+
+    if(vx||vz){
+      const ta=Math.atan2(vx,vz); let df=ta-player.dir;
+      while(df<-Math.PI)df+=Math.PI*2; while(df>Math.PI)df-=Math.PI*2;
+      player.dir+=df*.28; pMesh.rotation.y=player.dir;
+      player.wobble+=.28*ds; pBody.rotation.z=Math.sin(player.wobble)*.1;
+      pMesh.position.y=Math.abs(Math.sin(player.wobble))*.18;
+    } else { player.wobble=0; pBody.rotation.z=0; pMesh.position.y=0; }
+    pMesh.position.x=player.pos.x; pMesh.position.z=player.pos.z;
+
+    camera.position.x=player.pos.x; camera.position.z=player.pos.z+frustumSize*.95;
+    camera.lookAt(player.pos.x,0,player.pos.z);
+
+    if(gameState==='playing'){
+      updateRobots(ds);
+
+      let needVis=false;
+      for(const k in stations){ const s=stations[k]; if(s.type!=='grill') continue;
+        s.slots.forEach(sl=>{ 
+          if(!sl) return;
+          if(sl.state === 'raw') {
+            sl.progress += upg.grillMult*ds; 
+            if(sl.progress >= 200){ sl.state='cooked'; sl.burnTimer=0; needVis=true; playSound('sizzle'); } 
+          } else if (sl.state === 'cooked') { 
+            sl.burnTimer += ds * (1 / upg.grillMult); // Slow burn for upgraded grills
+            if(sl.burnTimer >= 300) { sl.state='charred'; needVis=true; playSound('error'); }
+          }
+        });
+      }
+      if(needVis) updateStationVisuals();
+
+      if(stats.spawnTimer>0) stats.spawnTimer-=ds;
+      if(stats.groupsLeft>0&&stats.spawnTimer<=0){ 
+        spawnGroup(); 
+        let r = Math.random();
+        let delay = 10;
+        if(r < 0.05) delay = 5;
+        else if (r < 0.10) delay = 15;
+        else {
+           let w = (Math.random() + Math.random() + Math.random()) / 3;
+           delay = 7 + w * 6; // Center heavily on 10s
+        }
+        stats.spawnTimer = delay * 60; 
+      }
+
+      if(stats.groupsLeft===0&&groups.length===0&&gameState==='playing'){
+        endDay(); return;
+      }
+
+      const queueGroups = groups.filter(g => g.state === 'queue');
+      for(let i=groups.length-1;i>=0;i--){
+        const g=groups[i];
+        if(g.state==='approach_door'){
+          g.target.set(doorX(),0,bounds.b-2); if(moveToTarget(g,ds)) g.state='queue';
+        }
+        else if(g.state==='queue'){
+          const qi = queueGroups.indexOf(g);
+          g.target.set(doorX() + (qi % 2 === 0 ? -1.0 : 1.0), 0, bounds.b - 2 + qi * 2.5); // Line out the door
+          moveToTarget(g,ds); 
+          g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
+          
+          if(g.waitPatience<=0){ g.state='leave'; stats.groupsServed++; }
+          else if(qi===0){
+            let tgt=null;
+            for(const k in stations){ const s=stations[k]; if(s.type==='table'&&!s.group&&s.dirtyTrays===0){tgt=s;break;} }
+            if(tgt){ g.state='to_table'; tgt.group=g; tgt.served=0; g.tbl=tgt; }
+          }
+        }
+        else if(g.state==='to_table'){
+          g.target.set(g.tbl.x,0,g.tbl.z); 
+          if(moveToTarget(g,ds)) { 
+            g.state='ordering';
+            g.mesh.rotation.y = 0; 
+            g.mesh.children.forEach((c, idx) => {
+               c.position.set(idx === 0 ? -2.8 : 2.8, 0, 0); 
+               c.rotation.y = idx === 0 ? Math.PI/2 : -Math.PI/2; 
+            });
+          }
+        }
+        else if(g.state==='ordering'){
+          g.foodPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
+          if(g.foodPatience<=0){ g.state='leave'; stats.groupsServed++; g.tbl.group=null; g.tbl.served=0; }
+        }
+        else if(g.state==='eating'){
+          g.eatTimer-=ds;
+          if(g.eatTimer<=0){
+            const ws=Math.max(0,g.waitPatience/g.maxWait), fs=Math.max(0,g.foodPatience/g.maxFood);
+            const tot=ws*.3+fs*.7;
+            const stars=tot>.8?5:tot>.6?4:tot>.4?3:tot>.2?2:1;
+            
+            let rawCash = g.size * 12 * (stars/5);
+            
+            let sodaCount = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
+            rawCash += sodaCount * 6 * (stars/5);
+
+            if(g.type === 'vip') rawCash *= 3; 
+            
+            const cash = Math.round(rawCash * 100) / 100;
+            eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
+            updateCashUI();
+            playSound('coin');
+            spawnFloater(g.tbl.mesh.position, `+$${cash.toFixed(2)}`);
+            
+            g.tbl.dirtyTrays = g.tbl.served; g.tbl.served=0; g.tbl.group=null; updateStationVisuals();
+
+            if(g.type === 'heavy' && g.heavyCount > 1) {
+                g.heavyCount--;
+                g.state = 'ordering';
+                g.foodPatience = g.maxFood;
+                g.tbl.group = g; 
+                let orderType = 'burger_on_tray';
+                if(upg.sodaCount > 0) {
+                    const r = Math.random();
+                    if(r < 0.25) orderType = 'soda_on_tray';
+                    else if(r < 0.70) orderType = 'burger_soda_on_tray';
+                }
+                g.orders = [orderType];
+                g.unservedOrders = [...g.orders];
+            } else {
+                g.state='leave';
+            }
+          }
+        }
+        else if(g.state==='leave'){
+          if(!g.stoodUp) {
+             g.stoodUp = true;
+             g.mesh.children.forEach((c, idx) => {
+                c.position.set(idx * 1.7 - (g.size > 1 ? .85 : 0), 0, idx * .4);
+                c.rotation.y = 0;
+             });
+          }
+          g.target.set(doorX(),0,bounds.b+2); if(moveToTarget(g,ds)) g.state='leaving';
+        }
+        else if(g.state==='leaving'){
+          g.target.set(doorX()+(g.id%1-.5)*6, 0, bounds.b+18);
+          if(moveToTarget(g,ds)){ scene.remove(g.mesh); groups.splice(i,1); }
+        }
+      }
+    }
+    drawFloatUI();
+  }
+  renderer.render(scene,camera);
+}
+
+animate();
+</script>
+</body>
+</html>
+
+
