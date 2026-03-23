@@ -703,12 +703,13 @@ function itemMesh(type){
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
 function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
-function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0}; }
 
 let gameState='boot'; 
 let eco=defEco(), upg=defUpg(), gStats=defGS();
 let stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:0, spawnTimer:0, initialGroups:1};
+let loadedLayout = null; 
 
 let floaters = [];
 function spawnFloater(pos, txt, color='#66BB6A'){
@@ -729,8 +730,26 @@ function getRobotLevel(bot) {
 //  SAVE / LOAD
 // ─────────────────────────────────────────────────────────────
 function saveGame(){
-  try{ localStorage.setItem('burgerBoss_save', JSON.stringify({eco,upg,gStats,wings})); }catch(e){}
+  try{ 
+    let layout = [];
+    for(const k in stations) {
+        const s = stations[k];
+        let lData = {id: s.id, type: s.type, w: s.w, d: s.d};
+        if(s.type === 'robot') {
+            lData.x = s.pos.x;
+            lData.z = s.pos.z;
+            lData.role = s.role;
+            lData.hiredDay = s.hiredDay;
+        } else {
+            lData.x = s.x;
+            lData.z = s.z;
+        }
+        layout.push(lData);
+    }
+    localStorage.setItem('burgerBoss_save', JSON.stringify({eco, upg, gStats, wings, layout})); 
+  } catch(e){}
 }
+
 function loadSave(){
   try{
     const raw=localStorage.getItem('burgerBoss_save');
@@ -740,10 +759,19 @@ function loadSave(){
     if(s.upg)    upg    = Object.assign(defUpg(),  s.upg);
     if(s.gStats) gStats = Object.assign(defGS(),   s.gStats);
     if(s.wings)  wings  = s.wings;
+    if(s.layout) loadedLayout = s.layout;
     
     if(typeof upg.sodaFountain === 'boolean') {
         upg.sodaCount = upg.sodaFountain ? 1 : 0;
         delete upg.sodaFountain;
+    }
+    
+    // Backwards compatibility for old saves that only had robotCount
+    if (upg.robotCount > 0 && (!upg.robots || upg.robots.length === 0)) {
+        upg.robots = [];
+        for(let i=0; i<upg.robotCount; i++) upg.robots.push({role: 'busser', hiredDay: eco.day || 1});
+    } else if (upg.robots && upg.robots.length > 0) {
+        upg.robotCount = upg.robots.length;
     }
   }catch(e){ console.warn('Load failed',e); }
   updateBoundsFromLevel();
@@ -878,7 +906,14 @@ function getValidSpawn(){
   const cz=Math.round((baseBounds.t+baseBounds.b)/2);
   for(let r=0;r<20;r+=2) for(let dx=-r;dx<=r;dx+=2) for(let dz=-r;dz<=r;dz+=2){
     const tx=cx+dx, tz=cz+dz;
-    if(!checkColl(tx,tz,null)) return new THREE.Vector3(tx,0,tz);
+    let overlap = false;
+    for(const k in stations) {
+       const s = stations[k];
+       if(s.type === 'robot' && s.pos) {
+          if(Math.sqrt((tx-s.pos.x)**2 + (tz-s.pos.z)**2) < 2.0) { overlap = true; break; }
+       }
+    }
+    if(!checkColl(tx,tz,null) && !overlap) return new THREE.Vector3(tx,0,tz);
   }
   return new THREE.Vector3(cx,0,cz);
 }
@@ -908,6 +943,9 @@ function saveEditMode(){
   document.getElementById('edit-hud').style.display='none';
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
   gridH.visible=false; hlRing.visible=false;
+  
+  saveGame(); // Commit layout positions immediately 
+  
   showStartMenu();
 }
 window.startEditMode=startEditMode; window.saveEditMode=saveEditMode;
@@ -980,7 +1018,9 @@ const SHOP_DEFS = [
   {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=maxEquip()-1, unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=freeSpot(); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
   {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=maxEquip()-1,  unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=freeSpot(); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
   {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>200+upg.robotCount*120, max:()=>upg.robotCount>=10, unlockDay:5, action:()=>{ 
-      const id='robot'+upg.robotCount; const pos=getValidSpawn(); addStation(id,'robot',pos.x,pos.z,1.5,1.5,{role:'busser', hiredDay:eco.day}); 
+      const rData = {role:'busser', hiredDay:eco.day};
+      upg.robots.push(rData);
+      const id='robot'+upg.robotCount; const pos=getValidSpawn(); addStation(id,'robot',pos.x,pos.z,1.5,1.5, rData); 
       if(upg.robotCount === 0) {
          setTimeout(() => {
             const p = document.getElementById('alert-popup');
@@ -1190,7 +1230,7 @@ function executeDayStart() {
   player.holding=null; updateHolding();
   groups.forEach(g=>scene.remove(g.mesh)); groups=[];
 
-  for(const k in stations) if(stations[k].type==='robot') stations[k].state='idle';
+  for(const k in stations) if(stations[k].type==='robot') { stations[k].state='idle'; stations[k].holding=null; }
 
   updateStationVisuals();
   player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
@@ -1393,6 +1433,11 @@ function handleAction(){
               const roles=['busser','chef','waiter'];
               const idx=(roles.indexOf(t.role)+1)%roles.length;
               t.role=roles[idx]; t.state='idle'; t.holding=null;
+              
+              const rIdx = parseInt(t.id.replace('robot', ''));
+              if(upg.robots && upg.robots[rIdx]) upg.robots[rIdx].role = t.role;
+              saveGame();
+
               stGrp.remove(t.mesh); t.mesh=buildRobot(t.role); t.mesh.position.set(t.pos.x,0,t.pos.z); stGrp.add(t.mesh);
               const tt=document.getElementById('role-tooltip');
               tt.textContent=`${t.role==='chef'?'👨‍🍳':t.role==='waiter'?'🛎️':'🧹'} Robot set to ${t.role.toUpperCase()}`;
@@ -1497,19 +1542,37 @@ function updateRobots(ds){
     bot.mesh.position.y=Math.sin(Date.now()/180)*.15;
 
     const lvl = getRobotLevel(bot);
-    const botSpeed = 0.02 + (lvl * 0.025); // Nerfed Level 1 base speed
+    const botSpeed = 0.02 + (lvl * 0.025);
+
+    if(bot.state === 'washing') {
+        bot.timer -= ds;
+        if(bot.timer <= 0) bot.state = 'idle';
+        continue;
+    }
 
     if(bot.state==='idle'){
       if(bot.role==='chef'){
         if(bot.holding === 'charred') {
             const trash = Object.values(stations).find(s => s.type === 'trash');
-            if(trash) { bot.target = trash; bot.state = 'moving'; }
+            if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
         } else if (bot.holding === 'cooked') {
-            const c = Object.values(stations).find(s => s.type === 'counter' && (!s.item || s.item === 'tray'));
+            const c = Object.values(stations).find(s => s.type === 'counter' && !s.item);
             if(c) { bot.target = c; bot.state = 'moving'; }
+            else {
+                const cTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'tray');
+                if(cTray) { bot.target = cTray; bot.state = 'moving'; }
+                else {
+                    const trash = Object.values(stations).find(s => s.type === 'trash');
+                    if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
+                }
+            }
         } else if (bot.holding === 'raw') {
             const g = Object.values(stations).find(s => s.type === 'grill' && s.slots.includes(null));
             if(g) { bot.target = g; bot.state = 'moving'; }
+            else {
+                const trash = Object.values(stations).find(s => s.type === 'trash');
+                if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
+            }
         } else if (!bot.holding) {
             const gCharred = Object.values(stations).find(s => s.type === 'grill' && s.slots.some(sl => sl && sl.state === 'charred'));
             if(gCharred) { bot.target = gCharred; bot.state = 'moving'; }
@@ -1531,72 +1594,59 @@ function updateRobots(ds){
             const sink = Object.values(stations).find(s => s.type === 'sink');
             if(sink) { bot.target = sink; bot.state = 'moving'; }
         } else if(bot.holding === 'tray') {
-            if(bot.timer > 0) {
-                bot.timer -= ds;
-                if(bot.timer <= 0) {
-                    const rack = Object.values(stations).find(s => s.type === 'trayrack');
-                    if(rack) { bot.target = rack; bot.state = 'moving'; }
-                }
-            } else {
-                const rack = Object.values(stations).find(s => s.type === 'trayrack');
-                if(rack) { bot.target = rack; bot.state = 'moving'; }
-            }
+            const rack = Object.values(stations).find(s => s.type === 'trayrack');
+            if(rack) { bot.target = rack; bot.state = 'moving'; }
         } else if(!bot.holding) {
             const t = Object.values(stations).find(s => s.type === 'table' && s.dirtyTrays > 0);
             if(t) { bot.target = t; bot.state = 'moving'; }
         }
       } 
       else if(bot.role==='waiter'){
-        for(const tk in stations) {
-            const t = stations[tk];
-            if(t.type === 'table' && t.group && t.group.state === 'ordering' && t.group.unservedOrders.length > 0) {
+        let foundTarget = false;
+        if(bot.holding && bot.holding !== 'tray') {
+            const t = Object.values(stations).find(s => s.type === 'table' && s.group && s.group.state === 'ordering' && s.group.unservedOrders.includes(bot.holding));
+            if(t) { bot.target = t; bot.state = 'moving'; continue; }
+            
+            const emptyCounter = Object.values(stations).find(s => s.type === 'counter' && !s.item);
+            if(emptyCounter) { bot.target = emptyCounter; bot.state = 'moving'; continue; }
+            
+            const trash = Object.values(stations).find(s => s.type === 'trash');
+            if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; continue; }
+        }
+        else if(bot.holding === 'tray') {
+            const tablesNeedingFood = Object.values(stations).filter(s => s.type === 'table' && s.group && s.group.state === 'ordering');
+            for(const t of tablesNeedingFood) {
                 const order = t.group.unservedOrders[0];
-                if(bot.holding === order) { bot.target = t; bot.state = 'moving'; break; }
-                
                 if(order === 'soda_on_tray') {
-                    if(!bot.holding) {
-                        const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
-                        if(r) { bot.target = r; bot.state = 'moving'; break; }
-                    } else if(bot.holding === 'tray') {
-                        const sf = Object.values(stations).find(s => s.type === 'sodafountain');
-                        if(sf) { bot.target = sf; bot.state = 'moving'; break; }
-                    }
-                } 
-                else if(order === 'burger_on_tray') {
-                    if(!bot.holding) {
-                        const cAssembled = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_on_tray');
-                        if(cAssembled) { bot.target = cAssembled; bot.state = 'moving'; break; }
-                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
-                        if(cCooked) {
-                            const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
-                            if(r) { bot.target = r; bot.state = 'moving'; break; }
-                        }
-                    } else if(bot.holding === 'tray') {
-                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
-                        if(cCooked) { bot.target = cCooked; bot.state = 'moving'; break; }
-                    }
-                } 
-                else if(order === 'burger_soda_on_tray') {
-                    if(!bot.holding) {
-                        const cAssembled = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_soda_on_tray');
-                        if(cAssembled) { bot.target = cAssembled; bot.state = 'moving'; break; }
-                        
-                        const cBurgerTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_on_tray');
-                        if(cBurgerTray) { bot.target = cBurgerTray; bot.state = 'moving'; break; }
-
-                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
-                        if(cCooked) {
-                            const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
-                            if(r) { bot.target = r; bot.state = 'moving'; break; }
-                        }
-                    } else if(bot.holding === 'tray') {
-                        const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
-                        if(cCooked) { bot.target = cCooked; bot.state = 'moving'; break; }
-                    } else if(bot.holding === 'burger_on_tray') {
-                        const sf = Object.values(stations).find(s => s.type === 'sodafountain');
-                        if(sf) { bot.target = sf; bot.state = 'moving'; break; }
-                    }
+                    const sf = Object.values(stations).find(s => s.type === 'sodafountain');
+                    if(sf) { bot.target = sf; bot.state = 'moving'; foundTarget = true; break; }
+                } else if(order.includes('burger')) {
+                    const cCooked = Object.values(stations).find(s => s.type === 'counter' && s.item === 'cooked');
+                    if(cCooked) { bot.target = cCooked; bot.state = 'moving'; foundTarget = true; break; }
                 }
+            }
+            if(foundTarget) continue;
+
+            const rack = Object.values(stations).find(s => s.type === 'trayrack');
+            if(rack) { bot.target = rack; bot.state = 'moving'; continue; }
+        }
+        else if(!bot.holding) {
+            const tablesNeedingFood = Object.values(stations).filter(s => s.type === 'table' && s.group && s.group.state === 'ordering');
+            for(const t of tablesNeedingFood) {
+                const order = t.group.unservedOrders[0];
+                
+                const cAssembled = Object.values(stations).find(s => s.type === 'counter' && s.item === order);
+                if(cAssembled) { bot.target = cAssembled; bot.state = 'moving'; foundTarget = true; break; }
+                
+                if(order === 'burger_soda_on_tray') {
+                     const cBurgerTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_on_tray');
+                     if(cBurgerTray) { bot.target = cBurgerTray; bot.state = 'moving'; foundTarget = true; break; }
+                     const cSodaTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'soda_on_tray');
+                     if(cSodaTray) { bot.target = cSodaTray; bot.state = 'moving'; foundTarget = true; break; }
+                }
+
+                const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
+                if(r) { bot.target = r; bot.state = 'moving'; foundTarget = true; break; }
             }
         }
       }
@@ -1625,7 +1675,7 @@ function updateRobots(ds){
     } else {
       const t = bot.target;
       if(bot.role === 'chef') {
-          if(t.type === 'fridge') { bot.holding = 'raw'; }
+          if(t.type === 'fridge' && !bot.holding) { bot.holding = 'raw'; }
           else if(t.type === 'grill') {
               if(bot.holding === 'raw') {
                   const i = t.slots.indexOf(null);
@@ -1646,45 +1696,59 @@ function updateRobots(ds){
               }
           }
           else if(t.type === 'trash') {
-              if(bot.holding === 'charred') { t.contents++; bot.holding = null; }
+              if((bot.holding === 'charred' || bot.holding === 'cooked' || bot.holding === 'raw') && t.contents < 4) { t.contents++; bot.holding = null; }
           }
-          bot.state = 'idle'; updateStationVisuals();
       }
       else if(bot.role === 'busser') {
           if(t.type === 'table' && !bot.holding && t.dirtyTrays > 0) {
-              t.dirtyTrays--; bot.holding = 'dirty_tray'; bot.state = 'idle'; updateStationVisuals();
+              t.dirtyTrays--; bot.holding = 'dirty_tray'; 
           } else if(t.type === 'sink' && bot.holding === 'dirty_tray') {
-              bot.holding = 'tray'; bot.timer = 100 - (lvl * 15); bot.state = 'idle'; 
-          } else if(t.type === 'trayrack' && bot.holding === 'tray' && bot.timer <= 0) {
-              t.cleanTrays++; bot.holding = null; bot.state = 'idle'; updateStationVisuals();
+              bot.holding = 'tray'; bot.timer = 100 - (lvl * 15); bot.state = 'washing'; 
+          } else if(t.type === 'trayrack' && bot.holding === 'tray') {
+              t.cleanTrays++; bot.holding = null; 
           }
       }
       else if(bot.role === 'waiter') {
           if(t.type === 'trayrack' && !bot.holding && t.cleanTrays > 0) {
-              t.cleanTrays--; bot.holding = 'tray'; bot.state = 'idle'; updateStationVisuals();
+              t.cleanTrays--; bot.holding = 'tray'; 
           }
           else if(t.type === 'sodafountain') {
-              if(bot.holding === 'tray') { bot.holding = 'soda_on_tray'; bot.state = 'idle'; updateStationVisuals(); }
-              else if(bot.holding === 'burger_on_tray') { bot.holding = 'burger_soda_on_tray'; bot.state = 'idle'; updateStationVisuals(); }
+              if(bot.holding === 'tray') { bot.holding = 'soda_on_tray'; }
+              else if(bot.holding === 'burger_on_tray') { bot.holding = 'burger_soda_on_tray'; }
           }
           else if(t.type === 'counter') {
               if(bot.holding === 'tray' && t.item === 'cooked') {
-                  t.item = null; bot.holding = 'burger_on_tray'; bot.state = 'idle'; updateStationVisuals();
+                  t.item = null; bot.holding = 'burger_on_tray'; 
               } else if (!bot.holding && (t.item === 'burger_on_tray' || t.item === 'soda_on_tray' || t.item === 'burger_soda_on_tray')) {
-                  bot.holding = t.item; t.item = null; bot.state = 'idle'; updateStationVisuals();
+                  bot.holding = t.item; t.item = null; 
+              } else if (bot.holding && bot.holding !== 'tray' && !t.item) {
+                  t.item = bot.holding; bot.holding = null;
+              } else if (bot.holding === 'burger_on_tray' && t.item === 'soda_on_tray') {
+                  bot.holding = 'burger_soda_on_tray'; t.item = null;
+              } else if (bot.holding === 'soda_on_tray' && t.item === 'burger_on_tray') {
+                  bot.holding = 'burger_soda_on_tray'; t.item = null;
               }
           }
           else if(t.type === 'table') {
-              if(t.group && t.group.state === 'ordering') {
+              if(t.group && t.group.state === 'ordering' && bot.holding) {
                   const idx = t.group.unservedOrders.indexOf(bot.holding);
                   if(idx !== -1) {
                       t.group.unservedOrders.splice(idx, 1);
-                      t.served++; bot.holding = null; bot.state = 'idle'; updateStationVisuals();
+                      t.served++; bot.holding = null; 
                       if(t.group.unservedOrders.length === 0) { t.group.eatTimer = 200; t.group.state = 'eating'; }
-                  } else { bot.state = 'idle'; }
-              } else { bot.state = 'idle'; }
+                  } 
+              }
+          }
+          else if(t.type === 'trash') {
+              if(bot.holding && t.contents < 4) {
+                  t.contents++;
+                  bot.holding = bot.holding.includes('tray') ? 'tray' : null;
+              }
           }
       }
+
+      if (bot.state !== 'washing') bot.state = 'idle';
+      updateStationVisuals();
     }
   }
 }
@@ -1840,14 +1904,27 @@ touchOv.addEventListener('pointercancel',e=>{ if(e.pointerId===joyId){joyId=null
 // ─────────────────────────────────────────────────────────────
 loadSave();
 updateBoundsFromLevel(); // Ensure bounds reflect loaded save immediately
-initStations();
 
-for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
-for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
-for(let i=1;i<=upg.extraCounters;i++) { const pos=freeSpot(); if(pos) addStation('counter'+(i+1),'counter',pos.x,pos.z,1.8,1.8); }
-for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
-for(let i=0;i<upg.robotCount;i++)     { const pos=getValidSpawn(); if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role:'busser'}); }
-for(let i=0;i<upg.sodaCount;i++)      { const pos=freeSpot(); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
+if (loadedLayout && loadedLayout.length > 0) {
+    // Rebuild exact layout from the saved layout data
+    loadedLayout.forEach(l => {
+        addStation(l.id, l.type, l.x, l.z, l.w, l.d, {role: l.role, hiredDay: l.hiredDay});
+    });
+} else {
+    // First run or old save lacking layout
+    initStations();
+    for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
+    for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
+    for(let i=1;i<=upg.extraCounters;i++) { const pos=freeSpot(); if(pos) addStation('counter'+(i+1),'counter',pos.x,pos.z,1.8,1.8); }
+    for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
+    for(let i=0;i<upg.robotCount;i++)     { 
+        const rData = upg.robots[i] || {role: 'busser', hiredDay: 1};
+        const pos = getValidSpawn(); 
+        if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role: rData.role, hiredDay: rData.hiredDay}); 
+    }
+    for(let i=0;i<upg.sodaCount;i++)      { const pos=freeSpot(); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
+    saveGame(); // Commit layout immediately
+}
 
 applyCrown();
 rebuildAll();
@@ -2027,8 +2104,8 @@ function animate(){
           if(!g.stoodUp) {
              g.stoodUp = true;
              g.mesh.children.forEach((c, idx) => {
-                c.position.set(idx * 1.7 - (g.size > 1 ? .85 : 0), 0, idx * .4);
-                c.rotation.y = 0;
+                 c.position.set(idx * 1.7 - (g.size > 1 ? .85 : 0), 0, idx * .4);
+                 c.rotation.y = 0;
              });
           }
           g.target.set(doorX(),0,bounds.b+2); if(moveToTarget(g,ds)) g.state='leaving';
@@ -2048,5 +2125,3 @@ animate();
 </script>
 </body>
 </html>
-
-
