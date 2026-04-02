@@ -1454,6 +1454,7 @@ function initHomeRenderer(){
 }
 
 function buildHomeChef(){
+  if(!homeScene) return; // not initialized yet
   if(homeChefMesh){ homeScene.remove(homeChefMesh); homeChefMesh=null; }
   const sk = getActiveSkin();
   const g = new THREE.Group();
@@ -1518,10 +1519,12 @@ function buildHomeChef(){
 function runHomeAnim(){
   homeAnimId = requestAnimationFrame(runHomeAnim);
   const t = Date.now()/1000;
-  // Background: slowly pan camera
-  if(homeBgCamera){ homeBgCamera.position.x = Math.sin(t*0.08)*2; homeBgCamera.lookAt(0,3,-4); homeBgRenderer.render(homeBgScene,homeBgCamera); }
-  // Chef: idle bob + slow rotate
-  if(homeChefMesh){
+  if(homeBgCamera && homeBgRenderer){
+    homeBgCamera.position.x = Math.sin(t*0.08)*2;
+    homeBgCamera.lookAt(0,3,-4);
+    homeBgRenderer.render(homeBgScene,homeBgCamera);
+  }
+  if(homeChefMesh && homeRenderer){
     homeChefMesh.rotation.y = Math.sin(t*0.6)*0.18;
     homeChefMesh.position.y = -1 + Math.sin(t*1.2)*0.12;
     homeRenderer.render(homeScene, homeCamera);
@@ -1534,6 +1537,7 @@ function stopHomeAnim(){
 
 // Position the chef canvas and nametag responsively
 function positionHomeChef(){
+  if(!homeRenderer) return;
   const chefCanvas = document.getElementById('home-chef-canvas');
   const nametag    = document.getElementById('home-nametag');
   const buttonsH   = document.getElementById('home-buttons').offsetHeight;
@@ -1556,14 +1560,16 @@ function positionHomeChef(){
 // ─────────────────────────────────────────────────────────────
 function applyChefSkin(skinId) {
   const sk = SKIN_DEFS.find(s=>s.id===skinId) || SKIN_DEFS[0];
-  // Gameplay 3D chef
-  pHatBody.material = M(sk.hatColor);
-  pHatTop.material  = M(sk.hatColor);
-  pHatRim.material  = M(sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor);
-  pBody.material    = M(sk.bodyColor);
-  pHead.material    = M(sk.headColor);
-  // Home screen 3D chef
-  buildHomeChef();
+  // Gameplay 3D chef — guard in case called before player mesh is built
+  try {
+    pHatBody.material = M(sk.hatColor);
+    pHatTop.material  = M(sk.hatColor);
+    pHatRim.material  = M(sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor);
+    pBody.material    = M(sk.bodyColor);
+    pHead.material    = M(sk.headColor);
+  } catch(e) {}
+  // Home screen 3D chef (only if renderer exists)
+  if(homeScene) buildHomeChef();
   // Trail color
   window._trailColor = sk.trailColor || null;
 }
@@ -2719,7 +2725,6 @@ if (loadedLayout && loadedLayout.length > 0) {
 }
 
 applyCrown();
-applyChefSkin(cosm.equippedSkin);
 rebuildAll();
 updateCashUI();
 showStartMenu();
