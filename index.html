@@ -77,15 +77,165 @@ canvas{display:block;width:100%;height:100%;}
 .expand-option{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.2);color:#fff;padding:16px 32px;border-radius:18px;font-size:17px;font-weight:900;cursor:pointer;font-family:inherit;width:260px;text-align:center;transition:all .15s;}
 .expand-option:hover{background:rgba(255,193,7,.15);border-color:#ffc107;color:#ffc107;}
 .expand-option:disabled{opacity:.35;cursor:not-allowed;}
+
+/* ── HOME SCREEN ── */
+#home-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;z-index:10;pointer-events:auto;overflow:hidden;}
+#home-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,#87CEEB 0%,#b0e0a8 55%,#5a9e47 100%);}
+#home-title{position:absolute;top:8%;left:50%;transform:translateX(-50%);text-align:center;width:100%;z-index:2;}
+#home-title h1{font-size:44px;font-weight:900;color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 30px rgba(255,200,0,.5);margin:0;letter-spacing:2px;}
+#home-title .sub{font-size:14px;color:rgba(255,255,255,.8);margin-top:4px;font-weight:700;}
+#home-currency{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:5;}
+.hcur{background:rgba(0,0,0,.75);backdrop-filter:blur(6px);padding:6px 14px;border-radius:20px;font-size:16px;font-weight:900;color:#fff;border:2px solid rgba(255,193,7,.4);display:flex;align-items:center;gap:6px;}
+#home-chef-wrap{position:absolute;bottom:33%;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;z-index:3;}
+#home-nametag{background:rgba(0,0,0,.7);color:#ffc107;font-size:13px;font-weight:900;padding:4px 14px;border-radius:20px;margin-top:6px;border:1.5px solid rgba(255,193,7,.4);}
+#home-buttons{position:absolute;bottom:3%;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;width:92%;max-width:380px;z-index:3;}
+.hbtn{width:100%;padding:14px 20px;border-radius:22px;font-size:17px;font-weight:900;border:none;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 5px 0 rgba(0,0,0,.25);transition:transform .1s;}
+.hbtn:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.25);}
+.hbtn-play{background:linear-gradient(135deg,#66BB6A,#2e7d32);color:#fff;font-size:20px;}
+.hbtn-shop{background:linear-gradient(135deg,#FFCA28,#f57f17);color:#333;}
+.hbtn-edit{background:linear-gradient(135deg,#42A5F5,#1565C0);color:#fff;}
+.hbtn-skins{background:linear-gradient(135deg,#ec407a,#880e4f);color:#fff;}
+.hbtn-stores{background:linear-gradient(135deg,#ab47bc,#6a1b9a);color:#fff;}
+#home-day-badge{position:absolute;top:14px;right:14px;background:rgba(0,0,0,.7);color:#ffc107;padding:6px 12px;border-radius:16px;font-size:13px;font-weight:900;border:2px solid rgba(255,193,7,.35);z-index:5;}
+#home-rating-badge{position:absolute;top:14px;left:14px;background:rgba(0,0,0,.7);color:#ffc107;padding:6px 12px;border-radius:16px;font-size:13px;font-weight:900;border:2px solid rgba(255,193,7,.35);z-index:5;}
+
+/* ── PAUSE MENU ── */
+#pause-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(5,10,20,.88);color:#fff;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:50;pointer-events:auto;backdrop-filter:blur(8px);}
+#pause-btn{position:absolute;top:14px;right:14px;width:46px;height:46px;background:rgba(0,0,0,.6);border:2px solid rgba(255,255,255,.25);border-radius:14px;font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer;z-index:20;pointer-events:auto;}
+
+/* ── IN-GAME HUD (top-center) ── */
+#top-hud{position:absolute;top:12px;left:0;right:0;display:none;justify-content:center;align-items:flex-start;gap:10px;z-index:6;pointer-events:none;}
+#day-banner{background:rgba(20,20,20,.82);backdrop-filter:blur(6px);padding:7px 16px;border-radius:22px;font-size:15px;font-weight:900;color:#ffc107;border:2px solid rgba(255,193,7,.4);text-align:center;box-shadow:0 4px 6px rgba(0,0,0,0.3);}
+#cash-display{background:rgba(20,20,20,.82);backdrop-filter:blur(6px);padding:7px 14px;border-radius:20px;font-size:17px;font-weight:900;color:#fff;border:2px solid rgba(102,187,106,.5);display:flex;flex-direction:column;align-items:center;box-shadow:0 4px 6px rgba(0,0,0,0.3);}
+#rating-val{font-size:12px;color:#ffc107;}
+
+/* ── SKINS SHOP ── */
+#skins-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(8,14,24,.95);color:#fff;display:none;flex-direction:column;align-items:center;z-index:11;pointer-events:auto;padding:16px;backdrop-filter:blur(6px);}
+.skin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:480px;max-height:55vh;overflow-y:auto;padding:4px;}
+.skin-card{background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:all .15s;}
+.skin-card.owned{border-color:#66BB6A;}
+.skin-card.equipped{border-color:#ffc107;background:rgba(255,193,7,.12);}
+.skin-card .skin-icon{font-size:36px;}
+.skin-card .skin-name{font-size:11px;font-weight:900;text-align:center;}
+.skin-card .skin-price{font-size:11px;color:#ffc107;font-weight:700;}
+
+/* ── MULTI-STORE ── */
+#stores-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(8,14,24,.95);color:#fff;display:none;flex-direction:column;align-items:center;z-index:11;pointer-events:auto;padding:16px;backdrop-filter:blur(6px);overflow-y:auto;}
+.store-card{background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);border-radius:16px;padding:16px;width:100%;max-width:480px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+.store-card.active-store{border-color:#ffc107;background:rgba(255,193,7,.1);}
+.store-card.locked-store{opacity:.55;}
+
+/* ── SINK HOLD PROGRESS ── */
+#sink-hold-ui{position:fixed;bottom:160px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:20;}
+#sink-hold-bar{width:140px;height:10px;background:rgba(0,0,0,.5);border-radius:5px;overflow:hidden;border:2px solid rgba(255,255,255,.3);}
+#sink-hold-fill{height:100%;background:#03A9F4;width:0%;border-radius:3px;}
+#sink-hold-label{font-size:12px;font-weight:900;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.8);}
+
+/* ── HOME SCREEN ANIMATIONS ── */
+@keyframes chefBob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-8px);}}
+@keyframes cloudDrift{0%{transform:translateX(-120px);}100%{transform:translateX(calc(100vw + 120px));}}
+@keyframes titleGlow{0%,100%{text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 20px rgba(255,200,0,.4);}50%{text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 40px rgba(255,200,0,.8);}}
+#home-chef-wrap{animation:chefBob 2.4s ease-in-out infinite;}
+#home-title h1{animation:titleGlow 3s ease-in-out infinite;}
+.home-cloud{position:absolute;opacity:.82;pointer-events:none;z-index:1;}
+.home-cloud.c1{top:18%;animation:cloudDrift 22s linear infinite;}
+.home-cloud.c2{top:28%;animation:cloudDrift 30s linear infinite 8s;}
+.home-cloud.c3{top:14%;animation:cloudDrift 26s linear infinite 14s;}
 </style>
 </head>
 <body>
 <div id="gc">
   <canvas id="gameCanvas"></canvas>
   <div id="floating-ui"></div>
+
+  <!-- ══ HOME SCREEN ══ -->
+  <div id="home-screen">
+    <div id="home-bg"></div>
+    <!-- Animated clouds -->
+    <svg class="home-cloud c1" width="120" height="50" viewBox="0 0 120 50"><ellipse cx="60" cy="32" rx="52" ry="18" fill="#fff"/><ellipse cx="40" cy="28" rx="28" ry="20" fill="#fff"/><ellipse cx="78" cy="26" rx="22" ry="17" fill="#fff"/></svg>
+    <svg class="home-cloud c2" width="90" height="40" viewBox="0 0 90 40"><ellipse cx="45" cy="26" rx="38" ry="14" fill="#fff"/><ellipse cx="30" cy="22" rx="20" ry="16" fill="#fff"/><ellipse cx="58" cy="20" rx="18" ry="14" fill="#fff"/></svg>
+    <svg class="home-cloud c3" width="70" height="34" viewBox="0 0 70 34"><ellipse cx="35" cy="22" rx="30" ry="12" fill="rgba(255,255,255,.9)"/><ellipse cx="22" cy="18" rx="16" ry="14" fill="rgba(255,255,255,.9)"/><ellipse cx="48" cy="16" rx="14" ry="12" fill="rgba(255,255,255,.9)"/></svg>
+    <!-- Trees left and right -->
+    <svg style="position:absolute;bottom:28%;left:2%;z-index:2;width:64px;" viewBox="0 0 64 100"><polygon points="32,0 64,70 0,70" fill="#2e7d32"/><rect x="26" y="68" width="12" height="32" fill="#5D4037"/></svg>
+    <svg style="position:absolute;bottom:28%;right:3%;z-index:2;width:48px;" viewBox="0 0 64 100"><polygon points="32,0 64,70 0,70" fill="#388e3c"/><rect x="26" y="68" width="12" height="32" fill="#5D4037"/></svg>
+    <svg style="position:absolute;bottom:28%;left:12%;z-index:2;width:38px;" viewBox="0 0 64 100"><polygon points="32,0 64,70 0,70" fill="#1b5e20"/><rect x="26" y="68" width="12" height="32" fill="#5D4037"/></svg>
+    <!-- Decorative restaurant silhouette behind chef -->
+    <svg id="home-restaurant-svg" style="position:absolute;bottom:29%;left:0;width:100%;height:38%;z-index:1;" viewBox="0 0 400 160" preserveAspectRatio="xMidYMax meet">
+      <!-- building body -->
+      <rect x="60" y="40" width="280" height="120" rx="4" fill="#8d6e63"/>
+      <!-- roof -->
+      <polygon points="40,45 200,5 360,45" fill="#d32f2f"/>
+      <!-- sign -->
+      <rect x="110" y="55" width="180" height="40" rx="6" fill="#ffc107"/>
+      <text x="200" y="82" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="20" fill="#333">BURGER BAR</text>
+      <!-- door -->
+      <rect x="168" y="110" width="64" height="50" rx="4" fill="#5D4037"/>
+      <rect x="186" y="118" width="12" height="22" rx="2" fill="#8d6e63"/>
+      <rect x="202" y="118" width="12" height="22" rx="2" fill="#8d6e63"/>
+      <!-- windows -->
+      <rect x="90" y="65" width="50" height="40" rx="4" fill="#81d4fa" opacity=".8"/>
+      <rect x="260" y="65" width="50" height="40" rx="4" fill="#81d4fa" opacity=".8"/>
+    </svg>
+    <!-- Chef figure, large, centered -->
+    <div id="home-chef-wrap">
+      <svg id="home-chef-svg" viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg">
+        <!-- hat -->
+        <ellipse cx="60" cy="52" rx="38" ry="9" fill="#eee"/>
+        <rect x="30" y="14" width="60" height="42" rx="6" fill="#fff" id="hc-hat"/>
+        <ellipse cx="60" cy="14" rx="26" ry="7" fill="#fff" id="hc-hattop"/>
+        <!-- head -->
+        <circle cx="60" cy="72" r="22" fill="#FFCC80" id="hc-head"/>
+        <!-- eyes -->
+        <circle cx="52" cy="68" r="3" fill="#333"/>
+        <circle cx="68" cy="68" r="3" fill="#333"/>
+        <circle cx="53" cy="67" r="1" fill="#fff"/>
+        <circle cx="69" cy="67" r="1" fill="#fff"/>
+        <!-- smile -->
+        <path d="M51 78 Q60 86 69 78" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <!-- body / uniform -->
+        <rect x="30" y="92" width="60" height="55" rx="10" fill="#fff" id="hc-body"/>
+        <!-- uniform buttons -->
+        <circle cx="60" cy="105" r="3" fill="#ddd"/>
+        <circle cx="60" cy="118" r="3" fill="#ddd"/>
+        <circle cx="60" cy="131" r="3" fill="#ddd"/>
+        <!-- arms -->
+        <rect x="8" y="94" width="22" height="12" rx="6" fill="#fff" id="hc-arml"/>
+        <rect x="90" y="94" width="22" height="12" rx="6" fill="#fff" id="hc-armr"/>
+        <!-- hands -->
+        <circle cx="10" cy="100" r="7" fill="#FFCC80"/>
+        <circle cx="110" cy="100" r="7" fill="#FFCC80"/>
+        <!-- spatula -->
+        <rect x="112" y="82" width="5" height="28" rx="2" fill="#888"/>
+        <rect x="106" y="78" width="17" height="8" rx="2" fill="#aaa"/>
+      </svg>
+      <div id="home-nametag">Chef</div>
+    </div>
+    <div id="home-title">
+      <h1>🍔 BURGER BAR</h1>
+      <div class="sub">Your Empire Awaits</div>
+    </div>
+    <div id="home-currency">
+      <div class="hcur">💰 <span id="home-cash">$0.00</span></div>
+      <div class="hcur">⭐ <span id="home-rating">0.0</span></div>
+    </div>
+    <div id="home-day-badge">📅 Day <span id="home-day">0</span></div>
+    <div id="home-buttons">
+      <button class="hbtn hbtn-play" onclick="startNextDay()">▶ PLAY DAY <span id="home-next-day">1</span></button>
+      <div style="display:flex;gap:8px;width:100%;">
+        <button class="hbtn hbtn-shop" style="flex:1;font-size:14px;" onclick="showShop()">🛒 SHOP</button>
+        <button class="hbtn hbtn-edit" style="flex:1;font-size:14px;" onclick="startEditMode()">✏️ EDIT</button>
+      </div>
+      <div style="display:flex;gap:8px;width:100%;">
+        <button class="hbtn hbtn-skins" style="flex:1;font-size:14px;" onclick="showSkinsShop()">👕 SKINS</button>
+        <button class="hbtn hbtn-stores" style="flex:1;font-size:14px;" id="home-stores-btn" onclick="showStores()">🏪 STORES</button>
+      </div>
+      <button style="background:none;border:none;color:rgba(255,255,255,.25);font-size:11px;margin-top:4px;cursor:pointer;font-family:inherit;" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save</button>
+    </div>
+  </div>
+
   <div id="ui-layer">
     <div id="top-hud">
-      <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:12px;color:rgba(255,255,255,.5);">Customers: 0</span></div>
+      <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: 0</span></div>
       <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span></div>
     </div>
     <div id="touch-overlay"></div>
@@ -94,7 +244,43 @@ canvas{display:block;width:100%;height:100%;}
     <div id="touch-hint">Left thumb · move &nbsp;&nbsp; Right thumb · act</div>
     <div id="role-tooltip"></div>
   </div>
-  
+
+  <!-- pause button (top-right during play) -->
+  <div id="pause-btn" onclick="togglePause()">⏸</div>
+
+  <!-- sink hold progress -->
+  <div id="sink-hold-ui">
+    <div id="sink-hold-label">Hold to wash...</div>
+    <div id="sink-hold-bar"><div id="sink-hold-fill"></div></div>
+  </div>
+
+  <!-- notification toast -->
+  <div id="notif-toast"></div>
+
+  <!-- PAUSE SCREEN -->
+  <div id="pause-screen">
+    <h2 style="font-size:36px;margin:0;color:#ffc107;">⏸ PAUSED</h2>
+    <button class="btn-green" style="margin-top:24px;" onclick="togglePause()">RESUME</button>
+    <button class="btn-red" style="margin-top:8px;" onclick="quitToMenu()">QUIT TO MENU</button>
+  </div>
+
+  <!-- SKINS SHOP -->
+  <div id="skins-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:480px;margin-bottom:14px;">
+      <h1 style="font-size:26px;margin:0;color:#ec407a;">👕 CHEF SKINS</h1>
+      <div style="background:rgba(255,193,7,.15);border:2px solid #ffc107;border-radius:14px;padding:6px 14px;font-size:17px;font-weight:900;">💰 <span id="skins-cash">$0</span></div>
+    </div>
+    <div class="skin-grid" id="skin-grid"></div>
+    <button class="btn-green" onclick="closeSkinsShop()" style="margin-top:14px;">BACK</button>
+  </div>
+
+  <!-- MULTI-STORE SCREEN -->
+  <div id="stores-screen">
+    <h1 style="font-size:26px;margin:0 0 16px;color:#ab47bc;">🏪 YOUR EMPIRE</h1>
+    <div id="stores-list" style="width:100%;max-width:480px;"></div>
+    <button class="btn-green" onclick="closeStores()" style="margin-top:14px;">BACK</button>
+  </div>
+
   <div id="edit-hud">
     EDIT MODE — face item + act to move/cycle role<br>
     <button id="finish-edit-btn" onclick="saveEditMode()">DONE ✓</button>
@@ -109,8 +295,8 @@ canvas{display:block;width:100%;height:100%;}
     <button class="expand-option" style="background:none;border-color:rgba(255,255,255,.15);font-size:14px;color:rgba(255,255,255,.4);" onclick="closeExpandPicker()">Cancel</button>
   </div>
 
-  <!-- START MENU -->
-  <div id="start-screen" class="overlay" style="display:flex;"></div>
+  <!-- START MENU (legacy, kept hidden, redirected to home) -->
+  <div id="start-screen" class="overlay" style="display:none;"></div>
 
   <!-- EVENT POPUPS -->
   <div id="alert-popup" class="overlay" style="z-index: 25; background:rgba(0,0,0,0.85);">
@@ -632,7 +818,7 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='trayrack') s.cleanTrays=0; 
   if(type==='trash')   s.contents=0; 
   if(type==='table')   { s.r=2.2; s.group=null; s.served=0; s.dirtyTrays=0; }
-  if(type==='robot')   { s.role=opts.role||'busser'; s.state='idle'; s.pos=new THREE.Vector3(x,0,z); s.target=null; s.holding=null; s.timer=0; }
+  if(type==='robot')   { s.role=opts.role||'busser'; s.state='idle'; s.pos=new THREE.Vector3(x,0,z); s.target=null; s.holding=null; s.timer=0; s._actionCooldown=0; }
   stations[id]=s; return s;
 }
 function removeStation(id){
@@ -706,6 +892,42 @@ function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
 function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0}; }
 
+// ─── SKINS ───────────────────────────────────────────────────
+const SKIN_DEFS = [
+  {id:'classic',  name:'Classic Chef',  icon:'👨‍🍳', price:0,    hatColor:'#ffffff', bodyColor:'#ffffff', headColor:'#FFCC80'},
+  {id:'space',    name:'Space Chef',    icon:'🚀',    price:200,  hatColor:'#1a237e', bodyColor:'#283593', headColor:'#FFCC80'},
+  {id:'gold',     name:'Gold Chef',     icon:'👑',    price:500,  hatColor:'#FFD700', bodyColor:'#FFC107', headColor:'#FFCC80'},
+  {id:'ninja',    name:'Ninja Chef',    icon:'🥷',    price:350,  hatColor:'#212121', bodyColor:'#212121', headColor:'#FFCC80'},
+  {id:'pirate',   name:'Pirate Chef',   icon:'🏴‍☠️',  price:400,  hatColor:'#1a0000', bodyColor:'#4a0000', headColor:'#FFCC80'},
+  {id:'alien',    name:'Alien Chef',    icon:'👽',    price:600,  hatColor:'#1b5e20', bodyColor:'#2e7d32', headColor:'#a5d6a7'},
+  {id:'pink',     name:'Cotton Candy',  icon:'🩷',    price:250,  hatColor:'#f06292', bodyColor:'#ec407a', headColor:'#FFCC80'},
+  {id:'ice',      name:'Ice Chef',      icon:'🧊',    price:300,  hatColor:'#b3e5fc', bodyColor:'#81d4fa', headColor:'#FFCC80'},
+  {id:'fire',     name:'Fire Chef',     icon:'🔥',    price:450,  hatColor:'#bf360c', bodyColor:'#e64a19', headColor:'#FFCC80'},
+];
+
+// ─── MULTI-STORE ─────────────────────────────────────────────
+// stores = [{id, name, eco, upg, gStats, wings, layout, passivePerDay}]
+// activeStoreIdx = index into stores[]
+let stores = [];
+let activeStoreIdx = 0;
+
+function defStore(id, name) {
+  return {
+    id, name,
+    eco: defEco(), upg: defUpg(), gStats: defGS(),
+    wings: [], layout: null,
+    passivePerDay: 0,  // calculated from robots
+    unlocked: true,
+  };
+}
+
+// Skin/cosmetic state (global across stores)
+let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic' };
+
+function getActiveSkin() {
+  return SKIN_DEFS.find(s => s.id === cosm.equippedSkin) || SKIN_DEFS[0];
+}
+
 let gameState='boot'; 
 let eco=defEco(), upg=defUpg(), gStats=defGS();
 let stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:0, spawnTimer:0, initialGroups:1};
@@ -730,50 +952,74 @@ function getRobotLevel(bot) {
 //  SAVE / LOAD
 // ─────────────────────────────────────────────────────────────
 function saveGame(){
-  try{ 
-    let layout = [];
-    for(const k in stations) {
+  try{
+    // sync active store's current state
+    if(stores.length > 0) {
+      stores[activeStoreIdx].eco = eco;
+      stores[activeStoreIdx].upg = upg;
+      stores[activeStoreIdx].gStats = gStats;
+      stores[activeStoreIdx].wings = wings;
+      let layout = [];
+      for(const k in stations) {
         const s = stations[k];
         let lData = {id: s.id, type: s.type, w: s.w, d: s.d};
-        if(s.type === 'robot') {
-            lData.x = s.pos.x;
-            lData.z = s.pos.z;
-            lData.role = s.role;
-            lData.hiredDay = s.hiredDay;
-        } else {
-            lData.x = s.x;
-            lData.z = s.z;
-        }
+        if(s.type === 'robot') { lData.x = s.pos.x; lData.z = s.pos.z; lData.role = s.role; lData.hiredDay = s.hiredDay; }
+        else { lData.x = s.x; lData.z = s.z; }
         layout.push(lData);
+      }
+      stores[activeStoreIdx].layout = layout;
     }
-    localStorage.setItem('burgerBoss_save', JSON.stringify({eco, upg, gStats, wings, layout})); 
-  } catch(e){}
+    localStorage.setItem('burgerBoss_save', JSON.stringify({stores, activeStoreIdx, cosm}));
+  }catch(e){}
 }
 
 function loadSave(){
   try{
-    const raw=localStorage.getItem('burgerBoss_save');
-    if(!raw) return;
-    const s=JSON.parse(raw);
-    if(s.eco)    eco    = Object.assign(defEco(),  s.eco);
-    if(s.upg)    upg    = Object.assign(defUpg(),  s.upg);
-    if(s.gStats) gStats = Object.assign(defGS(),   s.gStats);
-    if(s.wings)  wings  = s.wings;
-    if(s.layout) loadedLayout = s.layout;
-    
-    if(typeof upg.sodaFountain === 'boolean') {
-        upg.sodaCount = upg.sodaFountain ? 1 : 0;
-        delete upg.sodaFountain;
+    const raw = localStorage.getItem('burgerBoss_save');
+    if(!raw) { bootstrapNewSave(); return; }
+    const s = JSON.parse(raw);
+
+    // ── migrate old single-store saves ──
+    if(!s.stores) {
+      const store0 = defStore(0, 'Burger Bar #1');
+      if(s.eco)    store0.eco    = Object.assign(defEco(),  s.eco);
+      if(s.upg)    store0.upg    = Object.assign(defUpg(),  s.upg);
+      if(s.gStats) store0.gStats = Object.assign(defGS(),   s.gStats);
+      if(s.wings)  store0.wings  = s.wings;
+      if(s.layout) store0.layout = s.layout;
+      stores = [store0];
+      activeStoreIdx = 0;
+    } else {
+      stores = s.stores;
+      activeStoreIdx = s.activeStoreIdx || 0;
     }
-    
-    // Backwards compatibility for old saves that only had robotCount
-    if (upg.robotCount > 0 && (!upg.robots || upg.robots.length === 0)) {
-        upg.robots = [];
-        for(let i=0; i<upg.robotCount; i++) upg.robots.push({role: 'busser', hiredDay: eco.day || 1});
-    } else if (upg.robots && upg.robots.length > 0) {
-        upg.robotCount = upg.robots.length;
-    }
-  }catch(e){ console.warn('Load failed',e); }
+    if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic'}, s.cosm);
+
+    loadActiveStore();
+  }catch(e){ console.warn('Load failed',e); bootstrapNewSave(); }
+}
+
+function bootstrapNewSave() {
+  stores = [defStore(0, 'Burger Bar #1')];
+  activeStoreIdx = 0;
+  loadActiveStore();
+}
+
+function loadActiveStore() {
+  const st = stores[activeStoreIdx];
+  eco    = Object.assign(defEco(),  st.eco    || {});
+  upg    = Object.assign(defUpg(),  st.upg    || {});
+  gStats = Object.assign(defGS(),   st.gStats || {});
+  wings  = st.wings || [];
+  loadedLayout = st.layout || null;
+
+  // backward compat
+  if(typeof upg.sodaFountain === 'boolean') { upg.sodaCount = upg.sodaFountain?1:0; delete upg.sodaFountain; }
+  if(upg.robotCount>0 && (!upg.robots||upg.robots.length===0)){
+    upg.robots=[];
+    for(let i=0;i<upg.robotCount;i++) upg.robots.push({role:'busser',hiredDay:eco.day||1});
+  } else if(upg.robots&&upg.robots.length>0) upg.robotCount=upg.robots.length;
+
   updateBoundsFromLevel();
 }
 
@@ -929,6 +1175,9 @@ function startEditMode(){
       const el = document.getElementById(id);
       if(el) el.style.display='none';
   });
+  document.getElementById('home-screen').style.display='none';
+  document.getElementById('skins-screen').style.display='none';
+  document.getElementById('stores-screen').style.display='none';
   document.getElementById('edit-hud').style.display='block';
   player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
   dragStation=null; gridH.visible=true;
@@ -943,9 +1192,7 @@ function saveEditMode(){
   document.getElementById('edit-hud').style.display='none';
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
   gridH.visible=false; hlRing.visible=false;
-  
-  saveGame(); // Commit layout positions immediately 
-  
+  saveGame();
   showStartMenu();
 }
 window.startEditMode=startEditMode; window.saveEditMode=saveEditMode;
@@ -1112,46 +1359,239 @@ function updateCashUI(){
   document.getElementById('rating-val').textContent='⭐ '+getCumRating();
 }
 
-function showStartMenu(){
-  const scr = document.getElementById('start-screen');
-  scr.style.display = 'flex';
-  document.getElementById('results-screen').style.display = 'none';
-  document.getElementById('shop-screen').style.display = 'none';
-  document.getElementById('top-hud').style.display = 'none';
-  gameState = 'start_menu';
+function showToast(msg, dur=2200){
+  const t = document.getElementById('notif-toast');
+  t.textContent = msg; t.style.display='block';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(()=>t.style.display='none', dur);
+}
 
-  if (eco.day === 0) {
-      scr.innerHTML = `
-          <div style="background:rgba(0,0,0,0.85); padding:32px; border-radius:24px; border: 3px solid #66BB6A; max-width: 500px; text-align:center;">
-            <h1 style="font-size:38px;margin:0;color:#66BB6A;text-shadow:0 3px 0 #1B5E20;">WELCOME TO BURGER BAR!</h1>
-            <p style="font-size:16px;line-height:1.5;margin-top:16px;">
-              🍔 <b>1. Grab Raw Meat</b> from the fridge.<br>
-              🔥 <b>2. Cook it</b> on the grill until it sizzles.<br>
-              🍱 <b>3. Plate it</b> by grabbing a clean tray from the rack.<br>
-              🏃 <b>4. Serve it</b> to the waiting customers!<br><br>
-              <i>Use your Left Thumb to move, and your Right Thumb to Act/Grab.</i>
-            </p>
-            <button class="btn-green" onclick="startNextDay()">START DAY 1</button>
-          </div>
-      `;
-  } else {
-      scr.innerHTML = `
-          <div style="background:rgba(0,0,0,0.8); padding:32px; border-radius:24px; border: 2px solid #ffc107; text-align:center;">
-            <h1 style="font-size:42px;margin:0;color:#ffc107;text-shadow:0 3px 0 #b06000;">BURGER BAR</h1>
-            <div style="font-size:16px;color:rgba(255,255,255,.8);margin:12px 0 24px; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 12px;">
-              💾 Day <span style="font-weight:bold; color:#fff;">${eco.day}</span> &nbsp;·&nbsp;
-              <span style="font-weight:bold; color:#66BB6A;">$${eco.cash.toFixed(2)}</span> &nbsp;·&nbsp;
-              Rating <span style="font-weight:bold; color:#ffc107;">${getCumRating()}⭐</span>
-            </div>
-            <button class="btn-green" onclick="startNextDay()">START NEXT DAY</button><br>
-            <button class="btn-blue" onclick="showShop()">UPGRADE SHOP</button><br>
-            <button class="btn-blue" onclick="startEditMode()" style="margin-top:8px;">REORGANIZE</button><br>
-            <button style="background:none;border:none;color:rgba(255,255,255,.3);font-size:12px;margin-top:24px;cursor:pointer;font-family:inherit;" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save Data</button>
-          </div>
-      `;
-  }
+function applyChefSkin(skinId) {
+  const sk = SKIN_DEFS.find(s=>s.id===skinId) || SKIN_DEFS[0];
+  // Update Three.js chef materials
+  const hatColor = sk.hatColor;
+  const bodyColor = sk.bodyColor;
+  const headColor = sk.headColor;
+  pHatBody.material = M(hatColor);
+  pHatTop.material  = M(hatColor);
+  pHatRim.material  = M(hatColor === '#ffffff' ? '#eeeeee' : hatColor);
+  pBody.material    = M(bodyColor);
+  pHead.material    = M(headColor);
+  // update home screen SVG chef
+  const svgHat = document.getElementById('hc-hat');
+  const svgHattop = document.getElementById('hc-hattop');
+  const svgBody  = document.getElementById('hc-body');
+  const svgHead  = document.getElementById('hc-head');
+  const svgArml  = document.getElementById('hc-arml');
+  const svgArmr  = document.getElementById('hc-armr');
+  if(svgHat)    svgHat.setAttribute('fill', hatColor);
+  if(svgHattop) svgHattop.setAttribute('fill', hatColor);
+  if(svgBody)   svgBody.setAttribute('fill', bodyColor);
+  if(svgHead)   svgHead.setAttribute('fill', headColor);
+  if(svgArml)   svgArml.setAttribute('fill', bodyColor);
+  if(svgArmr)   svgArmr.setAttribute('fill', bodyColor);
+}
+
+// ── HOME SCREEN ──────────────────────────────────────────────
+function showStartMenu(){
+  // Hide all gameplay screens
+  ['results-screen','shop-screen','start-screen'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  document.getElementById('top-hud').style.display='none';
+  document.getElementById('pause-btn').style.display='none';
+  document.getElementById('skins-screen').style.display='none';
+  document.getElementById('stores-screen').style.display='none';
+  document.getElementById('pause-screen').style.display='none';
+  gameState='start_menu';
+
+  // Update home screen info
+  document.getElementById('home-cash').textContent='$'+eco.cash.toFixed(2);
+  document.getElementById('home-rating').textContent=getCumRating();
+  document.getElementById('home-day').textContent=eco.day;
+  document.getElementById('home-next-day').textContent=eco.day+1;
+  document.getElementById('home-nametag').textContent = stores[activeStoreIdx]?.name || 'Burger Bar';
+
+  // Show stores button only after day 30
+  const storeBtn = document.getElementById('home-stores-btn');
+  if(storeBtn) storeBtn.style.display = eco.day >= 30 ? 'flex' : 'none';
+
+  // Apply current skin
+  applyChefSkin(cosm.equippedSkin);
+
+  document.getElementById('home-screen').style.display='flex';
 }
 window.showStartMenu = showStartMenu;
+
+// ── PAUSE ────────────────────────────────────────────────────
+let gamePaused = false;
+function togglePause(){
+  if(gameState !== 'playing' && !gamePaused) return;
+  gamePaused = !gamePaused;
+  document.getElementById('pause-screen').style.display = gamePaused ? 'flex' : 'none';
+}
+function quitToMenu(){
+  gamePaused = false;
+  document.getElementById('pause-screen').style.display='none';
+  gameState = 'start_menu';
+  document.getElementById('top-hud').style.display='none';
+  document.getElementById('pause-btn').style.display='none';
+  hlRing.visible=false;
+  saveGame();
+  showStartMenu();
+}
+window.togglePause=togglePause; window.quitToMenu=quitToMenu;
+
+// ── SKINS SHOP ───────────────────────────────────────────────
+function showSkinsShop(){
+  document.getElementById('home-screen').style.display='none';
+  document.getElementById('skins-cash').textContent='$'+eco.cash.toFixed(2);
+  const grid = document.getElementById('skin-grid');
+  grid.innerHTML='';
+  for(const sk of SKIN_DEFS){
+    const owned = cosm.ownedSkins.includes(sk.id);
+    const equipped = cosm.equippedSkin === sk.id;
+    const canAfford = eco.cash >= sk.price;
+    const card = document.createElement('div');
+    card.className = 'skin-card' + (owned?' owned':'') + (equipped?' equipped':'');
+    card.innerHTML = `
+      <div class="skin-icon">${sk.icon}</div>
+      <div class="skin-name">${sk.name}</div>
+      ${equipped ? '<div class="skin-price" style="color:#ffc107;">✓ WEARING</div>' :
+        owned ? '<div class="skin-price" style="color:#66BB6A;">EQUIP</div>' :
+        `<div class="skin-price">${sk.price===0?'FREE':'$'+sk.price}</div>`}
+    `;
+    card.onclick=()=>{
+      if(!owned){
+        if(eco.cash < sk.price){ showToast('Not enough cash! 💸'); return; }
+        eco.cash -= sk.price;
+        cosm.ownedSkins.push(sk.id);
+        updateCashUI();
+      }
+      cosm.equippedSkin = sk.id;
+      applyChefSkin(sk.id);
+      saveGame();
+      showSkinsShop(); // refresh
+    };
+    grid.appendChild(card);
+  }
+  document.getElementById('skins-screen').style.display='flex';
+}
+function closeSkinsShop(){
+  document.getElementById('skins-screen').style.display='none';
+  showStartMenu();
+}
+window.showSkinsShop=showSkinsShop; window.closeSkinsShop=closeSkinsShop;
+
+// ── MULTI-STORE ──────────────────────────────────────────────
+function calcPassiveIncome(store) {
+  // Each robot generates $8/day passively
+  const robotCount = (store.upg && store.upg.robotCount) || 0;
+  return Math.round(robotCount * 8 * 100) / 100;
+}
+
+function showStores(){
+  document.getElementById('home-screen').style.display='none';
+  const list = document.getElementById('stores-list');
+  list.innerHTML='';
+
+  // Pay out passive income at start of viewing (once per day)
+  stores.forEach((store, idx) => {
+    if(idx !== activeStoreIdx && store.unlocked) {
+      const key = `passive_paid_${store.id}_day${eco.day}`;
+      if(!sessionStorage.getItem(key)) {
+        const inc = calcPassiveIncome(store);
+        if(inc > 0) {
+          eco.cash += inc;
+          store.eco.cash += inc;
+          updateCashUI();
+          sessionStorage.setItem(key, '1');
+        }
+      }
+    }
+  });
+
+  for(let i=0;i<stores.length;i++){
+    const store = stores[i];
+    const isActive = i === activeStoreIdx;
+    const passive = calcPassiveIncome(store);
+    const card = document.createElement('div');
+    card.className = 'store-card' + (isActive?' active-store':'');
+    card.innerHTML = `
+      <div style="font-size:36px;">🏪</div>
+      <div style="flex:1;">
+        <div style="font-weight:900;font-size:17px;">${store.name}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:3px;">
+          Day ${store.eco.day} · $${(store.eco.cash||0).toFixed(2)} · ⭐${store.gStats.lifeGroups?((store.gStats.lifeStars/store.gStats.lifeGroups).toFixed(1)):'0.0'}
+        </div>
+        <div style="font-size:12px;color:#66BB6A;margin-top:2px;">🤖 Passive: +$${passive}/day (${store.upg.robotCount||0} robots)</div>
+      </div>
+      <div>
+        ${isActive
+          ? '<span style="color:#ffc107;font-weight:900;font-size:13px;">ACTIVE</span>'
+          : `<button class="buy-btn" onclick="switchToStore(${i})">VISIT</button>`}
+      </div>
+    `;
+    list.appendChild(card);
+  }
+
+  // New store unlock
+  const canUnlock = eco.day >= 30 && eco.cash >= 5000;
+  const newCard = document.createElement('div');
+  newCard.className = 'store-card locked-store';
+  newCard.innerHTML = `
+    <div style="font-size:36px;">🔒</div>
+    <div style="flex:1;">
+      <div style="font-weight:900;font-size:16px;">Open New Location</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">Requires Day 30 · Costs $5,000</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);">Day ${Math.max(0,30-eco.day)} days away</div>
+    </div>
+    <button class="buy-btn" ${canUnlock?'':'disabled'} onclick="openNewStore()">$5,000</button>
+  `;
+  list.appendChild(newCard);
+
+  document.getElementById('stores-screen').style.display='flex';
+}
+function closeStores(){
+  document.getElementById('stores-screen').style.display='none';
+  showStartMenu();
+}
+function switchToStore(idx){
+  // Save current store
+  saveGame();
+  activeStoreIdx = idx;
+  loadActiveStore();
+  // Rebuild world for new store
+  for(const k in stations){ stGrp.remove(stations[k].mesh); delete stations[k]; }
+  wings_obj.forEach(w=>{scene.remove(w.obj||w);});
+  wings_obj=[];
+  if(stores[idx].layout && stores[idx].layout.length>0){
+    stores[idx].layout.forEach(l=>addStation(l.id,l.type,l.x,l.z,l.w,l.d,{role:l.role,hiredDay:l.hiredDay}));
+  } else {
+    initStations();
+  }
+  rebuildAll();
+  updateCashUI();
+  saveGame();
+  closeStores();
+}
+function openNewStore(){
+  if(eco.cash < 5000 || eco.day < 30) return;
+  eco.cash -= 5000;
+  const newId = stores.length;
+  const names = ['Downtown Diner','Westside Burger','East End Grill','North Star Kitchen','Harbor Bites','Midtown Munch'];
+  const name = names[newId-1] || `Burger Bar #${newId+1}`;
+  const newStore = defStore(newId, name);
+  stores.push(newStore);
+  updateCashUI();
+  saveGame();
+  showToast(`🎉 ${name} opened!`);
+  closeStores();
+  showStores();
+}
+window.showStores=showStores; window.closeStores=closeStores; window.switchToStore=switchToStore; window.openNewStore=openNewStore;
+
+let wings_obj=[];
 
 function startNextDay(){
   if(eco.day === 4 && upg.sodaCount === 0 && !upg.sodaDeclined) {
@@ -1201,9 +1641,15 @@ function executeDayStart() {
   const baseGroups = eco.day + 1; 
   const groupCount = Math.max(1, Math.floor(baseGroups * multi));
   
-  stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount, spawnTimer: 180}; // Quick first spawn
+  // After day 10, multiple groups can spawn simultaneously (up to # of tables)
+  const maxSimultaneousGroups = eco.day >= 10 ? Math.min(upg.tableCount, 3) : 1;
+  
+  stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount, spawnTimer: 60,
+         maxSimultaneous: maxSimultaneousGroups};
 
+  document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
+  document.getElementById('pause-btn').style.display='flex';
   ['start-screen','shop-screen','results-screen'].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.style.display='none';
@@ -1215,15 +1661,10 @@ function executeDayStart() {
   let traysAssigned = false;
   for(const k in stations){
     const s=stations[k];
-    if(s.type==='grill') {
-       s.slots=[null,null];
-    }
+    if(s.type==='grill') s.slots=[null,null];
     if(s.type==='counter') s.item=null;
     if(s.type==='sink')    s.cleanTrays=0;
-    if(s.type==='trayrack') { 
-        s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; 
-        traysAssigned = true; 
-    }
+    if(s.type==='trayrack') { s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; traysAssigned = true; }
     if(s.type==='table')   { s.group=null; s.served=0; s.dirtyTrays=0; }
   }
 
@@ -1234,15 +1675,22 @@ function executeDayStart() {
 
   updateStationVisuals();
   player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
-  gameState='playing';
+  gameState='playing'; gamePaused=false;
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
   saveGame();
 
   if(eco.day === 10) {
      const p = document.getElementById('alert-popup');
      document.getElementById('alert-title').style.color = '#F44336';
-     document.getElementById('alert-title').textContent = 'WARNING';
-     document.getElementById('alert-desc').innerHTML = "<b>THE VIP</b> is now visiting local restaurants.<br>Look for the black suit and angry mark (💢). Keep wait times low and serve food fast, or your rating will suffer severely! But they pay 3x as much.";
+     document.getElementById('alert-title').textContent = 'BUSY HOURS!';
+     document.getElementById('alert-desc').innerHTML = "You're getting popular! Multiple groups can now arrive at once.<br><br><b>THE VIP</b> is also now visiting — keep wait times low! 💢 They pay 3× but are very impatient.";
+     p.style.display = 'flex';
+  }
+  if(eco.day === 30) {
+     const p = document.getElementById('alert-popup');
+     document.getElementById('alert-title').style.color = '#ab47bc';
+     document.getElementById('alert-title').textContent = '🏪 EXPAND!';
+     document.getElementById('alert-desc').innerHTML = "You've been running for <b>30 days!</b><br><br>You can now <b>Open a New Store Location</b> from the Stores menu for <b>$5,000</b>.<br><br>Your robots will automatically earn passive income at idle stores!";
      p.style.display = 'flex';
   }
 }
@@ -1255,6 +1703,7 @@ function closeShop(){
 window.closeShop = closeShop;
 
 function showShop(){
+  document.getElementById('home-screen').style.display='none';
   document.getElementById('start-screen').style.display='none';
   document.getElementById('shop-cash-display').textContent='$'+eco.cash.toFixed(2);
   updateShop();
@@ -1267,6 +1716,7 @@ function endDay(){
   gStats.lifeStars+=stats.totalStars;
   gStats.lifeGroups+=stats.groupsServed;
   hlRing.visible=false;
+  document.getElementById('pause-btn').style.display='none';
   const cum=parseFloat(getCumRating());
   if(eco.day>=5&&cum<2.0){
     gameState='gameover';
@@ -1274,6 +1724,21 @@ function endDay(){
     document.getElementById('gameover-screen').style.display='flex';
     saveGame(); return;
   }
+
+  // Passive income from other stores
+  let passiveTotal = 0;
+  stores.forEach((store, idx) => {
+    if(idx !== activeStoreIdx && store.unlocked) {
+      const inc = calcPassiveIncome(store);
+      passiveTotal += inc;
+      store.eco.cash += inc;
+    }
+  });
+  if(passiveTotal > 0) {
+    eco.cash += passiveTotal;
+    stats._passiveEarned = passiveTotal;
+  } else { stats._passiveEarned = 0; }
+
   gameState='results'; saveGame(); showResults();
 }
 
@@ -1304,7 +1769,13 @@ function showResults(){
   setTimeout(()=>{ el('res-rating-num').textContent=`⭐ ${cum} overall`; el('res-rating-num').style.opacity='1'; }, 1480);
   setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
   setTimeout(()=>{
-    el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+stats.cashEarned.toFixed(2);
+    // Show passive income if any
+    const passiveEarned = stats._passiveEarned || 0;
+    const totalEarned = stats.cashEarned + passiveEarned;
+    el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+totalEarned.toFixed(2);
+    if(passiveEarned > 0) {
+      el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)} (+$${passiveEarned.toFixed(2)} passive 🤖)`;
+    }
     el('res-total-row').style.opacity='1';
     const totalEl=el('res-new-total');
     const dur=900, t0=performance.now();
@@ -1456,8 +1927,12 @@ function handleAction(){
   const type=t.type; let ok=false;
 
   if(type==='fridge'&&!player.holding){ player.holding='raw'; ok=true; }
-  else if(type==='sink'){ 
-    if(player.holding==='dirty_tray'){ player.holding='tray'; ok=true; playSound('sizzle'); }
+  if(type==='sink'){ 
+    if(player.holding==='dirty_tray'){
+      // Sink now requires 3-second hold — handled in action-hold logic, not instant
+      startSinkHold(t);
+      return; // don't set ok=true here; handled async
+    }
   }
   else if(type==='trayrack'){
     if(player.holding==='tray'){ player.holding=null; t.cleanTrays++; ok=true; }
@@ -1534,6 +2009,47 @@ function handleAction(){
 }
 
 // ─────────────────────────────────────────────────────────────
+//  SINK HOLD-TO-WASH (3 seconds)
+// ─────────────────────────────────────────────────────────────
+let sinkHoldTarget=null, sinkHoldProgress=0, sinkHoldActive=false;
+const SINK_HOLD_TIME = 3.0; // seconds
+
+function startSinkHold(t){
+  sinkHoldTarget = t;
+  sinkHoldProgress = 0;
+  sinkHoldActive = true;
+  document.getElementById('sink-hold-ui').style.display='flex';
+  document.getElementById('sink-hold-fill').style.width='0%';
+}
+
+function cancelSinkHold(){
+  sinkHoldActive = false;
+  sinkHoldTarget = null;
+  sinkHoldProgress = 0;
+  document.getElementById('sink-hold-ui').style.display='none';
+  document.getElementById('sink-hold-fill').style.width='0%';
+}
+
+function updateSinkHold(ds){
+  if(!sinkHoldActive) return;
+  // Check player is still at the sink
+  const t = getClosest();
+  if(!t || t !== sinkHoldTarget || player.holding !== 'dirty_tray'){
+    cancelSinkHold(); return;
+  }
+  sinkHoldProgress += ds / 60; // ds is in frames; TARGET=1/60
+  const pct = Math.min(1, sinkHoldProgress / SINK_HOLD_TIME);
+  document.getElementById('sink-hold-fill').style.width=(pct*100)+'%';
+  if(pct >= 1){
+    player.holding='tray';
+    playSound('sizzle');
+    updateHolding(); updateStationVisuals();
+    cancelSinkHold();
+    showToast('🍽️ Tray washed!', 1200);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 //  ROBOT AI
 // ─────────────────────────────────────────────────────────────
 function updateRobots(ds){
@@ -1544,13 +2060,22 @@ function updateRobots(ds){
     const lvl = getRobotLevel(bot);
     const botSpeed = 0.02 + (lvl * 0.025);
 
+    // Cooldown after each action to prevent thrashing
+    if(bot._actionCooldown > 0) { bot._actionCooldown -= ds; }
+
     if(bot.state === 'washing') {
         bot.timer -= ds;
         if(bot.timer <= 0) bot.state = 'idle';
         continue;
     }
 
-    if(bot.state==='idle'){
+    // Validate target still exists and is a valid station
+    if(bot.state === 'moving' && bot.target) {
+        const targetId = Object.keys(stations).find(id => stations[id] === bot.target);
+        if(!targetId) { bot.target = null; bot.state = 'idle'; }
+    }
+
+    if(bot.state==='idle' && !(bot._actionCooldown > 0)){
       if(bot.role==='chef'){
         if(bot.holding === 'charred') {
             const trash = Object.values(stations).find(s => s.type === 'trash');
@@ -1602,19 +2127,33 @@ function updateRobots(ds){
         }
       } 
       else if(bot.role==='waiter'){
+        // Waiter AI: deliberate, single-purpose decisions. No 'continue' — fall through to movement.
         let foundTarget = false;
+
         if(bot.holding && bot.holding !== 'tray') {
-            const t = Object.values(stations).find(s => s.type === 'table' && s.group && s.group.state === 'ordering' && s.group.unservedOrders.includes(bot.holding));
-            if(t) { bot.target = t; bot.state = 'moving'; continue; }
+            // Carrying food — find a table that wants exactly this item
+            const t = Object.values(stations).find(s =>
+                s.type === 'table' && s.group && s.group.state === 'ordering' &&
+                s.group.unservedOrders.includes(bot.holding));
+            if(t) { bot.target = t; bot.state = 'moving'; foundTarget = true; }
             
-            const emptyCounter = Object.values(stations).find(s => s.type === 'counter' && !s.item);
-            if(emptyCounter) { bot.target = emptyCounter; bot.state = 'moving'; continue; }
-            
-            const trash = Object.values(stations).find(s => s.type === 'trash');
-            if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; continue; }
+            if(!foundTarget) {
+                // No table wants this — put it on an empty counter to avoid holding it forever
+                const emptyCounter = Object.values(stations).find(s => s.type === 'counter' && !s.item);
+                if(emptyCounter) { bot.target = emptyCounter; bot.state = 'moving'; foundTarget = true; }
+            }
+            if(!foundTarget) {
+                // Last resort: trash it rather than loop endlessly
+                const trash = Object.values(stations).find(s => s.type === 'trash' && s.contents < 4);
+                if(trash) { bot.target = trash; bot.state = 'moving'; foundTarget = true; }
+            }
         }
         else if(bot.holding === 'tray') {
-            const tablesNeedingFood = Object.values(stations).filter(s => s.type === 'table' && s.group && s.group.state === 'ordering');
+            // Holding an empty tray — only useful if there's food to pick up for a waiting table
+            const tablesNeedingFood = Object.values(stations).filter(s =>
+                s.type === 'table' && s.group && s.group.state === 'ordering' &&
+                s.group.unservedOrders.length > 0);
+
             for(const t of tablesNeedingFood) {
                 const order = t.group.unservedOrders[0];
                 if(order === 'soda_on_tray') {
@@ -1625,19 +2164,27 @@ function updateRobots(ds){
                     if(cCooked) { bot.target = cCooked; bot.state = 'moving'; foundTarget = true; break; }
                 }
             }
-            if(foundTarget) continue;
 
-            const rack = Object.values(stations).find(s => s.type === 'trayrack');
-            if(rack) { bot.target = rack; bot.state = 'moving'; continue; }
+            // No table needs us with this tray right now — return tray to rack
+            if(!foundTarget) {
+                const rack = Object.values(stations).find(s => s.type === 'trayrack');
+                if(rack) { bot.target = rack; bot.state = 'moving'; foundTarget = true; }
+            }
         }
         else if(!bot.holding) {
-            const tablesNeedingFood = Object.values(stations).filter(s => s.type === 'table' && s.group && s.group.state === 'ordering');
+            // Not holding anything — look for ready food on counters OR get a tray
+            const tablesNeedingFood = Object.values(stations).filter(s =>
+                s.type === 'table' && s.group && s.group.state === 'ordering' &&
+                s.group.unservedOrders.length > 0);
+
             for(const t of tablesNeedingFood) {
                 const order = t.group.unservedOrders[0];
                 
+                // Check for fully assembled item on counter first (no tray needed)
                 const cAssembled = Object.values(stations).find(s => s.type === 'counter' && s.item === order);
                 if(cAssembled) { bot.target = cAssembled; bot.state = 'moving'; foundTarget = true; break; }
                 
+                // Check for partial combo components
                 if(order === 'burger_soda_on_tray') {
                      const cBurgerTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'burger_on_tray');
                      if(cBurgerTray) { bot.target = cBurgerTray; bot.state = 'moving'; foundTarget = true; break; }
@@ -1645,19 +2192,28 @@ function updateRobots(ds){
                      if(cSodaTray) { bot.target = cSodaTray; bot.state = 'moving'; foundTarget = true; break; }
                 }
 
-                const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
-                if(r) { bot.target = r; bot.state = 'moving'; foundTarget = true; break; }
+                // Need a tray to assemble — only grab one if there's actually food available
+                const hasFood = Object.values(stations).some(s =>
+                    s.type === 'counter' && (s.item === 'cooked' || s.item === 'burger_on_tray' || s.item === 'soda_on_tray'));
+                const hasSodaForSodaOrder = order === 'soda_on_tray' && Object.values(stations).some(s => s.type === 'sodafountain');
+                if(hasFood || hasSodaForSodaOrder) {
+                    const r = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
+                    if(r) { bot.target = r; bot.state = 'moving'; foundTarget = true; break; }
+                }
             }
         }
       }
     }
 
     if(bot.state==='idle') continue;
+
+    // Safety: if somehow target is gone, reset
+    if(!bot.target) { bot.state = 'idle'; continue; }
     
     const tx=bot.target.x;
-    let tz=bot.target.z;
+    const tz=bot.target.z;
     const dx_direct = tx - bot.pos.x;
-    let dz_direct = tz - bot.pos.z;
+    const dz_direct = tz - bot.pos.z;
     const dist = Math.sqrt(dx_direct*dx_direct + dz_direct*dz_direct);
     
     const tDist = bot.target.type === 'table' ? 3.0 : 2.0;
@@ -1674,59 +2230,61 @@ function updateRobots(ds){
         bot.mesh.rotation.y = Math.atan2(dx_direct, dz_direct);
     } else {
       const t = bot.target;
+      let actionDone = false;
+
       if(bot.role === 'chef') {
-          if(t.type === 'fridge' && !bot.holding) { bot.holding = 'raw'; }
+          if(t.type === 'fridge' && !bot.holding) { bot.holding = 'raw'; actionDone = true; }
           else if(t.type === 'grill') {
               if(bot.holding === 'raw') {
                   const i = t.slots.indexOf(null);
-                  if(i !== -1) { t.slots[i] = {state:'raw', progress:0, burnTimer:0}; bot.holding = null; }
+                  if(i !== -1) { t.slots[i] = {state:'raw', progress:0, burnTimer:0}; bot.holding = null; actionDone = true; }
               } else if (!bot.holding) {
                   const i = t.slots.findIndex(s => s && s.state === 'charred');
-                  if(i !== -1) { bot.holding = 'charred'; t.slots[i] = null; }
+                  if(i !== -1) { bot.holding = 'charred'; t.slots[i] = null; actionDone = true; }
                   else {
                       const i2 = t.slots.findIndex(s => s && s.state === 'cooked');
-                      if(i2 !== -1) { bot.holding = 'cooked'; t.slots[i2] = null; }
+                      if(i2 !== -1) { bot.holding = 'cooked'; t.slots[i2] = null; actionDone = true; }
                   }
               }
           }
           else if(t.type === 'counter') {
               if(bot.holding === 'cooked') {
-                  if(!t.item) { t.item = 'cooked'; bot.holding = null; }
-                  else if(t.item === 'tray') { t.item = 'burger_on_tray'; bot.holding = null; }
+                  if(!t.item) { t.item = 'cooked'; bot.holding = null; actionDone = true; }
+                  else if(t.item === 'tray') { t.item = 'burger_on_tray'; bot.holding = null; actionDone = true; }
               }
           }
           else if(t.type === 'trash') {
-              if((bot.holding === 'charred' || bot.holding === 'cooked' || bot.holding === 'raw') && t.contents < 4) { t.contents++; bot.holding = null; }
+              if((bot.holding === 'charred' || bot.holding === 'cooked' || bot.holding === 'raw') && t.contents < 4) { t.contents++; bot.holding = null; actionDone = true; }
           }
       }
       else if(bot.role === 'busser') {
           if(t.type === 'table' && !bot.holding && t.dirtyTrays > 0) {
-              t.dirtyTrays--; bot.holding = 'dirty_tray'; 
+              t.dirtyTrays--; bot.holding = 'dirty_tray'; actionDone = true;
           } else if(t.type === 'sink' && bot.holding === 'dirty_tray') {
-              bot.holding = 'tray'; bot.timer = 100 - (lvl * 15); bot.state = 'washing'; 
+              bot.holding = 'tray'; bot.timer = 100 - (lvl * 15); bot.state = 'washing'; actionDone = true;
           } else if(t.type === 'trayrack' && bot.holding === 'tray') {
-              t.cleanTrays++; bot.holding = null; 
+              t.cleanTrays++; bot.holding = null; actionDone = true;
           }
       }
       else if(bot.role === 'waiter') {
           if(t.type === 'trayrack' && !bot.holding && t.cleanTrays > 0) {
-              t.cleanTrays--; bot.holding = 'tray'; 
+              t.cleanTrays--; bot.holding = 'tray'; actionDone = true;
           }
           else if(t.type === 'sodafountain') {
-              if(bot.holding === 'tray') { bot.holding = 'soda_on_tray'; }
-              else if(bot.holding === 'burger_on_tray') { bot.holding = 'burger_soda_on_tray'; }
+              if(bot.holding === 'tray') { bot.holding = 'soda_on_tray'; actionDone = true; }
+              else if(bot.holding === 'burger_on_tray') { bot.holding = 'burger_soda_on_tray'; actionDone = true; }
           }
           else if(t.type === 'counter') {
               if(bot.holding === 'tray' && t.item === 'cooked') {
-                  t.item = null; bot.holding = 'burger_on_tray'; 
+                  t.item = null; bot.holding = 'burger_on_tray'; actionDone = true;
               } else if (!bot.holding && (t.item === 'burger_on_tray' || t.item === 'soda_on_tray' || t.item === 'burger_soda_on_tray')) {
-                  bot.holding = t.item; t.item = null; 
+                  bot.holding = t.item; t.item = null; actionDone = true;
               } else if (bot.holding && bot.holding !== 'tray' && !t.item) {
-                  t.item = bot.holding; bot.holding = null;
+                  t.item = bot.holding; bot.holding = null; actionDone = true;
               } else if (bot.holding === 'burger_on_tray' && t.item === 'soda_on_tray') {
-                  bot.holding = 'burger_soda_on_tray'; t.item = null;
+                  bot.holding = 'burger_soda_on_tray'; t.item = null; actionDone = true;
               } else if (bot.holding === 'soda_on_tray' && t.item === 'burger_on_tray') {
-                  bot.holding = 'burger_soda_on_tray'; t.item = null;
+                  bot.holding = 'burger_soda_on_tray'; t.item = null; actionDone = true;
               }
           }
           else if(t.type === 'table') {
@@ -1734,7 +2292,7 @@ function updateRobots(ds){
                   const idx = t.group.unservedOrders.indexOf(bot.holding);
                   if(idx !== -1) {
                       t.group.unservedOrders.splice(idx, 1);
-                      t.served++; bot.holding = null; 
+                      t.served++; bot.holding = null; actionDone = true;
                       if(t.group.unservedOrders.length === 0) { t.group.eatTimer = 200; t.group.state = 'eating'; }
                   } 
               }
@@ -1743,11 +2301,16 @@ function updateRobots(ds){
               if(bot.holding && t.contents < 4) {
                   t.contents++;
                   bot.holding = bot.holding.includes('tray') ? 'tray' : null;
+                  actionDone = true;
               }
           }
       }
 
-      if (bot.state !== 'washing') bot.state = 'idle';
+      // Apply cooldown after action to prevent immediate re-evaluation thrashing
+      if(actionDone) bot._actionCooldown = 15;
+
+      if(bot.state !== 'washing') bot.state = 'idle';
+      bot.target = null;
       updateStationVisuals();
     }
   }
@@ -1863,7 +2426,7 @@ window.addEventListener('keyup',e=>{
   if(e.key==='s'||e.key==='ArrowDown')  keys.s=0;
   if(e.key==='a'||e.key==='ArrowLeft')  keys.a=0;
   if(e.key==='d'||e.key==='ArrowRight') keys.d=0;
-  if(e.key===' ') actPressed=false;
+  if(e.key===' '){ actPressed=false; cancelSinkHold(); }
 });
 
 const jZone=document.getElementById('joystick-zone');
@@ -1896,22 +2459,20 @@ touchOv.addEventListener('pointerdown',e=>{
   }
 });
 touchOv.addEventListener('pointermove',e=>{ e.preventDefault(); if(e.pointerId===joyId) updateJoy(e.clientX,e.clientY); });
-touchOv.addEventListener('pointerup',e=>{ if(e.pointerId===joyId){joyId=null;hideJoy();} if(e.pointerId===actId){actId=null;hideAct();} });
-touchOv.addEventListener('pointercancel',e=>{ if(e.pointerId===joyId){joyId=null;hideJoy();} if(e.pointerId===actId){actId=null;hideAct();} });
+touchOv.addEventListener('pointerup',e=>{ if(e.pointerId===joyId){joyId=null;hideJoy();} if(e.pointerId===actId){actId=null;hideAct();cancelSinkHold();} });
+touchOv.addEventListener('pointercancel',e=>{ if(e.pointerId===joyId){joyId=null;hideJoy();} if(e.pointerId===actId){actId=null;hideAct();cancelSinkHold();} });
 
 // ─────────────────────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────────────────────
 loadSave();
-updateBoundsFromLevel(); // Ensure bounds reflect loaded save immediately
+updateBoundsFromLevel();
 
 if (loadedLayout && loadedLayout.length > 0) {
-    // Rebuild exact layout from the saved layout data
     loadedLayout.forEach(l => {
         addStation(l.id, l.type, l.x, l.z, l.w, l.d, {role: l.role, hiredDay: l.hiredDay});
     });
 } else {
-    // First run or old save lacking layout
     initStations();
     for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
     for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
@@ -1922,14 +2483,14 @@ if (loadedLayout && loadedLayout.length > 0) {
         const pos = getValidSpawn(); 
         if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role: rData.role, hiredDay: rData.hiredDay}); 
     }
-    for(let i=0;i<upg.sodaCount;i++)      { const pos=freeSpot(); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
-    saveGame(); // Commit layout immediately
+    for(let i=0;i<upg.sodaCount;i++) { const pos=freeSpot(); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
+    saveGame();
 }
 
 applyCrown();
+applyChefSkin(cosm.equippedSkin);
 rebuildAll();
 updateCashUI();
-
 showStartMenu();
 
 // ─────────────────────────────────────────────────────────────
@@ -1940,6 +2501,7 @@ const TARGET=1/60;
 
 function animate(){
   requestAnimationFrame(animate);
+  if(gamePaused) return;
   const now=performance.now();
   ds=Math.min((now-lastT)/1000,0.1)/TARGET; lastT=now;
 
@@ -1992,6 +2554,7 @@ function animate(){
 
     if(gameState==='playing'){
       updateRobots(ds);
+      updateSinkHold(ds);
 
       let needVis=false;
       for(const k in stations){ const s=stations[k]; if(s.type!=='grill') continue;
@@ -2010,14 +2573,16 @@ function animate(){
 
       if(stats.spawnTimer>0) stats.spawnTimer-=ds;
       if(stats.groupsLeft>0&&stats.spawnTimer<=0){ 
-        spawnGroup(); 
+        // After day 10: spawn up to maxSimultaneous groups at once when timer fires
+        const toSpawn = Math.min(stats.groupsLeft, stats.maxSimultaneous||1);
+        for(let _i=0;_i<toSpawn;_i++) { if(stats.groupsLeft>0) spawnGroup(); }
         let r = Math.random();
         let delay = 10;
         if(r < 0.05) delay = 5;
         else if (r < 0.10) delay = 15;
         else {
            let w = (Math.random() + Math.random() + Math.random()) / 3;
-           delay = 7 + w * 6; // Center heavily on 10s
+           delay = 7 + w * 6;
         }
         stats.spawnTimer = delay * 60; 
       }
