@@ -79,44 +79,50 @@ canvas{display:block;width:100%;height:100%;}
 .expand-option:disabled{opacity:.35;cursor:not-allowed;}
 
 /* ── HOME SCREEN ── */
-#home-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;z-index:10;pointer-events:auto;overflow:hidden;}
-#home-bg-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;}
-#home-gradient-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(10,18,40,.55) 0%,rgba(10,18,40,.1) 40%,rgba(10,18,40,.0) 60%,rgba(10,18,40,.65) 100%);z-index:1;pointer-events:none;}
+#home-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;z-index:10;pointer-events:auto;overflow:hidden;background:linear-gradient(180deg,#fce4ec 0%,#f8bbd0 18%,#e1bee7 40%,#b2ebf2 70%,#c8e6c9 100%);}
+
+/* street scene SVG */
+#home-street{position:absolute;bottom:0;left:0;width:100%;z-index:1;pointer-events:none;}
 
 /* title */
-#home-title{position:absolute;top:5%;left:0;width:100%;text-align:center;z-index:4;}
-#home-title h1{font-size:46px;font-weight:900;color:#fff;margin:0;letter-spacing:3px;text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 40px rgba(255,200,0,.6);}
-#home-title .sub{font-size:13px;color:rgba(255,255,255,.65);margin-top:3px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+#home-title{position:absolute;top:4%;left:0;width:100%;text-align:center;z-index:5;}
+#home-title h1{font-size:48px;font-weight:900;color:#fff;margin:0;letter-spacing:2px;
+  text-shadow:4px 4px 0 #d81b60,6px 6px 0 rgba(216,27,96,.3);
+  -webkit-text-stroke:2px #d81b60;paint-order:stroke fill;}
+#home-title .sub{font-size:13px;color:#ad1457;margin-top:2px;font-weight:900;letter-spacing:3px;text-transform:uppercase;text-shadow:none;-webkit-text-stroke:0;}
 
 /* currency row */
-#home-currency{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;}
-.hcur{background:rgba(0,0,0,.7);backdrop-filter:blur(8px);padding:7px 15px;border-radius:22px;font-size:15px;font-weight:900;color:#fff;border:1.5px solid rgba(255,193,7,.35);display:flex;align-items:center;gap:5px;}
+#home-currency{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:6;}
+.hcur{background:rgba(255,255,255,.82);backdrop-filter:blur(6px);padding:6px 14px;border-radius:22px;font-size:14px;font-weight:900;color:#5d4037;border:2.5px solid #fff;display:flex;align-items:center;gap:5px;box-shadow:0 3px 10px rgba(0,0,0,.12);}
 
-/* day/rating corner badges */
-#home-day-badge{position:absolute;top:12px;right:14px;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);color:#ffc107;padding:7px 13px;border-radius:16px;font-size:13px;font-weight:900;border:1.5px solid rgba(255,193,7,.3);z-index:5;}
-#home-rating-badge{position:absolute;top:12px;left:14px;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);color:#ffc107;padding:7px 13px;border-radius:16px;font-size:13px;font-weight:900;border:1.5px solid rgba(255,193,7,.3);z-index:5;}
+/* corner badges */
+#home-day-badge{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.82);color:#6a1b9a;padding:6px 12px;border-radius:14px;font-size:12px;font-weight:900;border:2px solid #fff;z-index:6;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+#home-rating-badge{position:absolute;top:12px;left:12px;background:rgba(255,255,255,.82);color:#e91e63;padding:6px 12px;border-radius:14px;font-size:12px;font-weight:900;border:2px solid #fff;z-index:6;box-shadow:0 2px 8px rgba(0,0,0,.1);}
 
-/* 3D chef canvas */
-#home-chef-canvas{position:absolute;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;}
-#home-nametag{position:absolute;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(0,0,0,.8),rgba(20,20,40,.9));color:#ffc107;font-size:13px;font-weight:900;padding:5px 18px;border-radius:20px;border:1.5px solid rgba(255,193,7,.5);z-index:4;white-space:nowrap;box-shadow:0 2px 12px rgba(255,193,7,.2);}
+/* chef SVG */
+#home-chef-svg-wrap{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:4;pointer-events:none;display:flex;flex-direction:column;align-items:center;}
+#home-chef-svg-wrap svg{display:block;}
+#home-nametag{background:rgba(255,255,255,.9);color:#ad1457;font-size:12px;font-weight:900;padding:4px 14px;border-radius:20px;margin-bottom:4px;border:2px solid #f48fb1;box-shadow:0 2px 8px rgba(0,0,0,.1);white-space:nowrap;}
 
-/* buttons */
-#home-buttons{position:absolute;bottom:0;left:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:9px;padding:0 16px 20px;z-index:4;}
-.hbtn{width:100%;max-width:400px;padding:0 20px;border-radius:24px;font-size:17px;font-weight:900;border:none;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .08s,box-shadow .08s;}
+/* button cards */
+#home-buttons{position:absolute;bottom:0;left:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 14px 16px;z-index:5;}
+.hbtn{width:100%;max-width:400px;border-radius:22px;font-size:16px;font-weight:900;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .09s,box-shadow .09s;position:relative;overflow:hidden;}
 .hbtn:active{transform:translateY(4px);}
-.hbtn-play{height:66px;font-size:22px;background:linear-gradient(135deg,#4CAF50,#1B5E20);color:#fff;box-shadow:0 6px 0 #0a3d12,0 0 30px rgba(76,175,80,.4);text-shadow:0 2px 4px rgba(0,0,0,.4);}
-.hbtn-play:active{box-shadow:0 1px 0 #0a3d12;}
-.hbtn-row{display:flex;gap:9px;width:100%;max-width:400px;}
-.hbtn-row .hbtn{flex:1;height:52px;font-size:13px;}
-.hbtn-shop{background:linear-gradient(135deg,#FFCA28,#E65100);color:#1a0800;box-shadow:0 4px 0 #7f2900;}
-.hbtn-shop:active{box-shadow:0 1px 0 #7f2900;}
-.hbtn-edit{background:linear-gradient(135deg,#42A5F5,#0D47A1);color:#fff;box-shadow:0 4px 0 #062884;}
-.hbtn-edit:active{box-shadow:0 1px 0 #062884;}
-.hbtn-skins{background:linear-gradient(135deg,#ec407a,#880e4f);color:#fff;box-shadow:0 4px 0 #3d0020;}
-.hbtn-skins:active{box-shadow:0 1px 0 #3d0020;}
-.hbtn-stores{background:linear-gradient(135deg,#ab47bc,#4a148c);color:#fff;box-shadow:0 4px 0 #1a0040;}
-.hbtn-stores:active{box-shadow:0 1px 0 #1a0040;}
-.hbtn-reset{background:none;border:none;color:rgba(255,255,255,.2);font-size:11px;cursor:pointer;font-family:inherit;margin-top:2px;}
+.hbtn-play{height:64px;font-size:21px;background:linear-gradient(135deg,#66BB6A,#2e7d32);color:#fff;box-shadow:0 6px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5);text-shadow:0 2px 4px rgba(0,0,0,.3);border:3px solid rgba(255,255,255,.6);}
+.hbtn-play:active{box-shadow:0 2px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5);}
+.hbtn-play::before{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);animation:btnShine 2.8s ease-in-out infinite;}
+.hbtn-row{display:flex;gap:8px;width:100%;max-width:400px;}
+.hbtn-row .hbtn{flex:1;height:72px;flex-direction:column;gap:3px;font-size:12px;padding:8px 6px;border-radius:20px;border:3px solid rgba(255,255,255,.7);}
+.hbtn-row .hbtn .btn-icon{font-size:26px;line-height:1;}
+.hbtn-shop{background:linear-gradient(145deg,#FFD54F,#FF8F00);color:#4e2600;box-shadow:0 5px 0 #b36200;}
+.hbtn-shop:active{box-shadow:0 1px 0 #b36200;}
+.hbtn-edit{background:linear-gradient(145deg,#80DEEA,#00838F);color:#fff;box-shadow:0 5px 0 #005662;}
+.hbtn-edit:active{box-shadow:0 1px 0 #005662;}
+.hbtn-skins{background:linear-gradient(145deg,#F48FB1,#C2185B);color:#fff;box-shadow:0 5px 0 #880e4f;}
+.hbtn-skins:active{box-shadow:0 1px 0 #880e4f;}
+.hbtn-stores{background:linear-gradient(145deg,#CE93D8,#7B1FA2);color:#fff;box-shadow:0 5px 0 #4a148c;}
+.hbtn-stores:active{box-shadow:0 1px 0 #4a148c;}
+.hbtn-reset{background:none;border:none;color:rgba(150,80,100,.35);font-size:11px;cursor:pointer;font-family:inherit;margin-top:2px;}
 
 /* ── PAUSE SCREEN ── */
 #pause-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:flex-end;align-items:center;z-index:50;pointer-events:auto;}
@@ -171,14 +177,33 @@ canvas{display:block;width:100%;height:100%;}
 
 /* ── ANIMATIONS ── */
 @keyframes cloudDrift{0%{transform:translateX(-160px);}100%{transform:translateX(calc(100vw + 160px));}}
-@keyframes titleGlow{0%,100%{text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 30px rgba(255,200,0,.5);}50%{text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 60px rgba(255,220,0,.9),0 0 80px rgba(255,150,0,.4);}}
-@keyframes playPulse{0%,100%{box-shadow:0 6px 0 #0a3d12,0 0 20px rgba(76,175,80,.3);}50%{box-shadow:0 6px 0 #0a3d12,0 0 45px rgba(76,175,80,.7);}}
-#home-title h1{animation:titleGlow 3s ease-in-out infinite;}
-.hbtn-play{animation:playPulse 2.2s ease-in-out infinite;}
-.home-cloud{position:absolute;pointer-events:none;z-index:2;opacity:.75;}
-.home-cloud.c1{top:12%;animation:cloudDrift 24s linear infinite;}
-.home-cloud.c2{top:22%;animation:cloudDrift 32s linear infinite 9s;}
-.home-cloud.c3{top:8%;animation:cloudDrift 20s linear infinite 5s;}
+@keyframes btnShine{0%{left:-60%;}60%,100%{left:130%;}}
+@keyframes playPulse{0%,100%{box-shadow:0 6px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5);}50%{box-shadow:0 6px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5),0 0 30px rgba(102,187,106,.7);}}
+@keyframes chefWiggle{
+  0%{transform:translateX(-50%) rotate(0deg) scaleX(1);}
+  10%{transform:translateX(-50%) rotate(-8deg) scaleX(.97);}
+  20%{transform:translateX(-50%) rotate(8deg) scaleX(1.03);}
+  30%{transform:translateX(-50%) rotate(-6deg) scaleX(.97);}
+  40%{transform:translateX(-50%) rotate(6deg) scaleX(1.03);}
+  50%{transform:translateX(-50%) rotate(-4deg);}
+  60%{transform:translateX(-50%) rotate(4deg);}
+  70%{transform:translateX(-50%) rotate(-2deg);}
+  80%{transform:translateX(-50%) rotate(2deg);}
+  90%,100%{transform:translateX(-50%) rotate(0deg) scaleX(1);}
+}
+@keyframes chefBob{0%,100%{margin-bottom:0px;}50%{margin-bottom:8px;}}
+@keyframes personWalk{0%{transform:translateX(-30px);}100%{transform:translateX(calc(100vw + 30px));}}
+@keyframes personWalkL{0%{transform:translateX(calc(100vw + 30px)) scaleX(-1);}100%{transform:translateX(-30px) scaleX(-1);}}
+.hbtn-play{animation:playPulse 2.4s ease-in-out infinite;}
+#home-chef-svg-wrap{animation:chefWiggle 1.6s ease-in-out infinite, chefBob 0.8s ease-in-out infinite;}
+.home-cloud{position:absolute;pointer-events:none;z-index:3;opacity:.8;}
+.home-cloud.c1{top:8%;animation:cloudDrift 26s linear infinite;}
+.home-cloud.c2{top:18%;animation:cloudDrift 34s linear infinite 11s;}
+.home-cloud.c3{top:4%;animation:cloudDrift 20s linear infinite 6s;}
+.street-person{position:absolute;bottom:42%;pointer-events:none;z-index:2;}
+.street-person.p1{animation:personWalk 14s linear infinite;}
+.street-person.p2{animation:personWalk 20s linear infinite 5s;}
+.street-person.p3{animation:personWalkL 18s linear infinite 2s;}
 </style>
 </head>
 <body>
@@ -188,28 +213,185 @@ canvas{display:block;width:100%;height:100%;}
 
   <!-- ══ HOME SCREEN ══ -->
   <div id="home-screen">
-    <canvas id="home-bg-canvas"></canvas>
-    <div id="home-gradient-overlay"></div>
-    <svg class="home-cloud c1" width="130" height="52" viewBox="0 0 130 52"><ellipse cx="65" cy="34" rx="56" ry="18" fill="rgba(255,255,255,.92)"/><ellipse cx="42" cy="29" rx="30" ry="22" fill="rgba(255,255,255,.92)"/><ellipse cx="85" cy="27" rx="24" ry="18" fill="rgba(255,255,255,.92)"/></svg>
-    <svg class="home-cloud c2" width="95" height="42" viewBox="0 0 95 42"><ellipse cx="48" cy="27" rx="40" ry="15" fill="rgba(255,255,255,.85)"/><ellipse cx="32" cy="23" rx="22" ry="17" fill="rgba(255,255,255,.85)"/><ellipse cx="62" cy="21" rx="19" ry="15" fill="rgba(255,255,255,.85)"/></svg>
-    <svg class="home-cloud c3" width="75" height="36" viewBox="0 0 75 36"><ellipse cx="38" cy="23" rx="32" ry="13" fill="rgba(255,255,255,.8)"/><ellipse cx="24" cy="19" rx="18" ry="15" fill="rgba(255,255,255,.8)"/><ellipse cx="52" cy="17" rx="15" ry="13" fill="rgba(255,255,255,.8)"/></svg>
-    <div id="home-title"><h1>🍔 BURGER BAR</h1><div class="sub">Build Your Empire</div></div>
+    <!-- pastel clouds -->
+    <svg class="home-cloud c1" width="130" height="55" viewBox="0 0 130 55"><ellipse cx="65" cy="37" rx="55" ry="19" fill="#fff"/><ellipse cx="40" cy="30" rx="32" ry="24" fill="#fff"/><ellipse cx="88" cy="28" rx="25" ry="20" fill="#fff"/></svg>
+    <svg class="home-cloud c2" width="100" height="44" viewBox="0 0 100 44"><ellipse cx="50" cy="28" rx="42" ry="16" fill="#fce4ec"/><ellipse cx="30" cy="22" rx="24" ry="18" fill="#fce4ec"/><ellipse cx="66" cy="20" rx="20" ry="16" fill="#fce4ec"/></svg>
+    <svg class="home-cloud c3" width="80" height="38" viewBox="0 0 80 38"><ellipse cx="40" cy="24" rx="34" ry="14" fill="#e1bee7"/><ellipse cx="22" cy="18" rx="20" ry="16" fill="#e1bee7"/><ellipse cx="56" cy="16" rx="16" ry="14" fill="#e1bee7"/></svg>
+
+    <!-- STREET SCENE -->
+    <svg id="home-street" viewBox="0 0 390 220" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
+      <!-- sidewalk -->
+      <rect x="0" y="155" width="390" height="65" fill="#f8bbd0"/>
+      <rect x="0" y="148" width="390" height="10" fill="#f48fb1"/>
+      <!-- road -->
+      <rect x="0" y="195" width="390" height="25" fill="#b39ddb"/>
+      <!-- road lines -->
+      <rect x="30" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
+      <rect x="100" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
+      <rect x="170" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
+      <rect x="240" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
+      <rect x="310" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
+      <!-- left building (bakery) -->
+      <rect x="0" y="60" width="90" height="100" rx="4" fill="#f8bbd0"/>
+      <rect x="0" y="55" width="90" height="12" rx="3" fill="#f48fb1"/>
+      <rect x="10" y="72" width="30" height="28" rx="3" fill="#b2ebf2" opacity=".9"/>
+      <rect x="50" y="72" width="30" height="28" rx="3" fill="#b2ebf2" opacity=".9"/>
+      <rect x="28" y="115" width="34" height="45" rx="4" fill="#e91e63" opacity=".8"/>
+      <rect x="0" y="55" width="90" height="10" rx="3" fill="#e91e63"/>
+      <text x="45" y="52" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="9" fill="#fff">BAKERY</text>
+      <!-- right building (flower shop) -->
+      <rect x="300" y="70" width="90" height="90" rx="4" fill="#e1bee7"/>
+      <rect x="300" y="65" width="90" height="12" rx="3" fill="#ce93d8"/>
+      <rect x="310" y="82" width="28" height="24" rx="3" fill="#b2ebf2" opacity=".9"/>
+      <rect x="350" y="82" width="28" height="24" rx="3" fill="#b2ebf2" opacity=".9"/>
+      <rect x="320" y="118" width="50" height="42" rx="4" fill="#ab47bc" opacity=".7"/>
+      <text x="345" y="62" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="9" fill="#fff">FLOWERS</text>
+      <!-- BURGER BAR (center, prominent) -->
+      <rect x="100" y="18" width="190" height="142" rx="6" fill="#fff9c4"/>
+      <!-- roof -->
+      <polygon points="88,22 195,2 302,22" fill="#e91e63"/>
+      <polygon points="92,22 195,5 298,22" fill="#f48fb1"/>
+      <!-- awning -->
+      <rect x="100" y="50" width="190" height="16" fill="#e91e63"/>
+      <path d="M100,66 Q115,58 130,66 Q145,58 160,66 Q175,58 190,66 Q205,58 220,66 Q235,58 250,66 Q265,58 280,66 Q285,58 290,66" fill="none" stroke="#c2185b" stroke-width="1.5"/>
+      <!-- sign -->
+      <rect x="118" y="28" width="154" height="26" rx="8" fill="#ffc107"/>
+      <rect x="120" y="30" width="150" height="22" rx="7" fill="#ffca28"/>
+      <text x="195" y="46" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="14" fill="#bf360c">🍔 BURGER BAR</text>
+      <!-- windows -->
+      <rect x="112" y="70" width="42" height="36" rx="5" fill="#b2ebf2" opacity=".85"/>
+      <rect x="174" y="70" width="42" height="36" rx="5" fill="#b2ebf2" opacity=".85"/>
+      <rect x="236" y="70" width="42" height="36" rx="5" fill="#b2ebf2" opacity=".85"/>
+      <!-- window cross bars -->
+      <line x1="133" y1="70" x2="133" y2="106" stroke="#81d4fa" stroke-width="1.5"/>
+      <line x1="112" y1="88" x2="154" y2="88" stroke="#81d4fa" stroke-width="1.5"/>
+      <line x1="195" y1="70" x2="195" y2="106" stroke="#81d4fa" stroke-width="1.5"/>
+      <line x1="174" y1="88" x2="216" y2="88" stroke="#81d4fa" stroke-width="1.5"/>
+      <line x1="257" y1="70" x2="257" y2="106" stroke="#81d4fa" stroke-width="1.5"/>
+      <line x1="236" y1="88" x2="278" y2="88" stroke="#81d4fa" stroke-width="1.5"/>
+      <!-- door -->
+      <rect x="168" y="115" width="54" height="45" rx="6" fill="#e91e63"/>
+      <rect x="172" y="119" width="22" height="36" rx="4" fill="#f8bbd0"/>
+      <rect x="196" y="119" width="22" height="36" rx="4" fill="#f8bbd0"/>
+      <circle cx="194" cy="137" r="3" fill="#e91e63"/>
+      <circle cx="196" cy="137" r="3" fill="#c2185b"/>
+      <!-- flower boxes under windows -->
+      <rect x="112" y="103" width="42" height="8" rx="3" fill="#a5d6a7"/>
+      <circle cx="120" cy="103" r="4" fill="#ef9a9a"/><circle cx="128" cy="101" r="4" fill="#f48fb1"/><circle cx="136" cy="103" r="4" fill="#ffcc80"/><circle cx="144" cy="101" r="3.5" fill="#ce93d8"/>
+      <rect x="236" y="103" width="42" height="8" rx="3" fill="#a5d6a7"/>
+      <circle cx="244" cy="103" r="4" fill="#ef9a9a"/><circle cx="252" cy="101" r="4" fill="#f48fb1"/><circle cx="260" cy="103" r="4" fill="#ffcc80"/><circle cx="268" cy="101" r="3.5" fill="#ce93d8"/>
+      <!-- trees -->
+      <circle cx="78" cy="140" r="18" fill="#a5d6a7"/>
+      <circle cx="68" cy="148" r="12" fill="#c8e6c9"/>
+      <rect x="74" y="152" width="8" height="16" rx="3" fill="#8d6e63"/>
+      <circle cx="312" cy="140" r="18" fill="#a5d6a7"/>
+      <circle cx="322" cy="148" r="12" fill="#c8e6c9"/>
+      <rect x="308" y="152" width="8" height="16" rx="3" fill="#8d6e63"/>
+      <!-- cute lil bench -->
+      <rect x="82" y="162" width="32" height="5" rx="2" fill="#8d6e63"/>
+      <rect x="85" y="167" width="4" height="8" rx="1" fill="#a1887f"/>
+      <rect x="105" y="167" width="4" height="8" rx="1" fill="#a1887f"/>
+    </svg>
+
+    <!-- walking people (CSS animated) -->
+    <svg class="street-person p1" width="22" height="40" viewBox="0 0 22 40" style="bottom:18%;">
+      <circle cx="11" cy="7" r="6" fill="#ffcc80"/><rect x="6" y="13" width="10" height="14" rx="4" fill="#f48fb1"/>
+      <rect x="3" y="15" width="5" height="10" rx="2.5" fill="#ffcc80"/><rect x="14" y="15" width="5" height="10" rx="2.5" fill="#ffcc80"/>
+      <rect x="7" y="27" width="4" height="10" rx="2" fill="#ce93d8"/><rect x="11" y="27" width="4" height="10" rx="2" fill="#ce93d8"/>
+    </svg>
+    <svg class="street-person p2" width="20" height="38" viewBox="0 0 20 38" style="bottom:18%;">
+      <circle cx="10" cy="6" r="5.5" fill="#ffb74d"/><circle cx="10" cy="3" r="5" fill="#8d6e63"/>
+      <rect x="5" y="12" width="10" height="13" rx="4" fill="#80deea"/>
+      <rect x="2" y="14" width="4" height="9" rx="2" fill="#ffb74d"/><rect x="14" y="14" width="4" height="9" rx="2" fill="#ffb74d"/>
+      <rect x="6" y="25" width="3.5" height="9" rx="1.75" fill="#37474f"/><rect x="10.5" y="25" width="3.5" height="9" rx="1.75" fill="#37474f"/>
+    </svg>
+    <svg class="street-person p3" width="18" height="36" viewBox="0 0 18 36" style="bottom:18%;">
+      <circle cx="9" cy="6" r="5" fill="#ef9a9a"/><circle cx="9" cy="2" r="5" fill="#e91e63" opacity=".8"/>
+      <rect x="4" y="11" width="10" height="12" rx="4" fill="#ce93d8"/>
+      <rect x="1" y="13" width="4" height="8" rx="2" fill="#ef9a9a"/><rect x="13" y="13" width="4" height="8" rx="2" fill="#ef9a9a"/>
+      <rect x="5" y="23" width="3" height="9" rx="1.5" fill="#7986cb"/><rect x="10" y="23" width="3" height="9" rx="1.5" fill="#7986cb"/>
+    </svg>
+
+    <!-- title -->
+    <div id="home-title"><h1>BURGER BAR</h1><div class="sub">✨ Your Delicious Empire ✨</div></div>
+
+    <!-- currency -->
     <div id="home-currency">
       <div class="hcur">💰 <span id="home-cash">$0.00</span></div>
       <div class="hcur">⭐ <span id="home-rating">0.0</span></div>
     </div>
     <div id="home-day-badge">📅 Day <span id="home-day">0</span></div>
-    <canvas id="home-chef-canvas" width="220" height="320"></canvas>
-    <div id="home-nametag">Burger Bar #1</div>
+
+    <!-- CHEF (SVG, dancing, bottom center peeking up) -->
+    <div id="home-chef-svg-wrap" id="home-chef-anim-wrap">
+      <div id="home-nametag">Burger Bar #1</div>
+      <svg id="home-chef-svg" width="130" height="160" viewBox="0 0 130 160" xmlns="http://www.w3.org/2000/svg">
+        <!-- chef hat -->
+        <ellipse cx="65" cy="62" rx="40" ry="10" fill="#eee" id="hcs-hatrim"/>
+        <rect x="33" y="18" width="64" height="48" rx="8" fill="#fff" id="hcs-hat"/>
+        <ellipse cx="65" cy="18" rx="28" ry="8" fill="#fff" id="hcs-hattop"/>
+        <!-- hat shine -->
+        <ellipse cx="55" cy="24" rx="8" ry="3" fill="rgba(255,255,255,.5)" transform="rotate(-15,55,24)"/>
+        <!-- face -->
+        <ellipse cx="65" cy="82" rx="26" ry="25" fill="#FFCC80" id="hcs-head"/>
+        <!-- cheeks -->
+        <ellipse cx="47" cy="88" rx="8" ry="5" fill="#ffb3ba" opacity=".6"/>
+        <ellipse cx="83" cy="88" rx="8" ry="5" fill="#ffb3ba" opacity=".6"/>
+        <!-- eyes (big cute) -->
+        <ellipse cx="55" cy="78" rx="6" ry="7" fill="#333"/>
+        <ellipse cx="75" cy="78" rx="6" ry="7" fill="#333"/>
+        <ellipse cx="53" cy="76" rx="2.5" ry="3" fill="#fff"/>
+        <ellipse cx="73" cy="76" rx="2.5" ry="3" fill="#fff"/>
+        <circle cx="52" cy="75" r="1.2" fill="#fff"/>
+        <circle cx="72" cy="75" r="1.2" fill="#fff"/>
+        <!-- eyebrows (happy) -->
+        <path d="M49 70 Q55 66 61 70" stroke="#5d4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M69 70 Q75 66 81 70" stroke="#5d4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <!-- big smile -->
+        <path d="M50 91 Q65 104 80 91" stroke="#e91e63" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <!-- tongue out (silly) -->
+        <ellipse cx="65" cy="98" rx="7" ry="5" fill="#ef9a9a"/>
+        <!-- body -->
+        <rect x="28" y="104" width="74" height="60" rx="12" fill="#fff" id="hcs-body"/>
+        <!-- apron -->
+        <rect x="38" y="108" width="54" height="52" rx="8" fill="#f8bbd0"/>
+        <!-- body buttons -->
+        <circle cx="65" cy="116" r="3.5" fill="#f48fb1"/>
+        <circle cx="65" cy="128" r="3.5" fill="#f48fb1"/>
+        <circle cx="65" cy="140" r="3.5" fill="#f48fb1"/>
+        <!-- left arm raised (waving) -->
+        <rect x="0" y="100" width="30" height="14" rx="7" fill="#fff" id="hcs-arml" transform="rotate(-30,15,107)"/>
+        <ellipse cx="5" cy="96" rx="8" ry="8" fill="#FFCC80"/>
+        <!-- right arm (holding spatula) -->
+        <rect x="100" y="100" width="30" height="14" rx="7" fill="#fff" id="hcs-armr" transform="rotate(20,115,107)"/>
+        <ellipse cx="125" cy="97" rx="8" ry="8" fill="#FFCC80"/>
+        <!-- spatula -->
+        <rect x="126" y="72" width="6" height="30" rx="3" fill="#bdbdbd"/>
+        <rect x="118" y="67" width="22" height="9" rx="3" fill="#9e9e9e"/>
+        <rect x="119" y="68" width="20" height="5" rx="2" fill="#e0e0e0"/>
+      </svg>
+    </div>
+
+    <!-- BUTTONS (illustrated cards) -->
     <div id="home-buttons">
-      <button class="hbtn hbtn-play" style="width:100%;max-width:400px;" onclick="startNextDay()">▶&nbsp; PLAY DAY <span id="home-next-day">1</span></button>
+      <button class="hbtn hbtn-play" style="width:100%;max-width:400px;" onclick="startNextDay()">
+        ▶&nbsp; PLAY DAY <span id="home-next-day">1</span>
+      </button>
       <div class="hbtn-row">
-        <button class="hbtn hbtn-shop" onclick="showShop()">🛒 Shop</button>
-        <button class="hbtn hbtn-edit" onclick="startEditMode()">✏️ Reorganize</button>
+        <button class="hbtn hbtn-shop" onclick="showShop()">
+          <span class="btn-icon">🛒</span>Shop
+        </button>
+        <button class="hbtn hbtn-edit" onclick="startEditMode()">
+          <span class="btn-icon">✏️</span>Reorganize
+        </button>
       </div>
       <div class="hbtn-row">
-        <button class="hbtn hbtn-skins" onclick="showSkinsShop()">👕 Skins</button>
-        <button class="hbtn hbtn-stores" id="home-stores-btn" onclick="showStores()">🏪 Stores</button>
+        <button class="hbtn hbtn-skins" onclick="showSkinsShop()">
+          <span class="btn-icon">👕</span>Skins
+        </button>
+        <button class="hbtn hbtn-stores" id="home-stores-btn" onclick="showStores()">
+          <span class="btn-icon">🏪</span>Stores
+        </button>
       </div>
       <button class="hbtn-reset" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save</button>
     </div>
@@ -450,15 +632,6 @@ function resize(){
   camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
 }
 window.addEventListener('resize', resize);
-window.addEventListener('resize', ()=>{
-  if(homeRenderer && document.getElementById('home-screen').style.display!=='none'){
-    const bgCanvas = document.getElementById('home-bg-canvas');
-    bgCanvas.width=window.innerWidth; bgCanvas.height=window.innerHeight;
-    homeBgRenderer.setSize(window.innerWidth, window.innerHeight);
-    homeBgCamera.aspect=window.innerWidth/window.innerHeight; homeBgCamera.updateProjectionMatrix();
-    positionHomeChef();
-  }
-});
 resize();
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); scene.add(hemi);
@@ -957,12 +1130,11 @@ function getRobotLevel(bot) {
 // ─────────────────────────────────────────────────────────────
 function saveGame(){
   try{
-    // sync active store's current state
     if(stores.length > 0) {
-      stores[activeStoreIdx].eco = eco;
-      stores[activeStoreIdx].upg = upg;
-      stores[activeStoreIdx].gStats = gStats;
-      stores[activeStoreIdx].wings = wings;
+      stores[activeStoreIdx].eco    = JSON.parse(JSON.stringify(eco));
+      stores[activeStoreIdx].upg    = JSON.parse(JSON.stringify(upg));
+      stores[activeStoreIdx].gStats = JSON.parse(JSON.stringify(gStats));
+      stores[activeStoreIdx].wings  = JSON.parse(JSON.stringify(wings));
       let layout = [];
       for(const k in stations) {
         const s = stations[k];
@@ -1374,202 +1546,40 @@ function showToast(msg, dur=2200){
 // ─────────────────────────────────────────────────────────────
 //  HOME SCREEN 3D CHEF RENDERER
 // ─────────────────────────────────────────────────────────────
-let homeRenderer=null, homeScene=null, homeCamera=null, homeChefMesh=null;
-let homeBgRenderer=null, homeBgScene=null, homeBgCamera=null;
-let homeAnimId=null;
-
-function initHomeRenderer(){
-  // ── Background scene (restaurant interior) ──
-  const bgCanvas = document.getElementById('home-bg-canvas');
-  bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
-  bgCanvas.style.width='100%'; bgCanvas.style.height='100%';
-  homeBgRenderer = new THREE.WebGLRenderer({canvas:bgCanvas, antialias:true, alpha:false});
-  homeBgRenderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
-  homeBgRenderer.setSize(window.innerWidth, window.innerHeight);
-  homeBgRenderer.shadowMap.enabled=true;
-
-  homeBgScene = new THREE.Scene();
-  homeBgScene.background = new THREE.Color('#87CEEB');
-  homeBgScene.fog = new THREE.Fog('#b0d8f0', 20, 60);
-
-  // Lighting
-  const hemi2 = new THREE.HemisphereLight(0xffeedd, 0x334422, 0.7); homeBgScene.add(hemi2);
-  const sun2  = new THREE.DirectionalLight(0xfff5e0, 1.1); sun2.position.set(10,20,10); sun2.castShadow=true; homeBgScene.add(sun2);
-  const fill2 = new THREE.DirectionalLight(0x88aaff, 0.3); fill2.position.set(-10,10,-5); homeBgScene.add(fill2);
-
-  // Ground
-  const ground2 = new THREE.Mesh(new THREE.PlaneGeometry(80,80), new THREE.MeshLambertMaterial({color:'#5a9e47'}));
-  ground2.rotation.x=-Math.PI/2; ground2.receiveShadow=true; homeBgScene.add(ground2);
-
-  // Simple restaurant building silhouette
-  const wallMat = new THREE.MeshLambertMaterial({color:'#8d6e63'});
-  const roofMat = new THREE.MeshLambertMaterial({color:'#c62828'});
-  const signMat = new THREE.MeshLambertMaterial({color:'#ffc107'});
-  const glassMat= new THREE.MeshLambertMaterial({color:'#81d4fa', transparent:true, opacity:.7});
-
-  // Main building
-  const bld = new THREE.Mesh(new THREE.BoxGeometry(18,8,10), wallMat); bld.position.set(0,4,-8); bld.castShadow=true; bld.receiveShadow=true; homeBgScene.add(bld);
-  // Roof
-  const roofGeo = new THREE.ConeGeometry(13,3,4); const roof = new THREE.Mesh(roofGeo, roofMat); roof.rotation.y=Math.PI/4; roof.position.set(0,9,-8); homeBgScene.add(roof);
-  // Sign
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(12,2.5,0.3), signMat); sign.position.set(0,6.5,-3); homeBgScene.add(sign);
-  // Windows
-  [-4,4].forEach(x=>{ const w=new THREE.Mesh(new THREE.BoxGeometry(3,2.5,0.2),glassMat); w.position.set(x,5,-3.1); homeBgScene.add(w); });
-  // Door
-  const door=new THREE.Mesh(new THREE.BoxGeometry(2.5,4,0.3),new THREE.MeshLambertMaterial({color:'#4e342e'})); door.position.set(0,2,-3.1); homeBgScene.add(door);
-  // Trees
-  [[-9,0,-4],[9,0,-4],[-7,0,2]].forEach(([x,y,z])=>{
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.3,.4,3,8),new THREE.MeshLambertMaterial({color:'#5D4037'})); trunk.position.set(x,1.5,z); homeBgScene.add(trunk);
-    const foliage=new THREE.Mesh(new THREE.ConeGeometry(1.8,4,8),new THREE.MeshLambertMaterial({color:'#2e7d32'})); foliage.position.set(x,5,z); homeBgScene.add(foliage);
-  });
-  // Road
-  const road=new THREE.Mesh(new THREE.PlaneGeometry(80,6),new THREE.MeshLambertMaterial({color:'#546e7a'})); road.rotation.x=-Math.PI/2; road.position.set(0,0.01,8); homeBgScene.add(road);
-  // Road lines
-  for(let i=-3;i<=3;i++){
-    const rl=new THREE.Mesh(new THREE.PlaneGeometry(3,.18),new THREE.MeshLambertMaterial({color:'#ffc107'})); rl.rotation.x=-Math.PI/2; rl.position.set(i*8,0.02,8); homeBgScene.add(rl);
-  }
-
-  // Camera angle — low, slightly angled up to see building
-  homeBgCamera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 200);
-  homeBgCamera.position.set(0, 5, 16); homeBgCamera.lookAt(0, 3, -4);
-
-  // ── Chef showcase canvas ──
-  const chefCanvas = document.getElementById('home-chef-canvas');
-  homeRenderer = new THREE.WebGLRenderer({canvas:chefCanvas, antialias:true, alpha:true});
-  homeRenderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
-  homeRenderer.setSize(220, 320);
-  homeRenderer.setClearColor(0x000000, 0);
-
-  homeScene = new THREE.Scene();
-  homeCamera = new THREE.PerspectiveCamera(38, 220/320, 0.1, 100);
-  homeCamera.position.set(0,4,14); homeCamera.lookAt(0,3,0);
-
-  // Chef lighting — dramatic 3-point
-  const kLight = new THREE.DirectionalLight(0xffffff, 1.4); kLight.position.set(3,8,6); homeScene.add(kLight);
-  const fLight = new THREE.DirectionalLight(0x88ccff, 0.5); fLight.position.set(-5,4,3); homeScene.add(fLight);
-  const rimLight= new THREE.DirectionalLight(0xffcc44, 0.8); rimLight.position.set(0,6,-8); homeScene.add(rimLight);
-  homeScene.add(new THREE.AmbientLight(0xffffff, 0.3));
-
-  buildHomeChef();
-}
-
-function buildHomeChef(){
-  if(!homeScene) return; // not initialized yet
-  if(homeChefMesh){ homeScene.remove(homeChefMesh); homeChefMesh=null; }
-  const sk = getActiveSkin();
-  const g = new THREE.Group();
-  const hatC  = new THREE.MeshPhongMaterial({color:sk.hatColor,  shininess:80, specular:new THREE.Color(0.4,0.4,0.4)});
-  const bodyC = new THREE.MeshPhongMaterial({color:sk.bodyColor, shininess:60, specular:new THREE.Color(0.3,0.3,0.3)});
-  const headC = new THREE.MeshPhongMaterial({color:sk.headColor, shininess:40});
-  const white = new THREE.MeshPhongMaterial({color:'#f5f5f5', shininess:50});
-  const dark  = new THREE.MeshLambertMaterial({color:'#333'});
-  const silver= new THREE.MeshPhongMaterial({color:'#aaaaaa', shininess:120, specular:new THREE.Color(0.6,0.6,0.6)});
-
-  const add=(geo,mat,x=0,y=0,z=0,rx=0,ry=0,rz=0)=>{ const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m; };
-  // hat brim
-  add(new THREE.CylinderGeometry(1.25,1.25,.18,24), hatC, 0,5.8,0);
-  // hat body
-  add(new THREE.CylinderGeometry(.95,1.1,2.2,24), hatC, 0,6.9,0);
-  // hat top dome
-  const topDome=add(new THREE.SphereGeometry(.95,16,10),hatC,0,8,0); topDome.scale.set(1,.5,1);
-  // head
-  add(new THREE.SphereGeometry(1.05,16,12), headC, 0,4.15,0);
-  // eyes
-  add(new THREE.SphereGeometry(.18,8,8), dark, -.38,4.35,.9);
-  add(new THREE.SphereGeometry(.18,8,8), dark,  .38,4.35,.9);
-  // eyeshine
-  add(new THREE.SphereGeometry(.07,6,6), white, -.3,4.45,1.0);
-  add(new THREE.SphereGeometry(.07,6,6), white,  .46,4.45,1.0);
-  // smile
-  const smilePts=[]; for(let a=-35;a<=35;a+=10){ const r=a*Math.PI/180; smilePts.push(new THREE.Vector3(Math.sin(r)*.5,-Math.cos(r)*.18+3.82,0.96)); }
-  const smileCurve=new THREE.CatmullRomCurve3(smilePts);
-  const smileMat=new THREE.MeshBasicMaterial({color:'#333'}); const smileGeo=new THREE.TubeGeometry(smileCurve,12,.04,6,false);
-  const smileMesh=new THREE.Mesh(smileGeo,smileMat); g.add(smileMesh);
-  // neck
-  add(new THREE.CylinderGeometry(.35,.45,.5,12), headC, 0,3.25,0);
-  // body torso
-  add(new THREE.CylinderGeometry(1.0,1.1,2.6,16), bodyC, 0,2,0);
-  // apron front
-  add(new THREE.BoxGeometry(1.4,.05,2.2), white, 0,2,.95);
-  // buttons
-  [-0.4,0,0.4].forEach(y=>add(new THREE.SphereGeometry(.1,8,8),new THREE.MeshPhongMaterial({color:'#ccc',shininess:100}),0,2.2+y,.97));
-  // left arm
-  add(new THREE.CylinderGeometry(.38,.42,1.6,12), bodyC, -1.4,2.5,0, 0,0,Math.PI/5);
-  // right arm (raised with spatula)
-  add(new THREE.CylinderGeometry(.38,.42,1.6,12), bodyC,  1.4,2.8,0, 0,0,-Math.PI/4);
-  // hands
-  add(new THREE.SphereGeometry(.44,10,10), headC, -1.9,1.5,0);
-  add(new THREE.SphereGeometry(.44,10,10), headC,  1.9,3.35,0);
-  // spatula handle
-  add(new THREE.CylinderGeometry(.1,.1,2.2,8), silver, 2.3,4.2,0, 0,0,-Math.PI/8);
-  // spatula head
-  add(new THREE.BoxGeometry(1.0,.08,.7), silver, 2.75,5.4,0);
-  // legs
-  add(new THREE.CylinderGeometry(.45,.38,1.8,12), new THREE.MeshLambertMaterial({color:'#37474f'}), -.5,0,0);
-  add(new THREE.CylinderGeometry(.45,.38,1.8,12), new THREE.MeshLambertMaterial({color:'#37474f'}),  .5,0,0);
-  // shoes
-  add(new THREE.BoxGeometry(.8,.35,1.1), dark, -.5,-1.0,.15);
-  add(new THREE.BoxGeometry(.8,.35,1.1), dark,  .5,-1.0,.15);
-
-  g.position.y = -1;
-  homeChefMesh = g;
-  homeScene.add(g);
-}
-
-function runHomeAnim(){
-  homeAnimId = requestAnimationFrame(runHomeAnim);
-  const t = Date.now()/1000;
-  if(homeBgCamera && homeBgRenderer){
-    homeBgCamera.position.x = Math.sin(t*0.08)*2;
-    homeBgCamera.lookAt(0,3,-4);
-    homeBgRenderer.render(homeBgScene,homeBgCamera);
-  }
-  if(homeChefMesh && homeRenderer){
-    homeChefMesh.rotation.y = Math.sin(t*0.6)*0.18;
-    homeChefMesh.position.y = -1 + Math.sin(t*1.2)*0.12;
-    homeRenderer.render(homeScene, homeCamera);
-  }
-}
-
-function stopHomeAnim(){
-  if(homeAnimId){ cancelAnimationFrame(homeAnimId); homeAnimId=null; }
-}
-
-// Position the chef canvas and nametag responsively
-function positionHomeChef(){
-  if(!homeRenderer) return;
-  const chefCanvas = document.getElementById('home-chef-canvas');
-  const nametag    = document.getElementById('home-nametag');
-  const buttonsH   = document.getElementById('home-buttons').offsetHeight;
-  const titleBot   = 80; // approx title bottom
-  const avail = window.innerHeight - titleBot - buttonsH - 20;
-  const h = Math.min(Math.max(avail, 200), 340);
-  const w = Math.round(h * (220/320));
-  chefCanvas.width=w*Math.min(window.devicePixelRatio,1.5); chefCanvas.height=h*Math.min(window.devicePixelRatio,1.5);
-  chefCanvas.style.width=w+'px'; chefCanvas.style.height=h+'px';
-  chefCanvas.style.position='absolute';
-  chefCanvas.style.left='50%'; chefCanvas.style.transform='translateX(-50%)';
-  chefCanvas.style.top=(titleBot+10)+'px';
-  nametag.style.top=(titleBot+h+14)+'px';
-  homeRenderer.setSize(w*Math.min(window.devicePixelRatio,1.5), h*Math.min(window.devicePixelRatio,1.5));
-  homeCamera.aspect=w/h; homeCamera.updateProjectionMatrix();
-}
+// (home screen now uses SVG, no Three.js renderer needed)
+function initHomeRenderer(){ /* no-op: SVG-based home screen */ }
+function buildHomeChef(){ applyChefSkinToSVG(cosm.equippedSkin); }
+function runHomeAnim(){ /* animation handled by CSS keyframes */ }
+function stopHomeAnim(){ /* no-op */ }
+function positionHomeChef(){ /* no-op: SVG auto-sizes */ }
 
 // ─────────────────────────────────────────────────────────────
-//  SKIN APPLICATION (gameplay chef + home chef)
+//  SKIN APPLICATION — gameplay chef + SVG home chef
 // ─────────────────────────────────────────────────────────────
+function applyChefSkinToSVG(skinId){
+  const sk = SKIN_DEFS.find(s=>s.id===skinId) || SKIN_DEFS[0];
+  const set = (id, attr, val) => { const el=document.getElementById(id); if(el) el.setAttribute(attr,val); };
+  set('hcs-hat','fill', sk.hatColor);
+  set('hcs-hattop','fill', sk.hatColor);
+  set('hcs-hatrim','fill', sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor);
+  set('hcs-body','fill', sk.bodyColor);
+  set('hcs-head','fill', sk.headColor);
+  set('hcs-arml','fill', sk.bodyColor);
+  set('hcs-armr','fill', sk.bodyColor);
+}
+
 function applyChefSkin(skinId) {
   const sk = SKIN_DEFS.find(s=>s.id===skinId) || SKIN_DEFS[0];
-  // Gameplay 3D chef — guard in case called before player mesh is built
+  // Gameplay 3D chef
   try {
     pHatBody.material = M(sk.hatColor);
     pHatTop.material  = M(sk.hatColor);
     pHatRim.material  = M(sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor);
     pBody.material    = M(sk.bodyColor);
     pHead.material    = M(sk.headColor);
-  } catch(e) {}
-  // Home screen 3D chef (only if renderer exists)
-  if(homeScene) buildHomeChef();
+  } catch(e){}
+  // SVG home chef
+  applyChefSkinToSVG(skinId);
   // Trail color
   window._trailColor = sk.trailColor || null;
 }
@@ -1626,11 +1636,8 @@ function showStartMenu(){
 
   document.getElementById('home-screen').style.display='flex';
 
-  // Init 3D home renderer once
-  if(!homeRenderer) initHomeRenderer();
+  // Apply skin to SVG chef
   applyChefSkin(cosm.equippedSkin);
-  setTimeout(positionHomeChef, 0);
-  stopHomeAnim(); runHomeAnim();
 }
 window.showStartMenu = showStartMenu;
 
