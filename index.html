@@ -78,51 +78,227 @@ canvas{display:block;width:100%;height:100%;}
 .expand-option:hover{background:rgba(255,193,7,.15);border-color:#ffc107;color:#ffc107;}
 .expand-option:disabled{opacity:.35;cursor:not-allowed;}
 
-/* ── HOME SCREEN ── */
-#home-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;z-index:10;pointer-events:auto;overflow:hidden;background:linear-gradient(180deg,#fce4ec 0%,#f8bbd0 18%,#e1bee7 40%,#b2ebf2 70%,#c8e6c9 100%);}
+/* ── HOME SCREEN (Golf Battle style) ── */
+#home-screen{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  display:none;z-index:10;pointer-events:auto;overflow:hidden;
+  /* Full pastel sky background */
+  background:linear-gradient(180deg,
+    #b3e5fc 0%,      /* sky blue top */
+    #e1f5fe 28%,     /* lighter sky */
+    #f8bbd0 52%,     /* pink horizon */
+    #a5d6a7 62%,     /* grass starts */
+    #81c784 78%,     /* mid grass */
+    #66bb6a 100%     /* deep grass */
+  );
+}
 
-/* street scene SVG */
-#home-street{position:absolute;bottom:0;left:0;width:100%;z-index:1;pointer-events:none;}
+/* ── RESTAURANT PREVIEW (bottom) ── */
+#home-restaurant-wrap{
+  position:absolute;bottom:0;left:0;width:100%;height:46%;
+  z-index:2;overflow:hidden;
+}
+#home-restaurant-canvas{
+  position:absolute;top:0;left:0;
+  width:100% !important;height:100% !important;
+  display:block;touch-action:none;cursor:grab;
+}
+#home-restaurant-canvas:active{cursor:grabbing;}
+#home-store-label{
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  pointer-events:none;
+}
+#home-store-name{
+  background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:900;
+  padding:3px 14px;border-radius:14px;letter-spacing:.5px;white-space:nowrap;
+}
+#home-store-dots{display:flex;gap:5px;}
+.store-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);transition:background .2s;}
+.store-dot.active{background:#fff;}
+#home-swipe-left,#home-swipe-right{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,.3);border:none;color:#fff;
+  font-size:26px;font-weight:900;width:32px;height:48px;
+  border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  z-index:3;user-select:none;
+}
+#home-swipe-left{left:4px;}
+#home-swipe-right{right:4px;}
 
-/* title */
-#home-title{position:absolute;top:4%;left:0;width:100%;text-align:center;z-index:5;}
-#home-title h1{font-size:48px;font-weight:900;color:#fff;margin:0;letter-spacing:2px;
-  text-shadow:4px 4px 0 #d81b60,6px 6px 0 rgba(216,27,96,.3);
-  -webkit-text-stroke:2px #d81b60;paint-order:stroke fill;}
-#home-title .sub{font-size:13px;color:#ad1457;margin-top:2px;font-weight:900;letter-spacing:3px;text-transform:uppercase;text-shadow:none;-webkit-text-stroke:0;}
+/* ── TOP STATS BAR (like Golf Battle) ── */
+#home-topbar{
+  position:absolute;top:0;left:0;width:100%;z-index:8;
+  background:linear-gradient(180deg,rgba(25,118,210,.92),rgba(13,71,161,.88));
+  padding:10px 12px 8px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 3px 12px rgba(0,0,0,.3);
+}
+#home-topbar-title{font-size:22px;font-weight:900;color:#fff;letter-spacing:1px;
+  text-shadow:2px 2px 0 rgba(0,0,0,.3);display:flex;align-items:center;gap:6px;}
+#home-topbar-stats{display:flex;gap:8px;align-items:center;}
+.hstat{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);
+  border-radius:20px;padding:5px 12px;font-size:13px;font-weight:900;color:#fff;
+  display:flex;align-items:center;gap:5px;}
+#home-day-badge{background:rgba(255,255,255,.9);color:#1565c0;padding:5px 11px;
+  border-radius:14px;font-size:12px;font-weight:900;border:2px solid #fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);display:flex;align-items:center;gap:4px;}
 
-/* currency row */
-#home-currency{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:6;}
-.hcur{background:rgba(255,255,255,.82);backdrop-filter:blur(6px);padding:6px 14px;border-radius:22px;font-size:14px;font-weight:900;color:#5d4037;border:2.5px solid #fff;display:flex;align-items:center;gap:5px;box-shadow:0 3px 10px rgba(0,0,0,.12);}
+/* ── CHEF (left-center, sitting on grass) ── */
+#home-chef-svg-wrap{
+  position:absolute;
+  left:4%;
+  bottom:44%;
+  z-index:4;pointer-events:auto;
+  display:flex;flex-direction:column;align-items:center;
+}
+#home-chef-canvas{
+  width:180px;height:270px;
+  display:block;
+  filter:drop-shadow(0 10px 16px rgba(0,0,0,.22));
+  cursor:grab;touch-action:none;
+}
+#home-chef-canvas:active{cursor:grabbing;}
+#home-spin-hint{
+  font-size:10px;color:rgba(255,255,255,.7);font-weight:700;
+  background:rgba(0,0,0,.35);padding:2px 10px;border-radius:10px;
+  margin-top:2px;pointer-events:none;letter-spacing:.3px;
+}
+#home-nametag{
+  background:rgba(255,255,255,.95);color:#ad1457;font-size:11px;font-weight:900;
+  padding:3px 12px;border-radius:16px;margin-top:4px;border:2px solid #f48fb1;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap;
+}
 
-/* corner badges */
-#home-day-badge{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.82);color:#6a1b9a;padding:6px 12px;border-radius:14px;font-size:12px;font-weight:900;border:2px solid #fff;z-index:6;box-shadow:0 2px 8px rgba(0,0,0,.1);}
-#home-rating-badge{position:absolute;top:12px;left:12px;background:rgba(255,255,255,.82);color:#e91e63;padding:6px 12px;border-radius:14px;font-size:12px;font-weight:900;border:2px solid #fff;z-index:6;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+/* ══ HOME SCREEN BUTTON LAYOUT ══
+   PLAY     : horizontally centered, top = 57% (just below screen center)
+   Edit     : small square, left of PLAY, same vertical center
+   Practice : small square, right of PLAY, same vertical center
+   Skins    : small wide, top-right
+   Shop     : small wide, top-right below Skins
+   Stores   : tucked below Edit (small square, left side)
+*/
 
-/* chef SVG */
-#home-chef-svg-wrap{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:4;pointer-events:none;display:flex;flex-direction:column;align-items:center;}
-#home-chef-svg-wrap svg{display:block;}
-#home-nametag{background:rgba(255,255,255,.9);color:#ad1457;font-size:12px;font-weight:900;padding:4px 14px;border-radius:20px;margin-bottom:4px;border:2px solid #f48fb1;box-shadow:0 2px 8px rgba(0,0,0,.1);white-space:nowrap;}
+/* PLAY — anchored to just below center */
+#home-btn-play{
+  position:absolute;
+  top:57%;left:50%;
+  transform:translate(-50%,0);
+  z-index:6;
+}
+.hbtn-play{
+  width:230px;height:66px;font-size:22px;font-weight:900;
+  background:linear-gradient(135deg,#1976D2,#0D47A1);
+  color:#fff;border:3px solid rgba(255,255,255,.7);border-radius:18px;
+  box-shadow:0 7px 0 #08306b,0 0 0 4px rgba(255,255,255,.25);
+  text-shadow:0 2px 4px rgba(0,0,0,.4);
+  cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  position:relative;overflow:hidden;
+  transition:transform .09s,box-shadow .09s;
+  white-space:nowrap;
+}
+.hbtn-play:active{transform:translateY(5px);box-shadow:0 2px 0 #08306b,0 0 0 4px rgba(255,255,255,.25);}
+.hbtn-play::before{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
+  animation:btnShine 2.6s ease-in-out infinite;}
 
-/* button cards */
-#home-buttons{position:absolute;bottom:0;left:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 14px 16px;z-index:5;}
-.hbtn{width:100%;max-width:400px;border-radius:22px;font-size:16px;font-weight:900;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .09s,box-shadow .09s;position:relative;overflow:hidden;}
-.hbtn:active{transform:translateY(4px);}
-.hbtn-play{height:64px;font-size:21px;background:linear-gradient(135deg,#66BB6A,#2e7d32);color:#fff;box-shadow:0 6px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5);text-shadow:0 2px 4px rgba(0,0,0,.3);border:3px solid rgba(255,255,255,.6);}
-.hbtn-play:active{box-shadow:0 2px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5);}
-.hbtn-play::before{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);animation:btnShine 2.8s ease-in-out infinite;}
-.hbtn-row{display:flex;gap:8px;width:100%;max-width:400px;}
-.hbtn-row .hbtn{flex:1;height:72px;flex-direction:column;gap:3px;font-size:12px;padding:8px 6px;border-radius:20px;border:3px solid rgba(255,255,255,.7);}
-.hbtn-row .hbtn .btn-icon{font-size:26px;line-height:1;}
-.hbtn-shop{background:linear-gradient(145deg,#FFD54F,#FF8F00);color:#4e2600;box-shadow:0 5px 0 #b36200;}
-.hbtn-shop:active{box-shadow:0 1px 0 #b36200;}
-.hbtn-edit{background:linear-gradient(145deg,#80DEEA,#00838F);color:#fff;box-shadow:0 5px 0 #005662;}
-.hbtn-edit:active{box-shadow:0 1px 0 #005662;}
-.hbtn-skins{background:linear-gradient(145deg,#F48FB1,#C2185B);color:#fff;box-shadow:0 5px 0 #880e4f;}
-.hbtn-skins:active{box-shadow:0 1px 0 #880e4f;}
-.hbtn-stores{background:linear-gradient(145deg,#CE93D8,#7B1FA2);color:#fff;box-shadow:0 5px 0 #4a148c;}
-.hbtn-stores:active{box-shadow:0 1px 0 #4a148c;}
-.hbtn-reset{background:none;border:none;color:rgba(150,80,100,.35);font-size:11px;cursor:pointer;font-family:inherit;margin-top:2px;}
+/* Edit — small square, left of PLAY, same top edge */
+#home-btn-edit{
+  position:absolute;
+  top:57%;right:calc(50% + 125px);
+  transform:translateY(0);
+  z-index:6;
+}
+
+/* Practice — small square, right of PLAY, same top edge */
+#home-btn-practice{
+  position:absolute;
+  top:57%;left:calc(50% + 125px);
+  transform:translateY(0);
+  z-index:6;
+}
+
+/* Skins — small wide, top-right */
+#home-btn-skins{
+  position:absolute;
+  top:78px;right:10px;
+  z-index:6;
+}
+
+/* Shop — small wide, top-right below Skins */
+#home-btn-shop{
+  position:absolute;
+  top:136px;right:10px;
+  z-index:6;
+}
+
+/* Stores — small square, bottom-left */
+#home-btn-stores{
+  position:absolute;
+  top:calc(57% + 80px);left:10px;
+  z-index:6;
+}
+
+/* Small wide buttons (Skins, Shop) */
+.hbtn-wide{
+  width:160px;height:50px;font-size:14px;font-weight:900;
+  border-radius:16px;border:3px solid rgba(255,255,255,.65);
+  cursor:pointer;font-family:inherit;color:#fff;
+  display:flex;align-items:center;gap:9px;padding:0 12px;
+  box-shadow:0 5px 0 rgba(0,0,0,.25);
+  transition:transform .09s,box-shadow .09s;
+  white-space:nowrap;
+}
+.hbtn-wide:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.25);}
+.hbtn-wide .btn-icon{font-size:22px;flex-shrink:0;}
+.hbtn-wide .btn-label{display:flex;flex-direction:column;line-height:1.1;}
+.hbtn-wide .btn-sub{font-size:10px;opacity:.8;font-weight:700;}
+
+/* Small square buttons (Edit, Practice, Stores) */
+.hbtn-square{
+  width:70px;height:70px;flex-direction:column;gap:2px;font-size:11px;
+  font-weight:900;padding:6px 4px;border-radius:18px;
+  border:3px solid rgba(255,255,255,.75);
+  cursor:pointer;font-family:inherit;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 5px 0 rgba(0,0,0,.25);
+  transition:transform .09s,box-shadow .09s;
+}
+.hbtn-square:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.25);}
+.hbtn-square .btn-icon{font-size:26px;line-height:1.1;}
+
+/* Colour tokens */
+.hbtn-shop{background:linear-gradient(135deg,#FF8F00,#E65100);box-shadow:0 5px 0 #7f2900;}
+.hbtn-shop:active{box-shadow:0 1px 0 #7f2900;}
+.hbtn-edit{background:linear-gradient(135deg,#00897B,#00695C);box-shadow:0 5px 0 #003d34;}
+.hbtn-edit:active{box-shadow:0 1px 0 #003d34;}
+.hbtn-skins{background:linear-gradient(135deg,#D81B60,#880E4F);box-shadow:0 5px 0 #4a0028;}
+.hbtn-skins:active{box-shadow:0 1px 0 #4a0028;}
+.hbtn-stores{background:linear-gradient(135deg,#7B1FA2,#4A148C);box-shadow:0 5px 0 #1a0050;}
+.hbtn-stores:active{box-shadow:0 1px 0 #1a0050;}
+.hbtn-practice{background:linear-gradient(135deg,#0288d1,#01579b);box-shadow:0 5px 0 #003c6e;}
+.hbtn-practice:active{box-shadow:0 1px 0 #003c6e;}
+
+.hbtn-shop{background:linear-gradient(135deg,#FF8F00,#E65100);box-shadow:0 5px 0 #7f2900;}
+.hbtn-shop:active{box-shadow:0 1px 0 #7f2900;}
+.hbtn-edit{background:linear-gradient(135deg,#00897B,#00695C);box-shadow:0 5px 0 #003d34;}
+.hbtn-edit:active{box-shadow:0 1px 0 #003d34;}
+.hbtn-skins{background:linear-gradient(135deg,#D81B60,#880E4F);box-shadow:0 5px 0 #4a0028;}
+.hbtn-skins:active{box-shadow:0 1px 0 #4a0028;}
+.hbtn-stores{background:linear-gradient(135deg,#7B1FA2,#4A148C);box-shadow:0 5px 0 #1a0050;}
+.hbtn-stores:active{box-shadow:0 1px 0 #1a0050;}
+
+/* Bottom reset link */
+.hbtn-reset{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  background:none;border:none;color:rgba(255,255,255,.25);font-size:10px;
+  cursor:pointer;font-family:inherit;white-space:nowrap;z-index:5;}
+
+/* Clouds */
+.home-cloud{position:absolute;pointer-events:none;z-index:2;opacity:.85;}
+.home-cloud.c1{top:9%;animation:cloudDrift 28s linear infinite;}
+.home-cloud.c2{top:18%;animation:cloudDrift 36s linear infinite 12s;}
+.home-cloud.c3{top:5%;animation:cloudDrift 22s linear infinite 7s;}
 
 /* ── PAUSE SCREEN ── */
 #pause-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:flex-end;align-items:center;z-index:50;pointer-events:auto;}
@@ -169,6 +345,62 @@ canvas{display:block;width:100%;height:100%;}
 .store-card.active-store{border-color:rgba(255,193,7,.6);background:rgba(255,193,7,.07);box-shadow:0 0 20px rgba(255,193,7,.1);}
 .store-card.locked-store{opacity:.5;}
 
+/* ── PRACTICE / TUTORIAL OVERLAY ── */
+#practice-screen{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  display:none;flex-direction:column;align-items:center;justify-content:flex-end;
+  z-index:200;pointer-events:auto;
+}
+#practice-backdrop{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,15,.85);backdrop-filter:blur(8px);
+}
+#practice-panel{
+  position:relative;width:100%;max-width:480px;
+  background:linear-gradient(180deg,#0d2137,#0a1a2e);
+  border-radius:28px 28px 0 0;
+  border-top:2.5px solid rgba(3,169,244,.6);
+  padding:22px 18px 36px;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+  box-shadow:0 -10px 50px rgba(0,0,0,.8);
+  max-height:82vh;
+}
+#practice-title{
+  font-size:20px;font-weight:900;color:#03A9F4;
+  margin-bottom:3px;text-align:center;letter-spacing:.5px;
+}
+#practice-subtitle{
+  font-size:12px;color:rgba(255,255,255,.5);
+  margin-bottom:14px;text-align:center;
+}
+#practice-steps{
+  width:100%;overflow-y:auto;
+  display:flex;flex-direction:column;gap:9px;
+  margin-bottom:16px;
+  -webkit-overflow-scrolling:touch;
+}
+.practice-step{
+  display:flex;align-items:flex-start;gap:12px;
+  background:rgba(255,255,255,.07);
+  border-radius:14px;padding:12px 14px;
+  border-left:3px solid #03A9F4;
+  flex-shrink:0;
+}
+.practice-step.seafood{ border-left-color:#00bcd4; }
+.pstep-icon{font-size:26px;flex-shrink:0;line-height:1.2;margin-top:1px;}
+.pstep-body{flex:1;min-width:0;}
+.pstep-title{font-size:13px;font-weight:900;color:#fff;margin-bottom:3px;}
+.pstep-desc{font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.45;}
+#practice-close{
+  width:100%;max-width:300px;height:48px;
+  background:linear-gradient(135deg,#0288d1,#01579b);
+  color:#fff;font-size:16px;font-weight:900;
+  border:none;border-radius:16px;cursor:pointer;
+  font-family:inherit;box-shadow:0 5px 0 #003c6e;
+  transition:transform .09s,box-shadow .09s;
+}
+#practice-close:active{transform:translateY(4px);box-shadow:0 1px 0 #003c6e;}
+
 /* ── SINK HOLD PROGRESS ── */
 #sink-hold-ui{position:fixed;bottom:160px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:5px;pointer-events:none;z-index:20;}
 #sink-hold-bar{width:150px;height:11px;background:rgba(0,0,0,.55);border-radius:6px;overflow:hidden;border:1.5px solid rgba(255,255,255,.25);}
@@ -179,28 +411,20 @@ canvas{display:block;width:100%;height:100%;}
 @keyframes cloudDrift{0%{transform:translateX(-160px);}100%{transform:translateX(calc(100vw + 160px));}}
 @keyframes btnShine{0%{left:-60%;}60%,100%{left:130%;}}
 @keyframes playPulse{0%,100%{box-shadow:0 6px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5);}50%{box-shadow:0 6px 0 #1a5226,0 0 0 3px rgba(255,255,255,.5),0 0 30px rgba(102,187,106,.7);}}
-@keyframes chefWiggle{
-  0%{transform:translateX(-50%) rotate(0deg) scaleX(1);}
-  10%{transform:translateX(-50%) rotate(-8deg) scaleX(.97);}
-  20%{transform:translateX(-50%) rotate(8deg) scaleX(1.03);}
-  30%{transform:translateX(-50%) rotate(-6deg) scaleX(.97);}
-  40%{transform:translateX(-50%) rotate(6deg) scaleX(1.03);}
-  50%{transform:translateX(-50%) rotate(-4deg);}
-  60%{transform:translateX(-50%) rotate(4deg);}
-  70%{transform:translateX(-50%) rotate(-2deg);}
-  80%{transform:translateX(-50%) rotate(2deg);}
-  90%,100%{transform:translateX(-50%) rotate(0deg) scaleX(1);}
+@keyframes chefBob{
+  0%,100%{bottom:28%;}
+  50%{bottom:29.5%;}
 }
-@keyframes chefBob{0%,100%{margin-bottom:0px;}50%{margin-bottom:8px;}}
+/* chef bob applied via JS animation — no CSS transform needed */
+#home-chef-svg-wrap{ animation: none; }
 @keyframes personWalk{0%{transform:translateX(-30px);}100%{transform:translateX(calc(100vw + 30px));}}
 @keyframes personWalkL{0%{transform:translateX(calc(100vw + 30px)) scaleX(-1);}100%{transform:translateX(-30px) scaleX(-1);}}
 .hbtn-play{animation:playPulse 2.4s ease-in-out infinite;}
-#home-chef-svg-wrap{animation:chefWiggle 1.6s ease-in-out infinite, chefBob 0.8s ease-in-out infinite;}
 .home-cloud{position:absolute;pointer-events:none;z-index:3;opacity:.8;}
 .home-cloud.c1{top:8%;animation:cloudDrift 26s linear infinite;}
 .home-cloud.c2{top:18%;animation:cloudDrift 34s linear infinite 11s;}
 .home-cloud.c3{top:4%;animation:cloudDrift 20s linear infinite 6s;}
-.street-person{position:absolute;bottom:42%;pointer-events:none;z-index:2;}
+.street-person{position:absolute;bottom:10%;pointer-events:none;z-index:2;}
 .street-person.p1{animation:personWalk 14s linear infinite;}
 .street-person.p2{animation:personWalk 20s linear infinite 5s;}
 .street-person.p3{animation:personWalkL 18s linear infinite 2s;}
@@ -211,190 +435,89 @@ canvas{display:block;width:100%;height:100%;}
   <canvas id="gameCanvas"></canvas>
   <div id="floating-ui"></div>
 
-  <!-- ══ HOME SCREEN ══ -->
+  <!-- ══ HOME SCREEN (Golf Battle style) ══ -->
   <div id="home-screen">
-    <!-- pastel clouds -->
-    <svg class="home-cloud c1" width="130" height="55" viewBox="0 0 130 55"><ellipse cx="65" cy="37" rx="55" ry="19" fill="#fff"/><ellipse cx="40" cy="30" rx="32" ry="24" fill="#fff"/><ellipse cx="88" cy="28" rx="25" ry="20" fill="#fff"/></svg>
-    <svg class="home-cloud c2" width="100" height="44" viewBox="0 0 100 44"><ellipse cx="50" cy="28" rx="42" ry="16" fill="#fce4ec"/><ellipse cx="30" cy="22" rx="24" ry="18" fill="#fce4ec"/><ellipse cx="66" cy="20" rx="20" ry="16" fill="#fce4ec"/></svg>
-    <svg class="home-cloud c3" width="80" height="38" viewBox="0 0 80 38"><ellipse cx="40" cy="24" rx="34" ry="14" fill="#e1bee7"/><ellipse cx="22" cy="18" rx="20" ry="16" fill="#e1bee7"/><ellipse cx="56" cy="16" rx="16" ry="14" fill="#e1bee7"/></svg>
 
-    <!-- STREET SCENE -->
-    <svg id="home-street" viewBox="0 0 390 220" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
-      <!-- sidewalk -->
-      <rect x="0" y="155" width="390" height="65" fill="#f8bbd0"/>
-      <rect x="0" y="148" width="390" height="10" fill="#f48fb1"/>
-      <!-- road -->
-      <rect x="0" y="195" width="390" height="25" fill="#b39ddb"/>
-      <!-- road lines -->
-      <rect x="30" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
-      <rect x="100" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
-      <rect x="170" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
-      <rect x="240" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
-      <rect x="310" y="204" width="28" height="5" rx="2" fill="#fff" opacity=".7"/>
-      <!-- left building (bakery) -->
-      <rect x="0" y="60" width="90" height="100" rx="4" fill="#f8bbd0"/>
-      <rect x="0" y="55" width="90" height="12" rx="3" fill="#f48fb1"/>
-      <rect x="10" y="72" width="30" height="28" rx="3" fill="#b2ebf2" opacity=".9"/>
-      <rect x="50" y="72" width="30" height="28" rx="3" fill="#b2ebf2" opacity=".9"/>
-      <rect x="28" y="115" width="34" height="45" rx="4" fill="#e91e63" opacity=".8"/>
-      <rect x="0" y="55" width="90" height="10" rx="3" fill="#e91e63"/>
-      <text x="45" y="52" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="9" fill="#fff">BAKERY</text>
-      <!-- right building (flower shop) -->
-      <rect x="300" y="70" width="90" height="90" rx="4" fill="#e1bee7"/>
-      <rect x="300" y="65" width="90" height="12" rx="3" fill="#ce93d8"/>
-      <rect x="310" y="82" width="28" height="24" rx="3" fill="#b2ebf2" opacity=".9"/>
-      <rect x="350" y="82" width="28" height="24" rx="3" fill="#b2ebf2" opacity=".9"/>
-      <rect x="320" y="118" width="50" height="42" rx="4" fill="#ab47bc" opacity=".7"/>
-      <text x="345" y="62" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="9" fill="#fff">FLOWERS</text>
-      <!-- BURGER BAR (center, prominent) -->
-      <rect x="100" y="18" width="190" height="142" rx="6" fill="#fff9c4"/>
-      <!-- roof -->
-      <polygon points="88,22 195,2 302,22" fill="#e91e63"/>
-      <polygon points="92,22 195,5 298,22" fill="#f48fb1"/>
-      <!-- awning -->
-      <rect x="100" y="50" width="190" height="16" fill="#e91e63"/>
-      <path d="M100,66 Q115,58 130,66 Q145,58 160,66 Q175,58 190,66 Q205,58 220,66 Q235,58 250,66 Q265,58 280,66 Q285,58 290,66" fill="none" stroke="#c2185b" stroke-width="1.5"/>
-      <!-- sign -->
-      <rect x="118" y="28" width="154" height="26" rx="8" fill="#ffc107"/>
-      <rect x="120" y="30" width="150" height="22" rx="7" fill="#ffca28"/>
-      <text x="195" y="46" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="14" fill="#bf360c">🍔 BURGER BAR</text>
-      <!-- windows -->
-      <rect x="112" y="70" width="42" height="36" rx="5" fill="#b2ebf2" opacity=".85"/>
-      <rect x="174" y="70" width="42" height="36" rx="5" fill="#b2ebf2" opacity=".85"/>
-      <rect x="236" y="70" width="42" height="36" rx="5" fill="#b2ebf2" opacity=".85"/>
-      <!-- window cross bars -->
-      <line x1="133" y1="70" x2="133" y2="106" stroke="#81d4fa" stroke-width="1.5"/>
-      <line x1="112" y1="88" x2="154" y2="88" stroke="#81d4fa" stroke-width="1.5"/>
-      <line x1="195" y1="70" x2="195" y2="106" stroke="#81d4fa" stroke-width="1.5"/>
-      <line x1="174" y1="88" x2="216" y2="88" stroke="#81d4fa" stroke-width="1.5"/>
-      <line x1="257" y1="70" x2="257" y2="106" stroke="#81d4fa" stroke-width="1.5"/>
-      <line x1="236" y1="88" x2="278" y2="88" stroke="#81d4fa" stroke-width="1.5"/>
-      <!-- door -->
-      <rect x="168" y="115" width="54" height="45" rx="6" fill="#e91e63"/>
-      <rect x="172" y="119" width="22" height="36" rx="4" fill="#f8bbd0"/>
-      <rect x="196" y="119" width="22" height="36" rx="4" fill="#f8bbd0"/>
-      <circle cx="194" cy="137" r="3" fill="#e91e63"/>
-      <circle cx="196" cy="137" r="3" fill="#c2185b"/>
-      <!-- flower boxes under windows -->
-      <rect x="112" y="103" width="42" height="8" rx="3" fill="#a5d6a7"/>
-      <circle cx="120" cy="103" r="4" fill="#ef9a9a"/><circle cx="128" cy="101" r="4" fill="#f48fb1"/><circle cx="136" cy="103" r="4" fill="#ffcc80"/><circle cx="144" cy="101" r="3.5" fill="#ce93d8"/>
-      <rect x="236" y="103" width="42" height="8" rx="3" fill="#a5d6a7"/>
-      <circle cx="244" cy="103" r="4" fill="#ef9a9a"/><circle cx="252" cy="101" r="4" fill="#f48fb1"/><circle cx="260" cy="103" r="4" fill="#ffcc80"/><circle cx="268" cy="101" r="3.5" fill="#ce93d8"/>
-      <!-- trees -->
-      <circle cx="78" cy="140" r="18" fill="#a5d6a7"/>
-      <circle cx="68" cy="148" r="12" fill="#c8e6c9"/>
-      <rect x="74" y="152" width="8" height="16" rx="3" fill="#8d6e63"/>
-      <circle cx="312" cy="140" r="18" fill="#a5d6a7"/>
-      <circle cx="322" cy="148" r="12" fill="#c8e6c9"/>
-      <rect x="308" y="152" width="8" height="16" rx="3" fill="#8d6e63"/>
-      <!-- cute lil bench -->
-      <rect x="82" y="162" width="32" height="5" rx="2" fill="#8d6e63"/>
-      <rect x="85" y="167" width="4" height="8" rx="1" fill="#a1887f"/>
-      <rect x="105" y="167" width="4" height="8" rx="1" fill="#a1887f"/>
-    </svg>
+    <!-- PASTEL CLOUDS -->
+    <svg class="home-cloud c1" width="140" height="56" viewBox="0 0 140 56"><ellipse cx="70" cy="38" rx="60" ry="20" fill="rgba(255,255,255,.9)"/><ellipse cx="44" cy="30" rx="34" ry="25" fill="rgba(255,255,255,.9)"/><ellipse cx="94" cy="28" rx="28" ry="22" fill="rgba(255,255,255,.9)"/></svg>
+    <svg class="home-cloud c2" width="100" height="44" viewBox="0 0 100 44"><ellipse cx="50" cy="29" rx="44" ry="16" fill="rgba(255,255,255,.8)"/><ellipse cx="30" cy="23" rx="25" ry="19" fill="rgba(255,255,255,.8)"/><ellipse cx="68" cy="21" rx="21" ry="17" fill="rgba(255,255,255,.8)"/></svg>
+    <svg class="home-cloud c3" width="75" height="36" viewBox="0 0 75 36"><ellipse cx="38" cy="24" rx="34" ry="14" fill="rgba(255,255,255,.75)"/><ellipse cx="22" cy="18" rx="20" ry="16" fill="rgba(255,255,255,.75)"/></svg>
 
-    <!-- walking people (CSS animated) -->
-    <svg class="street-person p1" width="22" height="40" viewBox="0 0 22 40" style="bottom:18%;">
-      <circle cx="11" cy="7" r="6" fill="#ffcc80"/><rect x="6" y="13" width="10" height="14" rx="4" fill="#f48fb1"/>
-      <rect x="3" y="15" width="5" height="10" rx="2.5" fill="#ffcc80"/><rect x="14" y="15" width="5" height="10" rx="2.5" fill="#ffcc80"/>
-      <rect x="7" y="27" width="4" height="10" rx="2" fill="#ce93d8"/><rect x="11" y="27" width="4" height="10" rx="2" fill="#ce93d8"/>
-    </svg>
-    <svg class="street-person p2" width="20" height="38" viewBox="0 0 20 38" style="bottom:18%;">
-      <circle cx="10" cy="6" r="5.5" fill="#ffb74d"/><circle cx="10" cy="3" r="5" fill="#8d6e63"/>
-      <rect x="5" y="12" width="10" height="13" rx="4" fill="#80deea"/>
-      <rect x="2" y="14" width="4" height="9" rx="2" fill="#ffb74d"/><rect x="14" y="14" width="4" height="9" rx="2" fill="#ffb74d"/>
-      <rect x="6" y="25" width="3.5" height="9" rx="1.75" fill="#37474f"/><rect x="10.5" y="25" width="3.5" height="9" rx="1.75" fill="#37474f"/>
-    </svg>
-    <svg class="street-person p3" width="18" height="36" viewBox="0 0 18 36" style="bottom:18%;">
-      <circle cx="9" cy="6" r="5" fill="#ef9a9a"/><circle cx="9" cy="2" r="5" fill="#e91e63" opacity=".8"/>
-      <rect x="4" y="11" width="10" height="12" rx="4" fill="#ce93d8"/>
-      <rect x="1" y="13" width="4" height="8" rx="2" fill="#ef9a9a"/><rect x="13" y="13" width="4" height="8" rx="2" fill="#ef9a9a"/>
-      <rect x="5" y="23" width="3" height="9" rx="1.5" fill="#7986cb"/><rect x="10" y="23" width="3" height="9" rx="1.5" fill="#7986cb"/>
-    </svg>
-
-    <!-- title -->
-    <div id="home-title"><h1>BURGER BAR</h1><div class="sub">✨ Your Delicious Empire ✨</div></div>
-
-    <!-- currency -->
-    <div id="home-currency">
-      <div class="hcur">💰 <span id="home-cash">$0.00</span></div>
-      <div class="hcur">⭐ <span id="home-rating">0.0</span></div>
+    <!-- RESTAURANT PREVIEW CANVAS (swipeable, shows actual in-game exterior) -->
+    <div id="home-restaurant-wrap">
+      <canvas id="home-restaurant-canvas"></canvas>
+      <!-- store name + dots indicator -->
+      <div id="home-store-label">
+        <span id="home-store-name">Burger Bar #1</span>
+        <div id="home-store-dots"></div>
+      </div>
+      <!-- swipe hint arrows -->
+      <div id="home-swipe-left"  onclick="homeSwipeStore(-1)">&#8249;</div>
+      <div id="home-swipe-right" onclick="homeSwipeStore(1)">&#8250;</div>
     </div>
-    <div id="home-day-badge">📅 Day <span id="home-day">0</span></div>
 
-    <!-- CHEF (SVG, dancing, bottom center peeking up) -->
-    <div id="home-chef-svg-wrap" id="home-chef-anim-wrap">
+        <!-- TOP STATS BAR (Golf Battle style) -->
+    <div id="home-topbar">
+      <div id="home-topbar-title">🍔 BURGER BAR</div>
+      <div id="home-topbar-stats">
+        <div class="hstat">💰 <span id="home-cash">$0.00</span></div>
+        <div class="hstat">⭐ <span id="home-rating">0.0</span></div>
+        <div id="home-day-badge">📅 Day <span id="home-day">0</span></div>
+      </div>
+    </div>
+
+    <!-- CHEF (left-center, sitting on the grass — rendered as actual 3D) -->
+    <div id="home-chef-svg-wrap">
+      <canvas id="home-chef-canvas" width="200" height="300" style="display:block;"></canvas>
+      <div id="home-spin-hint">↔ drag to spin</div>
       <div id="home-nametag">Burger Bar #1</div>
-      <svg id="home-chef-svg" width="130" height="160" viewBox="0 0 130 160" xmlns="http://www.w3.org/2000/svg">
-        <!-- chef hat -->
-        <ellipse cx="65" cy="62" rx="40" ry="10" fill="#eee" id="hcs-hatrim"/>
-        <rect x="33" y="18" width="64" height="48" rx="8" fill="#fff" id="hcs-hat"/>
-        <ellipse cx="65" cy="18" rx="28" ry="8" fill="#fff" id="hcs-hattop"/>
-        <!-- hat shine -->
-        <ellipse cx="55" cy="24" rx="8" ry="3" fill="rgba(255,255,255,.5)" transform="rotate(-15,55,24)"/>
-        <!-- face -->
-        <ellipse cx="65" cy="82" rx="26" ry="25" fill="#FFCC80" id="hcs-head"/>
-        <!-- cheeks -->
-        <ellipse cx="47" cy="88" rx="8" ry="5" fill="#ffb3ba" opacity=".6"/>
-        <ellipse cx="83" cy="88" rx="8" ry="5" fill="#ffb3ba" opacity=".6"/>
-        <!-- eyes (big cute) -->
-        <ellipse cx="55" cy="78" rx="6" ry="7" fill="#333"/>
-        <ellipse cx="75" cy="78" rx="6" ry="7" fill="#333"/>
-        <ellipse cx="53" cy="76" rx="2.5" ry="3" fill="#fff"/>
-        <ellipse cx="73" cy="76" rx="2.5" ry="3" fill="#fff"/>
-        <circle cx="52" cy="75" r="1.2" fill="#fff"/>
-        <circle cx="72" cy="75" r="1.2" fill="#fff"/>
-        <!-- eyebrows (happy) -->
-        <path d="M49 70 Q55 66 61 70" stroke="#5d4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M69 70 Q75 66 81 70" stroke="#5d4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <!-- big smile -->
-        <path d="M50 91 Q65 104 80 91" stroke="#e91e63" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <!-- tongue out (silly) -->
-        <ellipse cx="65" cy="98" rx="7" ry="5" fill="#ef9a9a"/>
-        <!-- body -->
-        <rect x="28" y="104" width="74" height="60" rx="12" fill="#fff" id="hcs-body"/>
-        <!-- apron -->
-        <rect x="38" y="108" width="54" height="52" rx="8" fill="#f8bbd0"/>
-        <!-- body buttons -->
-        <circle cx="65" cy="116" r="3.5" fill="#f48fb1"/>
-        <circle cx="65" cy="128" r="3.5" fill="#f48fb1"/>
-        <circle cx="65" cy="140" r="3.5" fill="#f48fb1"/>
-        <!-- left arm raised (waving) -->
-        <rect x="0" y="100" width="30" height="14" rx="7" fill="#fff" id="hcs-arml" transform="rotate(-30,15,107)"/>
-        <ellipse cx="5" cy="96" rx="8" ry="8" fill="#FFCC80"/>
-        <!-- right arm (holding spatula) -->
-        <rect x="100" y="100" width="30" height="14" rx="7" fill="#fff" id="hcs-armr" transform="rotate(20,115,107)"/>
-        <ellipse cx="125" cy="97" rx="8" ry="8" fill="#FFCC80"/>
-        <!-- spatula -->
-        <rect x="126" y="72" width="6" height="30" rx="3" fill="#bdbdbd"/>
-        <rect x="118" y="67" width="22" height="9" rx="3" fill="#9e9e9e"/>
-        <rect x="119" y="68" width="20" height="5" rx="2" fill="#e0e0e0"/>
-      </svg>
     </div>
 
-    <!-- BUTTONS (illustrated cards) -->
-    <div id="home-buttons">
-      <button class="hbtn hbtn-play" style="width:100%;max-width:400px;" onclick="startNextDay()">
+    <!-- SKINS — top right, small wide -->
+    <div id="home-btn-skins">
+      <button class="hbtn-wide hbtn-skins" onclick="showSkinsShop()">
+        <span class="btn-icon">👕</span>
+        <span class="btn-label">Skins<span class="btn-sub">Customize</span></span>
+      </button>
+    </div>
+
+    <!-- SHOP — top right below skins, small wide -->
+    <div id="home-btn-shop">
+      <button class="hbtn-wide hbtn-shop" onclick="showShop()">
+        <span class="btn-icon">🛒</span>
+        <span class="btn-label">Shop<span class="btn-sub">Upgrades</span></span>
+      </button>
+    </div>
+
+    <!-- PLAY — just below screen center -->
+    <div id="home-btn-play">
+      <button class="hbtn-play" onclick="homePlaySelected()">
         ▶&nbsp; PLAY DAY <span id="home-next-day">1</span>
       </button>
-      <div class="hbtn-row">
-        <button class="hbtn hbtn-shop" onclick="showShop()">
-          <span class="btn-icon">🛒</span>Shop
-        </button>
-        <button class="hbtn hbtn-edit" onclick="startEditMode()">
-          <span class="btn-icon">✏️</span>Reorganize
-        </button>
-      </div>
-      <div class="hbtn-row">
-        <button class="hbtn hbtn-skins" onclick="showSkinsShop()">
-          <span class="btn-icon">👕</span>Skins
-        </button>
-        <button class="hbtn hbtn-stores" id="home-stores-btn" onclick="showStores()">
-          <span class="btn-icon">🏪</span>Stores
-        </button>
-      </div>
-      <button class="hbtn-reset" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save</button>
     </div>
+
+    <!-- EDIT — small square, left of PLAY -->
+    <div id="home-btn-edit">
+      <button class="hbtn-square hbtn-edit" onclick="startEditMode()">
+        <span class="btn-icon">✏️</span>Edit
+      </button>
+    </div>
+
+    <!-- PRACTICE — small square, right of PLAY -->
+    <div id="home-btn-practice">
+      <button class="hbtn-square hbtn-practice" onclick="showPractice()">
+        <span class="btn-icon">📖</span>Practice
+      </button>
+    </div>
+
+    <!-- STORES — bottom left, small square -->
+    <div id="home-btn-stores">
+      <button class="hbtn-square hbtn-stores" id="home-stores-btn" onclick="showStores()">
+        <span class="btn-icon">🏪</span>Stores
+      </button>
+    </div>
+
+    <button class="hbtn-reset" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save</button>
   </div>
 
   <div id="ui-layer">
@@ -417,6 +540,7 @@ canvas{display:block;width:100%;height:100%;}
   </div>
 
   <div id="notif-toast"></div>
+  <div id="station-hint" style="position:fixed;bottom:175px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;font-size:13px;font-weight:900;padding:5px 16px;border-radius:16px;display:none;pointer-events:none;z-index:20;white-space:nowrap;border:1.5px solid rgba(255,255,255,.25);"></div>
 
   <!-- PAUSE SCREEN (slide-up panel) -->
   <div id="pause-screen">
@@ -437,6 +561,17 @@ canvas{display:block;width:100%;height:100%;}
           <button class="pbtn pbtn-quit" style="width:auto;flex:1;" onclick="quitToMenu()">Yes, Quit</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- PRACTICE / TUTORIAL SCREEN -->
+  <div id="practice-screen">
+    <div id="practice-backdrop" onclick="closePractice()"></div>
+    <div id="practice-panel">
+      <div id="practice-title">📖 HOW TO COOK</div>
+      <div id="practice-subtitle" id="practice-subtitle-text">Learn the workflow step by step</div>
+      <div id="practice-steps"></div>
+      <button class="btn-green" id="practice-close" onclick="closePractice()">GOT IT ✓</button>
     </div>
   </div>
 
@@ -737,52 +872,130 @@ function buildWorld(){
   const rW = b.r-b.l, rD = b.b-b.t;
   const cx = (b.r+b.l)/2, cz = (b.b+b.t)/2;
   const sw = 6;
-
-  addMesh(worldGrp, GBox(120,.5,120), matGrass, 0,-.75,0, 0,0,0, false);
-  addMesh(worldGrp, GBox(rW+sw*2,.3,rD+sw*2), matSidewalk, cx,-.2,cz, 0,0,0, false);
-  addMesh(worldGrp, GBox(100,.2,12), matRoad, cx,-.25, b.b+sw+6, 0,0,0, false);
-  for(let i=-4;i<=4;i++) addMesh(worldGrp, GBox(4,.05,.4), matRoadLine, cx+i*10,-.15, b.b+sw+6, 0,0,0, false);
-  addMesh(worldGrp, GBox(rW+sw*2+2,.4,.5), matSilver, cx,-.1, b.b+sw, 0,0,0, false);
-
-  for(const lx of [b.l-4, b.r+4]){
-    addMesh(worldGrp, GCyl(.12,7,8), M('#455A64'), lx,3.5, b.b+sw-1);
-    addMesh(worldGrp, GBox(1,.5,.8), M('#37474F'), lx,7.2, b.b+sw-1);
-    addMesh(worldGrp, GSph(.22,8), MB('#ffffff'), lx,7.0, b.b+sw-1, 0,0,0, false);
-  }
-
   const dcx = (baseBounds.l+baseBounds.r)/2;
-  for(const px of [dcx-8, dcx+8]){
-    addMesh(worldGrp, GBox(1.5,1,1.5), matWood, px,.5, b.b+2);
-    addMesh(worldGrp, GBox(1.3,.2,1.3), matFrameDark, px,1.1, b.b+2, 0,0,0, false);
-    addMesh(worldGrp, GSph(.65,8), matPlant, px,1.7, b.b+2);
-  }
-
-  const treePos=[
-    {x:b.l-8,  z:b.t-6}, {x:b.r+8,  z:b.t-6},
-    {x:b.l-10, z:cz},    {x:b.r+10, z:cz},
-    {x:b.l-10, z:b.b+4}, {x:b.r+10, z:b.b+4},
-  ];
-  for(const tp of treePos){
-    addMesh(worldGrp, GCyl(.35,3,8), M('#8d6e63'), tp.x,1.5,tp.z);
-    addMesh(worldGrp, GSph(2.1,8), M('#4caf50'), tp.x,5.5,tp.z);
-    addMesh(worldGrp, GSph(1.5,8), M('#66bb6a'), tp.x+.7,6.4,tp.z-.4);
-  }
-
-  for(const px of [dcx-7, dcx+7]){
-    addMesh(worldGrp, GCyl(1.15,.15,16), M('#eeeeee'), px,1.8, b.b+4.5);
-    addMesh(worldGrp, GCyl(.1,1.8,8), matPoleGray, px,.9, b.b+4.5);
-    addMesh(worldGrp, GCyl(.06,5.5,8), matPoleGray, px,2.75, b.b+4.5);
-    addMesh(worldGrp, new THREE.ConeGeometry(2.1,.75,8), matUmbrella, px,5.4, b.b+4.5);
-  }
-
   const bz = b.t;
-  addMesh(worldGrp, GBox(rW*.65,1.7,.28), matSign, cx, 4.1, bz-.35);
-  ['B','U','R','G','E','R',' ','B','A','R'].forEach((l,i)=>{
-    if(l===' ') return;
-    addMesh(worldGrp, GBox(.55,1.1,.14), matSignTxt, cx-3.5+i*.7, 4.1, bz-.22);
-  });
-  addMesh(worldGrp, GBox(.18,2.4,.18), matSilver, cx-rW*.3, 3.2, bz-.35);
-  addMesh(worldGrp, GBox(.18,2.4,.18), matSilver, cx+rW*.3, 3.2, bz-.35);
+
+  if(isSeafood()){
+    // ── BEACH WORLD ──────────────────────────────────────────
+    scene.background = new THREE.Color('#87CEEB');
+    scene.fog = new THREE.Fog('#b3e5fc', 50, 120);
+
+    // Deep ocean behind restaurant (extends far back)
+    addMesh(worldGrp, GBox(200,1,100), M('#0277bd'), 0,-1, b.t-30, 0,0,0,false);
+    // Shallow ocean (lighter, closer)
+    addMesh(worldGrp, GBox(200,.3,30), M('#4fc3f7'), 0,-.6, b.t-12, 0,0,0,false);
+    // Wave foam strips
+    for(let i=0;i<4;i++) addMesh(worldGrp, GBox(120,.08,1.2), M('#e3f2fd',.6), 0,-.1, b.t-4-i*5, 0,0,0,false);
+
+    // Sandy beach ground (all around)
+    addMesh(worldGrp, GBox(200,.5,200), M('#f9e4b7'), 0,-.76,0, 0,0,0,false);
+    // Darker wet sand near water
+    addMesh(worldGrp, GBox(200,.3,12), M('#e0c882'), 0,-.55, b.t-6, 0,0,0,false);
+
+    // Boardwalk planks in front of restaurant
+    addMesh(worldGrp, GBox(rW+sw*2,.35,rD+sw*2), M('#8d6e63'), cx,-.18,cz, 0,0,0,false);
+    for(let xi=b.l-sw;xi<b.r+sw;xi+=1.4)
+      addMesh(worldGrp, GBox(.06,.06,rD+sw*2), M('#6d4c41'), xi,.1,cz, 0,0,0,false);
+
+    // Ocean road → replace with sandy path
+    addMesh(worldGrp, GBox(100,.1,10), M('#e0c882'), cx,-.2, b.b+sw+5, 0,0,0,false);
+
+    // Palm trees instead of regular trees
+    const palmPos=[
+      {x:b.l-7,z:b.t-4},{x:b.r+7,z:b.t-4},
+      {x:b.l-9,z:cz-4}, {x:b.r+9,z:cz-4},
+      {x:b.l-8,z:b.b+3},{x:b.r+8,z:b.b+3},
+    ];
+    for(const tp of palmPos){
+      const lean = (tp.x<0 ? 1:-1)*0.15;
+      addMesh(worldGrp, GCyl(.25,.35,6,8), M('#8d6e63'), tp.x,3,tp.z, 0,0,lean);
+      addMesh(worldGrp, GSph(.5,6), M('#1b5e20'), tp.x+lean*8,6.5,tp.z);
+      // Fronds
+      for(let f=0;f<5;f++){
+        const ang=(f/5)*Math.PI*2;
+        addMesh(worldGrp, GBox(2.5,.12,.3), M('#2e7d32'),
+          tp.x+Math.cos(ang)*1.5, 6.5, tp.z+Math.sin(ang)*1.5, 0,ang+.3,0.35);
+      }
+    }
+
+    // Beach umbrella tables outside
+    for(const px of [dcx-9, dcx+9]){
+      addMesh(worldGrp, GCyl(.08,.08,3,6), M('#9e9e9e'), px,1.5,b.b+4);
+      addMesh(worldGrp, new THREE.ConeGeometry(2,.5,8), M('#e53935'), px,3.3,b.b+4);
+      addMesh(worldGrp, GCyl(1.1,.12,16), M('#eeeeee'), px,.5,b.b+4);
+      // Lounge chairs
+      addMesh(worldGrp, GBox(1.2,.2,2), M('#f9e4b7'), px,.15,b.b+5.5, 0.25,0,0);
+    }
+
+    // Surfboards leaning on wall
+    for(const sx of [-2,2]){
+      addMesh(worldGrp, GBox(.4,2.2,.12), M(sx<0?'#ff5722':'#1976D2'), cx+sx*3,.9,bz-.2, -0.15,0,sx>0?.1:-.1);
+    }
+
+    // Seagulls (white cones in sky)
+    [[cx-12,14,bz-20],[cx+10,16,bz-25],[cx-5,13,bz-18]].forEach(([x,y,z])=>{
+      addMesh(worldGrp, GBox(.9,.1,.08), M('#fff'), x,y,z, 0,0,.4);
+      addMesh(worldGrp, GBox(.9,.1,.08), M('#fff'), x+.7,y+.2,z, 0,0,-.4);
+    });
+
+    // Sign — SEAFOOD SHACK thatched style
+    addMesh(worldGrp, GBox(rW*.6,1.8,.28), M('#0277bd'), cx,4.1,bz-.35);
+    ['S','E','A','F','O','O','D',' ','S','H','A','C','K'].forEach((l,i)=>{
+      if(l===' ') return;
+      addMesh(worldGrp, GBox(.42,.9,.14), M('#ffffff'), cx-4.0+i*.62,4.1,bz-.22);
+    });
+    addMesh(worldGrp, GBox(.18,2.4,.18), M('#8d6e63'), cx-rW*.28, 3.2, bz-.35);
+    addMesh(worldGrp, GBox(.18,2.4,.18), M('#8d6e63'), cx+rW*.28, 3.2, bz-.35);
+
+  } else {
+    // ── BURGER BAR WORLD (original) ──────────────────────────
+    scene.background = new THREE.Color('#87CEEB');
+    scene.fog = new THREE.Fog('#87CEEB', 50, 110);
+
+    addMesh(worldGrp, GBox(120,.5,120), matGrass, 0,-.75,0, 0,0,0,false);
+    addMesh(worldGrp, GBox(rW+sw*2,.3,rD+sw*2), matSidewalk, cx,-.2,cz, 0,0,0,false);
+    addMesh(worldGrp, GBox(100,.2,12), matRoad, cx,-.25, b.b+sw+6, 0,0,0,false);
+    for(let i=-4;i<=4;i++) addMesh(worldGrp, GBox(4,.05,.4), matRoadLine, cx+i*10,-.15, b.b+sw+6, 0,0,0,false);
+    addMesh(worldGrp, GBox(rW+sw*2+2,.4,.5), matSilver, cx,-.1, b.b+sw, 0,0,0,false);
+
+    for(const lx of [b.l-4, b.r+4]){
+      addMesh(worldGrp, GCyl(.12,7,8), M('#455A64'), lx,3.5, b.b+sw-1);
+      addMesh(worldGrp, GBox(1,.5,.8), M('#37474F'), lx,7.2, b.b+sw-1);
+      addMesh(worldGrp, GSph(.22,8), MB('#ffffff'), lx,7.0, b.b+sw-1, 0,0,0,false);
+    }
+
+    for(const px of [dcx-8, dcx+8]){
+      addMesh(worldGrp, GBox(1.5,1,1.5), matWood, px,.5, b.b+2);
+      addMesh(worldGrp, GBox(1.3,.2,1.3), matFrameDark, px,1.1, b.b+2, 0,0,0,false);
+      addMesh(worldGrp, GSph(.65,8), matPlant, px,1.7, b.b+2);
+    }
+
+    const treePos=[
+      {x:b.l-8,z:b.t-6},{x:b.r+8,z:b.t-6},
+      {x:b.l-10,z:cz},  {x:b.r+10,z:cz},
+      {x:b.l-10,z:b.b+4},{x:b.r+10,z:b.b+4},
+    ];
+    for(const tp of treePos){
+      addMesh(worldGrp, GCyl(.35,3,8), M('#8d6e63'), tp.x,1.5,tp.z);
+      addMesh(worldGrp, GSph(2.1,8), M('#4caf50'), tp.x,5.5,tp.z);
+      addMesh(worldGrp, GSph(1.5,8), M('#66bb6a'), tp.x+.7,6.4,tp.z-.4);
+    }
+
+    for(const px of [dcx-7, dcx+7]){
+      addMesh(worldGrp, GCyl(1.15,.15,16), M('#eeeeee'), px,1.8, b.b+4.5);
+      addMesh(worldGrp, GCyl(.1,1.8,8), matPoleGray, px,.9, b.b+4.5);
+      addMesh(worldGrp, GCyl(.06,5.5,8), matPoleGray, px,2.75, b.b+4.5);
+      addMesh(worldGrp, new THREE.ConeGeometry(2.1,.75,8), matUmbrella, px,5.4, b.b+4.5);
+    }
+
+    addMesh(worldGrp, GBox(rW*.65,1.7,.28), matSign, cx, 4.1, bz-.35);
+    ['B','U','R','G','E','R',' ','B','A','R'].forEach((l,i)=>{
+      if(l===' ') return;
+      addMesh(worldGrp, GBox(.55,1.1,.14), matSignTxt, cx-3.5+i*.7, 4.1, bz-.22);
+    });
+    addMesh(worldGrp, GBox(.18,2.4,.18), matSilver, cx-rW*.3, 3.2, bz-.35);
+    addMesh(worldGrp, GBox(.18,2.4,.18), matSilver, cx+rW*.3, 3.2, bz-.35);
+  }
 
   if(!window._cloudsBuilt){
     window._cloudsBuilt=true;
@@ -826,8 +1039,14 @@ function buildRoom(){
   const w = b.r - b.l, d = b.b - b.t;
   const cx = (b.r + b.l) / 2, cz = (b.b + b.t) / 2;
   
-  addMesh(roomGrp, GBox(w,.25,d), matDFloor, cx,.05,cz, 0,0,0,false);
-  for(let xi=0;xi<w;xi+=1.5) addMesh(roomGrp, GBox(.05,.01,d), M('#c2a057'), b.l+xi,.18,cz, 0,0,0,false);
+  if(isSeafood()){
+    // Sandy tile floor with blue grout lines
+    addMesh(roomGrp, GBox(w,.25,d), M('#e0c882'), cx,.05,cz, 0,0,0,false);
+    for(let xi=0;xi<w;xi+=1.5) addMesh(roomGrp, GBox(.05,.01,d), M('#4fc3f7'), b.l+xi,.18,cz, 0,0,0,false);
+  } else {
+    addMesh(roomGrp, GBox(w,.25,d), matDFloor, cx,.05,cz, 0,0,0,false);
+    for(let xi=0;xi<w;xi+=1.5) addMesh(roomGrp, GBox(.05,.01,d), M('#c2a057'), b.l+xi,.18,cz, 0,0,0,false);
+  }
 
   const wH=2.8, wT=0.55, doorHalfW = 2.5;
   function wallSeg(x,y,z,sw,sh,sd,isK){
@@ -962,6 +1181,60 @@ function buildTable(){
   }
   return g;
 }
+// ── SEAFOOD STATION BUILDERS ──────────────────────────────────
+function buildCooler(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(3,2.8,2), M('#b3e5fc'), 0,1.4,0);
+  addMesh(g, GBox(3.1,0.18,2.1), M('#e1f5fe'), 0,2.89,0);
+  addMesh(g, GBox(2.6,0.6,1.6), M('#0288d1'), 0,2.4,0);
+  addMesh(g, GBox(2.4,0.1,1.4), M('#80d8ff'), 0,2.72,0, 0,0,0,false);
+  return g;
+}
+function buildBeachGrill(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(3.2,2.6,2.2), M('#37474f'), 0,1.3,0);
+  addMesh(g, GBox(2.8,0.18,1.5), M('#ff8f00'), 0,2.62,0.2, 0,0,0,false);
+  addMesh(g, GBox(3.3,1.8,0.4), M('#263238'), 0,3.7,-1.05);
+  addMesh(g, GCyl(.18,2.8,8), M('#9e9e9e'), 0,5.1,-1.05);
+  for(let i=-1;i<=1;i+=.4) addMesh(g, GBox(2.8,.06,.06), M('#555'), i,2.7,.2, 0,Math.PI/2,0,false);
+  return g;
+}
+function buildAssemblyStation(w,d){
+  const g=new THREE.Group();
+  addMesh(g, GBox(w,2.8,d), M('#795548'), 0,1.4,0);
+  addMesh(g, GBox(w+.18,.18,d+.18), M('#f9e4b7'), 0,2.89,0);
+  addMesh(g, GBox(w+.32,.09,d+.32), M('#d4b483'), 0,2.98,0);
+  // Taco shell rack on top
+  addMesh(g, GBox(0.5,0.3,0.3), M('#ffd54f'), -0.6,3.1,0);
+  addMesh(g, GBox(0.5,0.3,0.3), M('#ffd54f'),  0.6,3.1,0);
+  return g;
+}
+function buildChowderPot(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(2.2,2.8,1.8), M('#37474f'), 0,1.4,0);
+  addMesh(g, new THREE.CylinderGeometry(0.65,0.55,0.9,14), M('#5d4037'), 0,3.1,0);
+  addMesh(g, new THREE.CylinderGeometry(0.62,0.62,0.08,14), M('#fff8e1'), 0,3.56,0, 0,0,0,false);
+  addMesh(g, GBox(0.12,0.5,0.12), M('#9e9e9e'), 0.5,3.35,0);
+  return g;
+}
+function buildLemonadeStation(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(2,2.8,2), M('#f9a825'), 0,1.4,0);
+  addMesh(g, GBox(2.1,0.18,2.1), M('#fff9c4'), 0,2.89,0);
+  // Pitcher
+  addMesh(g, new THREE.CylinderGeometry(0.3,0.24,0.7,12), M('#fff176'), 0,3.25,0);
+  addMesh(g, GCyl(0.32,0.06,12), M('#f9a825'), 0,3.62,0, 0,0,0,false);
+  // Lemon slices
+  addMesh(g, new THREE.CylinderGeometry(0.2,0.2,0.06,8), M('#ffee58'), -0.35,3.65,0.2, 0,0,0,false);
+  return g;
+}
+function buildBasketRack(w,d){
+  const g=new THREE.Group();
+  addMesh(g, GBox(w,2.8,d), M('#6d4c41'), 0,1.4,0);
+  addMesh(g, GBox(w+.1,.1,d+.1), M('#8d6e63'), 0,2.85,0);
+  return g;
+}
+
 function buildRobot(role){
   const g=new THREE.Group();
   const bodyColor = role==='chef'?'#00bcd4':role==='waiter'?'#e91e63':'#ff9800';
@@ -986,6 +1259,13 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='dumpster')mesh=buildDumpster();
   if(type==='table')   mesh=buildTable();
   if(type==='robot')   mesh=buildRobot(opts.role||'busser');
+  // seafood stations
+  if(type==='cooler')           mesh=buildCooler();
+  if(type==='beachgrill')       mesh=buildBeachGrill();
+  if(type==='assembly')         mesh=buildAssemblyStation(w,d);
+  if(type==='chowderpot')       mesh=buildChowderPot();
+  if(type==='lemonadestation')  mesh=buildLemonadeStation();
+  if(type==='basketrack')       mesh=buildBasketRack(w,d);
   mesh.position.set(x,0,z);
   stGrp.add(mesh);
   const s={id,type,x,z,w,d,mesh,visuals:[],...opts};
@@ -996,6 +1276,13 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='trash')   s.contents=0; 
   if(type==='table')   { s.r=2.2; s.group=null; s.served=0; s.dirtyTrays=0; }
   if(type==='robot')   { s.role=opts.role||'busser'; s.state='idle'; s.pos=new THREE.Vector3(x,0,z); s.target=null; s.holding=null; s.timer=0; s._actionCooldown=0; }
+  // seafood
+  if(type==='beachgrill')      s.slots=[null,null];
+  if(type==='assembly')        s.item=null;
+  if(type==='chowderpot')      { s.chowderReady=true; s.cooldown=0; } // always has chowder
+  if(type==='lemonadestation') s.item=null;
+  if(type==='basketrack')      s.cleanBaskets=4;
+  if(type==='cooler')          s.item=null; // unlimited raw fish (refills auto)
   stations[id]=s; return s;
 }
 function removeStation(id){
@@ -1005,15 +1292,29 @@ function removeStation(id){
 }
 
 function initStations(){
-  addStation('fridge','fridge',-8,-8,3,3);
-  addStation('sink0','sink',-4.5,-8.5,1.8,1.8);
-  addStation('rack0','trayrack',-2.2,-8.5,1.8,1.8); 
-  addStation('grill0','grill',1.2,-8.5,3.5,2);
-  addStation('counter0','counter',4.8,-8.5,1.8,1.8);
-  addStation('counter1','counter',7.2,-8.5,1.8,1.8);
-  addStation('trash0','trash',-8,6,2,2);
-  addStation('dumpster0', 'dumpster', 0, bounds.b + 20, 4, 3); 
-  addStation('table0','table',0,4,5,5);
+  if(isSeafood()){
+    // Seafood Shack layout
+    addStation('cooler0',   'cooler',      -8,  -8,  3,   2);
+    addStation('bgrill0',   'beachgrill',   0,  -8.5,3.2, 2);
+    addStation('assembly0', 'assembly',     6,  -8.5,2.2, 1.8);
+    addStation('chowder0',  'chowderpot',  -3.5,-8.5,2.2, 1.8);
+    addStation('lemonade0', 'lemonadestation', 9,-8.5,2, 2);
+    addStation('basketrack0','basketrack', -5.5,-8,  1.8, 1.8);
+    addStation('sink0','sink',-8,3,1.8,1.8);
+    addStation('trash0','trash', 8, 4, 2, 2);
+    addStation('dumpster0','dumpster', 0, bounds.b+20, 4, 3);
+    addStation('table0','table',0,4,5,5);
+  } else {
+    addStation('fridge','fridge',-8,-8,3,3);
+    addStation('sink0','sink',-4.5,-8.5,1.8,1.8);
+    addStation('rack0','trayrack',-2.2,-8.5,1.8,1.8); 
+    addStation('grill0','grill',1.2,-8.5,3.5,2);
+    addStation('counter0','counter',4.8,-8.5,1.8,1.8);
+    addStation('counter1','counter',7.2,-8.5,1.8,1.8);
+    addStation('trash0','trash',-8,6,2,2);
+    addStation('dumpster0', 'dumpster', 0, bounds.b + 20, 4, 3); 
+    addStation('table0','table',0,4,5,5);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1058,6 +1359,67 @@ function itemMesh(type){
   } else if(type==='trash_bag'){
     addMesh(g, GSph(0.6, 12), matTrashBag, 0, 0.5, 0);
     addMesh(g, GCyl(0.1, 0.2, 8), matTrashBag, 0, 1.1, 0);
+
+  // ── SEAFOOD ITEMS ──────────────────────────────────────────
+  } else if(type==='raw_fish'){
+    // Raw fish fillet — orange slab
+    addMesh(g, GBox(0.8,0.15,0.5), M('#ff7043'), 0,0.08,0, 0,0,0,false);
+    addMesh(g, GBox(0.6,0.08,0.35),M('#ff8a65'), 0,0.16,0, 0,0,0,false);
+  } else if(type==='cooked_fish'){
+    // Grilled fish — golden with grill marks
+    addMesh(g, GBox(0.8,0.18,0.5), M('#ffb300'), 0,0.09,0, 0,0,0,false);
+    for(let i=-1;i<=1;i++) addMesh(g, GBox(0.8,0.04,0.04), M('#5d4037'), 0,0.19,i*0.12, 0,0,0,false);
+  } else if(type==='charred_fish'){
+    addMesh(g, GBox(0.8,0.18,0.5), M('#3e2723'), 0,0.09,0, 0,0,0,false);
+  } else if(type==='fish_taco'){
+    // Taco shell (U-shape) + fish filling
+    addMesh(g, new THREE.CylinderGeometry(0.35,0.35,0.55,16,1,true,0,Math.PI), M('#ffd54f'), 0,0.1,0, 0,0,0,false);
+    addMesh(g, GBox(0.5,0.2,0.25), M('#ffb300'), 0,0.22,0, 0,0,0,false);
+    addMesh(g, GBox(0.4,0.08,0.18), M('#aed581'), 0,0.32,0, 0,0,0,false); // lettuce
+    addMesh(g, GBox(0.3,0.06,0.14), M('#ef5350'), 0,0.38,0, 0,0,0,false); // salsa
+  } else if(type==='chowder'){
+    // Bowl with creamy soup
+    addMesh(g, new THREE.CylinderGeometry(0.38,0.28,0.32,16), M('#8d6e63'), 0,0.16,0);
+    addMesh(g, new THREE.CylinderGeometry(0.34,0.34,0.04,16), M('#fff8e1'), 0,0.32,0, 0,0,0,false);
+    addMesh(g, GSph(0.1,6), M('#ff8f00'), -0.12,0.36,0);
+    addMesh(g, GSph(0.08,6), M('#e91e63'), 0.1,0.35,0.08);
+  } else if(type==='lemonade'){
+    // Yellow cup with straw
+    addMesh(g, GCyl(0.18,0.4,12), M('#fff176'), 0,0.28,0);
+    addMesh(g, GCyl(0.19,0.05,12), M('#f9a825'), 0,0.5,0);
+    addMesh(g, GCyl(0.015,0.35,6), M('#fff'), 0,0.62,0);
+    addMesh(g, GSph(0.05,6), M('#ffee58'), 0,0.5,0.15);
+  } else if(type==='basket'){
+    // Wicker seafood basket
+    addMesh(g, GBox(1.6,0.1,1.1), M('#8d6e63'), 0,0.05,0, 0,0,0,false);
+    addMesh(g, GBox(1.5,0.14,1.0), M('#a1887f'), 0,0.07,0, 0,0,0,false);
+    // Basket weave lines
+    for(let i=-2;i<=2;i++) addMesh(g, GBox(1.52,0.02,0.04), M('#795548'), 0,0.14,i*0.19, 0,0,0,false);
+  } else if(type==='dirty_basket'){
+    addMesh(g, GBox(1.6,0.1,1.1), M('#8d6e63'), 0,0.05,0, 0,0,0,false);
+    addMesh(g, GBox(1.5,0.14,1.0), M('#5d4037'), 0,0.07,0, 0,0,0,false);
+    const pc=[M('#8a6045'),M('#556b2f'),M('#3e2723')];
+    for(let i=0;i<5;i++){
+      const pm=new THREE.Mesh(new THREE.SphereGeometry(.05+Math.random()*.04,4,4),pc[i%3]);
+      pm.position.set((Math.random()-.5)*1.3,.15,(Math.random()-.5)*.8); g.add(pm);
+    }
+  } else if(type==='taco_in_basket'){
+    g.add(itemMesh('basket'));
+    const t=itemMesh('fish_taco'); t.position.set(0,0.08,0); g.add(t);
+  } else if(type==='chowder_in_basket'){
+    g.add(itemMesh('basket'));
+    const c=itemMesh('chowder'); c.position.set(0,0.08,0); g.add(c);
+  } else if(type==='lemonade_in_basket'){
+    g.add(itemMesh('basket'));
+    const l=itemMesh('lemonade'); l.position.set(0,0.04,0); g.add(l);
+  } else if(type==='taco_chowder_basket'){
+    g.add(itemMesh('basket'));
+    const t=itemMesh('fish_taco'); t.position.set(-0.38,0.08,0); g.add(t);
+    const c=itemMesh('chowder'); c.position.set(0.4,0.08,0); c.scale.setScalar(0.82); g.add(c);
+  } else if(type==='taco_lemonade_basket'){
+    g.add(itemMesh('basket'));
+    const t=itemMesh('fish_taco'); t.position.set(-0.38,0.08,0); g.add(t);
+    const l=itemMesh('lemonade'); l.position.set(0.4,0.04,0); l.scale.setScalar(0.85); g.add(l);
   }
   return g;
 }
@@ -1088,15 +1450,18 @@ const SKIN_DEFS = [
 let stores = [];
 let activeStoreIdx = 0;
 
-function defStore(id, name) {
+function defStore(id, name, type='burger') {
   return {
-    id, name,
+    id, name, type,            // 'burger' | 'seafood'
     eco: defEco(), upg: defUpg(), gStats: defGS(),
     wings: [], layout: null,
-    passivePerDay: 0,  // calculated from robots
+    passivePerDay: 0,
     unlocked: true,
   };
 }
+
+// Helper: is the active store a seafood restaurant?
+function isSeafood(){ return (stores[activeStoreIdx]?.type === 'seafood'); }
 
 // Skin/cosmetic state (global across stores)
 let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic' };
@@ -1145,7 +1510,7 @@ function saveGame(){
       }
       stores[activeStoreIdx].layout = layout;
     }
-    localStorage.setItem('burgerBoss_save', JSON.stringify({stores, activeStoreIdx, cosm}));
+    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm}));
   }catch(e){}
 }
 
@@ -1154,6 +1519,9 @@ function loadSave(){
     const raw = localStorage.getItem('burgerBoss_save');
     if(!raw) { bootstrapNewSave(); return; }
     const s = JSON.parse(raw);
+
+    // If save is from an old version, wipe and start fresh to avoid corrupted state
+    if(!s.v || s.v < 6) { bootstrapNewSave(); return; }
 
     // ── migrate old single-store saves ──
     if(!s.stores) {
@@ -1176,7 +1544,10 @@ function loadSave(){
 }
 
 function bootstrapNewSave() {
-  stores = [defStore(0, 'Burger Bar #1')];
+  stores = [
+    defStore(0, 'Burger Bar #1', 'burger'),
+    defStore(1, 'Seafood Shack',  'seafood'),
+  ];
   activeStoreIdx = 0;
   loadActiveStore();
 }
@@ -1544,14 +1915,511 @@ function showToast(msg, dur=2200){
 }
 
 // ─────────────────────────────────────────────────────────────
-//  HOME SCREEN 3D CHEF RENDERER
+//  HOME SCREEN 3D CHEF RENDERER  (dedicated canvas, same mesh as gameplay)
 // ─────────────────────────────────────────────────────────────
-// (home screen now uses SVG, no Three.js renderer needed)
-function initHomeRenderer(){ /* no-op: SVG-based home screen */ }
-function buildHomeChef(){ applyChefSkinToSVG(cosm.equippedSkin); }
-function runHomeAnim(){ /* animation handled by CSS keyframes */ }
-function stopHomeAnim(){ /* no-op */ }
-function positionHomeChef(){ /* no-op: SVG auto-sizes */ }
+let hc = {   // home chef state
+  renderer:null, scene:null, camera:null,
+  mesh:null, animId:null,
+  armL:null, armR:null, body:null, hatBody:null
+};
+
+function initHomeRenderer(){
+  const canvas = document.getElementById('home-chef-canvas');
+  if(!canvas || hc.renderer) return;
+
+  hc.renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  hc.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  hc.renderer.setClearColor(0x000000, 0);
+  hc.renderer.shadowMap.enabled = true;
+  hc.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  hc.scene = new THREE.Scene();
+
+  // Warm 3-point lighting so chef looks the same as in gameplay
+  const key = new THREE.DirectionalLight(0xfff5e0, 1.4);
+  key.position.set(4, 8, 6); key.castShadow = true; hc.scene.add(key);
+  const fill = new THREE.DirectionalLight(0xadd8ff, 0.5);
+  fill.position.set(-5, 4, 2); hc.scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffd580, 0.7);
+  rim.position.set(0, 6, -7); hc.scene.add(rim);
+  hc.scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+
+  // Shadow receiver platform (invisible — just catches shadow)
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(12, 12),
+    new THREE.ShadowMaterial({opacity: 0.18})
+  );
+  ground.rotation.x = -Math.PI/2; ground.receiveShadow = true;
+  hc.scene.add(ground);
+
+  hc.camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  hc.camera.position.set(0, 3.2, 11);
+  hc.camera.lookAt(0, 2.5, 0);
+
+  buildHomeChef();
+  resizeHomeCanvas();
+}
+
+function buildHomeChef(){
+  if(!hc.scene) return;
+  if(hc.mesh){ hc.scene.remove(hc.mesh); hc.mesh = null; }
+
+  const sk = getActiveSkin();
+  const g = new THREE.Group();
+
+  // Helper reusing same geometry helpers as gameplay
+  const cyl  = (rt,rb,h,seg=14) => new THREE.CylinderGeometry(rt,rb,h,seg);
+  const sph  = (r,seg=12)        => new THREE.SphereGeometry(r,seg,seg);
+  const box  = (w,h,d)           => new THREE.BoxGeometry(w,h,d);
+  const mat  = c => new THREE.MeshLambertMaterial({color:c});
+  const mesh = (geo,mat,x=0,y=0,z=0) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x,y,z); m.castShadow=true; g.add(m); return m;
+  };
+
+  // ── BODY (exact same as gameplay pBody) ──
+  hc.body = mesh(cyl(.65,.65,1.6,14), mat(sk.bodyColor), 0, .8, 0);
+
+  // ── HEAD ──
+  mesh(sph(.55,14), mat(sk.headColor), 0, 1.95, 0);
+
+  // ── EYES ──
+  mesh(sph(.12,8), mat('#222'), -.22, 2.06, .5);
+  mesh(sph(.12,8), mat('#222'),  .22, 2.06, .5);
+  mesh(sph(.05,6), mat('#fff'), -.17, 2.10, .59);
+  mesh(sph(.05,6), mat('#fff'),  .27, 2.10, .59);
+
+  // ── SMILE ──
+  const smilePts = [];
+  for(let a = -28; a <= 28; a += 7){
+    const r = a * Math.PI/180;
+    smilePts.push(new THREE.Vector3(Math.sin(r)*.28, -Math.cos(r)*.09+1.75, .52));
+  }
+  const smileCurve = new THREE.CatmullRomCurve3(smilePts);
+  const smileGeo = new THREE.TubeGeometry(smileCurve, 10, .03, 6, false);
+  const smileMesh = new THREE.Mesh(smileGeo, mat('#c2185b'));
+  smileMesh.castShadow = true; g.add(smileMesh);
+
+  // ── CHEEKS ──
+  const cheekMat = new THREE.MeshLambertMaterial({color:'#ffb3ba', transparent:true, opacity:.7});
+  mesh(new THREE.SphereGeometry(.15,8,8).scale?sph(.14,8):sph(.14,8), cheekMat, -.38, 1.88, .44);
+  mesh(sph(.14,8), cheekMat,  .38, 1.88, .44);
+
+  // ── HAT RIM ──
+  mesh(cyl(.9,.9,.3,16), mat(sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor), 0, 2.38, 0);
+
+  // ── HAT BODY ──
+  hc.hatBody = mesh(cyl(.6,.82,1.55,16), mat(sk.hatColor), 0, 3.15, 0);
+
+  // ── HAT TOP ──
+  const hatTop = mesh(sph(.6,16), mat(sk.hatColor), 0, 3.95, 0);
+  hatTop.scale.set(1, .55, 1);
+
+  // ── ARMS (separate groups so we can animate them) ──
+  const armMat = mat(sk.bodyColor);
+  hc.armL = new THREE.Group(); g.add(hc.armL);
+  const aL = new THREE.Mesh(box(.32, .9, .32), armMat); aL.castShadow=true;
+  aL.position.set(0, -.3, 0); hc.armL.add(aL);
+  const handL = new THREE.Mesh(sph(.22,10), mat(sk.headColor)); handL.position.set(0,-.7,0); handL.castShadow=true; hc.armL.add(handL);
+  hc.armL.position.set(-.82, 1.5, 0);
+  hc.armL.rotation.z = 0.3;
+
+  hc.armR = new THREE.Group(); g.add(hc.armR);
+  const aR = new THREE.Mesh(box(.32, .9, .32), armMat); aR.castShadow=true;
+  aR.position.set(0, -.3, 0); hc.armR.add(aR);
+  const handR = new THREE.Mesh(sph(.22,10), mat(sk.headColor)); handR.position.set(0,-.7,0); handR.castShadow=true; hc.armR.add(handR);
+  hc.armR.position.set(.82, 1.5, 0);
+  hc.armR.rotation.z = -0.3;
+
+  // ── SPATULA in right hand ──
+  const spatHandle = new THREE.Mesh(box(.1,.9,.1), mat('#9e9e9e')); spatHandle.position.set(0,-.1,0); hc.armR.add(spatHandle);
+  const spatHead   = new THREE.Mesh(box(.55,.08,.4), mat('#bdbdbd')); spatHead.position.set(0,.45,.0); hc.armR.add(spatHead);
+
+  // ── LEGS ──
+  mesh(cyl(.28,.24,.9,10), mat('#37474f'), -.28, -.52, 0);
+  mesh(cyl(.28,.24,.9,10), mat('#37474f'),  .28, -.52, 0);
+
+  // ── SHOES ──
+  mesh(box(.42,.18,.58), mat('#212121'), -.28, -1.02, .1);
+  mesh(box(.42,.18,.58), mat('#212121'),  .28, -1.02, .1);
+
+  g.position.y = 1.05;  // lift off ground so feet touch shadow plane
+  hc.mesh = g;
+  hc.scene.add(g);
+}
+
+function resizeHomeCanvas(){
+  const canvas = document.getElementById('home-chef-canvas');
+  if(!canvas || !hc.renderer) return;
+  const w = canvas.clientWidth  || 180;
+  const h = canvas.clientHeight || 280;
+  hc.renderer.setSize(w, h, false);
+  hc.camera.aspect = w / h;
+  hc.camera.updateProjectionMatrix();
+}
+
+function runHomeAnim(){
+  hc.animId = requestAnimationFrame(runHomeAnim);
+  if(!hc.mesh || !hc.renderer) return;
+  const t = Date.now() / 1000;
+
+  // Gentle idle: slow breathing bob only — mostly stationary
+  hc.mesh.position.y = 1.05 + Math.sin(t * 1.4) * 0.045;
+  if(hc.body) hc.body.scale.y = 1.0 + Math.sin(t * 1.4) * 0.018;
+
+  // Spin: apply drag rotation, decay toward 0 velocity
+  hc._spinVel = (hc._spinVel || 0) * 0.88;
+  hc._spinY   = (hc._spinY   || 0) + hc._spinVel;
+  hc.mesh.rotation.y = hc._spinY;
+
+  // Arms hang naturally — slight idle sway
+  if(hc.armL) hc.armL.rotation.z =  0.25 + Math.sin(t * 1.4) * 0.04;
+  if(hc.armR) hc.armR.rotation.z = -0.25 - Math.sin(t * 1.4) * 0.04;
+
+  hc.renderer.render(hc.scene, hc.camera);
+}
+
+// ── Drag-to-spin on chef canvas ──────────────────────────────
+function initChefDrag(){
+  const canvas = document.getElementById('home-chef-canvas');
+  if(!canvas) return;
+  let dragX = null;
+  const onDown = e => { e.preventDefault(); dragX = (e.touches ? e.touches[0].clientX : e.clientX); };
+  const onMove = e => {
+    e.preventDefault();
+    if(dragX === null) return;
+    const x = (e.touches ? e.touches[0].clientX : e.clientX);
+    const dx = x - dragX; dragX = x;
+    hc._spinVel = dx * 0.022;
+  };
+  const onUp = () => { dragX = null; };
+  canvas.addEventListener('pointerdown', onDown, {passive:false});
+  canvas.addEventListener('pointermove', onMove, {passive:false});
+  canvas.addEventListener('pointerup', onUp);
+  canvas.addEventListener('pointercancel', onUp);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RESTAURANT PREVIEW RENDERER  (bottom of home screen)
+//  Shows the actual in-game exterior using the same colors/materials
+// ─────────────────────────────────────────────────────────────
+let rp = { renderer:null, scene:null, camera:null, animId:null,
+           storeIdx:0, transitionX:0, targetX:0 };
+
+const STORE_COLORS = [
+  {wall:'#fff0d4', roof:'#ff5722', sign:'#ff5722', floor:'#e6c27a', name:'Burger Bar #1',    type:'burger'},
+  {wall:'#e0f7fa', roof:'#0288d1', sign:'#0277bd', floor:'#b2ebf2', name:'Seafood Shack',    type:'seafood'},
+  {wall:'#dceefb', roof:'#1976D2', sign:'#1976D2', floor:'#b0bec5', name:'Downtown Diner',   type:'burger'},
+  {wall:'#f3e5f5', roof:'#7B1FA2', sign:'#7B1FA2', floor:'#ce93d8', name:'Westside Grill',   type:'burger'},
+  {wall:'#e8f5e9', roof:'#2e7d32', sign:'#388e3c', floor:'#a5d6a7', name:'East End Kitchen', type:'burger'},
+];
+
+// RESTAURANT_UNLOCK_DAYS[i] = day required to unlock store slot i (0 = always available)
+const RESTAURANT_UNLOCK_DAYS = [0, 0, 30, 30, 30];
+
+function buildRestaurantScene(storeIndex){
+  if(!rp.scene) return;
+  while(rp.scene.children.length) rp.scene.remove(rp.scene.children[0]);
+
+  const col = STORE_COLORS[storeIndex % STORE_COLORS.length];
+  if(col.type === 'seafood') { buildBeachRestaurantScene(); return; }
+  const M2 = c => new THREE.MeshLambertMaterial({color:c});
+  const add = (geo, mat, x=0, y=0, z=0, rx=0, ry=0) => {
+    const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z);
+    m.rotation.set(rx,ry,0); m.castShadow=true; m.receiveShadow=true;
+    rp.scene.add(m); return m;
+  };
+
+  // Lighting
+  const sun = new THREE.DirectionalLight(0xfff5e0, 1.2); sun.position.set(8,18,12); sun.castShadow=true; rp.scene.add(sun);
+  const fill= new THREE.DirectionalLight(0xadd8ff, 0.4); fill.position.set(-6,8,4); rp.scene.add(fill);
+  rp.scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+
+  // Sky background
+  rp.scene.background = new THREE.Color('#87CEEB');
+
+  // Ground — single flat base avoids ALL z-fighting
+  add(new THREE.BoxGeometry(120,0.4,60), M2('#66cc44'), 0,-0.2,4);
+  // Road — raised clearly above grass, no overlap
+  add(new THREE.BoxGeometry(120,0.22,8), M2('#4a5a6a'), 0,0.11,14);
+  // Road dashes — clearly above road
+  for(let i=-5;i<=5;i++) add(new THREE.BoxGeometry(3,0.08,0.3), M2('#ffcc00'), i*10,0.34,14);
+  // Sidewalk — between grass and road level
+  add(new THREE.BoxGeometry(44,0.18,6), M2('#aab5b8'), 0,0.09,8.5);
+
+  // ── Main building ──
+  add(new THREE.BoxGeometry(18,8,10), M2(col.wall), 0,4,-3);
+  // Roof
+  const roofGeo = new THREE.BoxGeometry(19,.8,11.2); add(roofGeo, M2(col.roof), 0,8.4,-3);
+  // Roof ridge
+  const ridgeGeo = new THREE.CylinderGeometry(.4,.4,20,8); add(ridgeGeo, M2(col.roof), 0,9.4,-3, 0,Math.PI/2);
+
+  // Sign board
+  add(new THREE.BoxGeometry(13,1.8,.3), M2(col.sign), 0,8.5,2.1);
+  // Sign letters (white blocks)
+  for(let i=0;i<8;i++) add(new THREE.BoxGeometry(.5,1,.2), M2('#ffffff'), -2.8+i*.8,8.5,2.3);
+
+  // Awning
+  add(new THREE.BoxGeometry(14,.4,2.5), M2(col.roof), 0,5.8,3.7, 0.18,0);
+
+  // Front windows (3)
+  const glassMat = new THREE.MeshLambertMaterial({color:'#b2ebf2', transparent:true, opacity:.7});
+  [-4.5,0,4.5].forEach(x=>{
+    add(new THREE.BoxGeometry(3,2.5,.15), glassMat, x,5,2.2);
+    add(new THREE.BoxGeometry(.08,2.5,.2), M2('#888'), x,5,2.2);
+    add(new THREE.BoxGeometry(3,.08,.2), M2('#888'), x,5,2.2);
+    // Flower box
+    add(new THREE.BoxGeometry(3,.4,.4), M2('#8d6e63'), x,3.7,2.2);
+    add(new THREE.SphereGeometry(.3,6,6), M2('#e91e63'), x-.6,4.0,2.2);
+    add(new THREE.SphereGeometry(.3,6,6), M2('#ff9800'), x,4.0,2.2);
+    add(new THREE.SphereGeometry(.3,6,6), M2('#9c27b0'), x+.6,4.0,2.2);
+  });
+
+  // Door
+  add(new THREE.BoxGeometry(3,5,.15), M2('#8d6e63'), 0,2.5,2.2);
+  add(new THREE.BoxGeometry(1.4,4.6,.1), M2(col.wall), -0.75,2.7,2.3);
+  add(new THREE.BoxGeometry(1.4,4.6,.1), M2(col.wall),  0.75,2.7,2.3);
+
+  // Outdoor umbrella tables (like the in-game ones)
+  [-6.5,6.5].forEach(x=>{
+    add(new THREE.CylinderGeometry(.08,0.08,1.8,6), M2('#a0a0a0'), x,.9,5.5);
+    add(new THREE.ConeGeometry(2,.6,8), M2(col.roof), x,2.5,5.5);
+    add(new THREE.CylinderGeometry(1,.05,16), M2('#eeeeee'), x,1.05,5.5);
+  });
+
+  // Trees (same as in-game: brown trunk + green spheres)
+  [[-10,0,-1],[10,0,-1],[-10,0,4],[10,0,4]].forEach(([x,y,z])=>{
+    add(new THREE.CylinderGeometry(.35,.4,3,8), M2('#8d6e63'), x,1.5,z);
+    add(new THREE.SphereGeometry(2,8,6), M2('#4caf50'), x,5,z);
+    add(new THREE.SphereGeometry(1.3,8,6), M2('#66bb6a'), x+.6,6,z-.4);
+  });
+
+  // Street lamps (like in-game)
+  [-7.5,7.5].forEach(x=>{
+    add(new THREE.CylinderGeometry(.1,.1,7,6), M2('#455A64'), x,3.5,11);
+    add(new THREE.SphereGeometry(.3,8,8), M2('#ffffcc'), x,7.2,11);
+  });
+
+  // Small shrubs near entrance
+  [-2.5,2.5].forEach(x=>{
+    add(new THREE.BoxGeometry(1.4,1,1.4), M2('#8a6045'), x,.5,4.5);
+    add(new THREE.SphereGeometry(.8,8,6), M2('#309030'), x,1.4,4.5);
+  });
+}
+
+function buildBeachRestaurantScene(){
+  const M2 = c => new THREE.MeshLambertMaterial({color:c});
+  const add = (geo, mat, x=0, y=0, z=0, rx=0, ry=0) => {
+    const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z);
+    m.rotation.set(rx,ry,0); m.castShadow=true; m.receiveShadow=true;
+    rp.scene.add(m); return m;
+  };
+  // Lighting
+  const sun = new THREE.DirectionalLight(0xfff5e0, 1.3); sun.position.set(10,20,14); sun.castShadow=true; rp.scene.add(sun);
+  rp.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const fill = new THREE.DirectionalLight(0x80d8ff, 0.4); fill.position.set(-8,8,4); rp.scene.add(fill);
+
+  // Sky + ocean background
+  rp.scene.background = new THREE.Color('#87CEEB');
+
+  // Ocean (behind building)
+  add(new THREE.PlaneGeometry(120,60), M2('#0288d1'), 0,-0.1,-20, -Math.PI/2);
+  // Ocean shimmer strips
+  for(let i=0;i<6;i++) add(new THREE.PlaneGeometry(80,.6), M2('#4fc3f7'), 0,0.01,-18+i*3,-Math.PI/2);
+  // Sandy beach ground
+  add(new THREE.PlaneGeometry(80,30), M2('#f9e4b7'), 0,0,8,-Math.PI/2);
+  // Grass/path near building
+  add(new THREE.PlaneGeometry(80,6), M2('#aed581'), 0,0.01,2.5,-Math.PI/2);
+  // Wooden boardwalk
+  add(new THREE.PlaneGeometry(30,5), M2('#8d6e63'), 0,0.02,6,-Math.PI/2);
+  for(let i=-3;i<=3;i++) add(new THREE.PlaneGeometry(30,.1), M2('#6d4c41'), i*1.2,0.03,6,-Math.PI/2);
+
+  // ── Main building (beach shack style) ──
+  add(new THREE.BoxGeometry(16,6,9), M2('#e0f7fa'), 0,3,-3);
+  // Thatched roof (layered cones)
+  add(new THREE.CylinderGeometry(0,10,.6,4), M2('#c8a96e'), 0,7.2,-3, 0,Math.PI/4);
+  add(new THREE.CylinderGeometry(0,12,.6,4), M2('#d4b483'), 0,6.7,-3, 0,Math.PI/4);
+  add(new THREE.CylinderGeometry(0,14,.7,4), M2('#bcaa7e'), 0,6.0,-3, 0,Math.PI/4);
+  // Sign
+  add(new THREE.BoxGeometry(12,1.6,.3), M2('#0277bd'), 0,7.4,2.2);
+  for(let i=0;i<10;i++) add(new THREE.BoxGeometry(.4,1,.2), M2('#ffffff'), -2.2+i*.48,7.4,2.4);
+  // Awning (blue & white stripes)
+  for(let i=0;i<5;i++) add(new THREE.BoxGeometry(2.4,.3,2.5), M2(i%2===0?'#0288d1':'#fff'), -4.8+i*2.4,5.4,3.8, 0.2,0);
+  // Windows
+  const glMat = new THREE.MeshLambertMaterial({color:'#b2ebf2',transparent:true,opacity:.7});
+  [-4.5,0,4.5].forEach(x=>{
+    add(new THREE.BoxGeometry(3,2.5,.15), glMat, x,4.2,2.2);
+    add(new THREE.BoxGeometry(.08,2.5,.2), M2('#888'), x,4.2,2.2);
+    add(new THREE.BoxGeometry(3,.08,.2), M2('#888'), x,4.2,2.2);
+  });
+  // Door
+  add(new THREE.BoxGeometry(2.8,4.5,.15), M2('#5d4037'), 0,2.25,2.2);
+  add(new THREE.BoxGeometry(1.3,4.2,.1), M2('#e0f7fa'), -0.7,2.4,2.3);
+  add(new THREE.BoxGeometry(1.3,4.2,.1), M2('#e0f7fa'),  0.7,2.4,2.3);
+
+  // ── Beach details ──
+  // Palm trees
+  [[-9,0,3],[9,0,3],[-11,0,9],[11,0,9]].forEach(([x,y,z])=>{
+    // leaning trunk (slight curve via multiple segments)
+    add(new THREE.CylinderGeometry(.25,.35,5,8), M2('#8d6e63'), x,2.5,z, 0, 0.18*(x>0?1:-1));
+    // fronds
+    for(let a=0;a<5;a++){
+      const angle = (a/5)*Math.PI*2;
+      add(new THREE.CylinderGeometry(.05,.05,2.8,6), M2('#4caf50'),
+        x+Math.cos(angle)*1.4, 5.5, z+Math.sin(angle)*1.4, Math.PI*0.3, angle);
+    }
+    add(new THREE.SphereGeometry(.5,6,6), M2('#33691e'), x,5.4,z);
+  });
+
+  // Beach umbrellas
+  [[-6,0,7],[6,0,7],[-3,0,10],[3,0,10]].forEach(([x,y,z])=>{
+    const umbCol = ['#ff5722','#ffb300','#e91e63','#00bcd4'][Math.floor(Math.random()*4)];
+    add(new THREE.CylinderGeometry(.06,.06,2.8,6), M2('#9e9e9e'), x,1.4,z);
+    add(new THREE.ConeGeometry(1.8,.4,8), M2(umbCol), x,3.1,z);
+    // Sandy chairs
+    add(new THREE.BoxGeometry(1.2,.2,.9), M2('#f9e4b7'), x-.3,.2,z+.6);
+    add(new THREE.BoxGeometry(1.2,.2,.9), M2('#f9e4b7'), x+.3,.2,z+.6);
+  });
+
+  // Crab decoration on building front
+  add(new THREE.SphereGeometry(.5,8,6), M2('#e53935'), 0,1.8,2.4);
+  [-0.5,0.5].forEach(side=>{
+    add(new THREE.SphereGeometry(.2,6,6), M2('#e53935'), side*.8,2.1,2.4);
+    add(new THREE.CylinderGeometry(.06,.06,.6,6), M2('#e53935'), side*1.2,2.0,2.4, 0,0,Math.PI/4*side);
+  });
+
+  // Seagulls (simple V shapes in sky)
+  [[6,14,-8],[-3,16,-12],[10,15,-6]].forEach(([x,y,z])=>{
+    add(new THREE.CylinderGeometry(.06,.06,1.2,4), M2('#fff'), x,y,z, 0,0, 0.4);
+    add(new THREE.CylinderGeometry(.06,.06,1.2,4), M2('#fff'), x+.8,y+.2,z, 0,0,-0.4);
+  });
+
+  // ── Outdoor seating (driftwood tables) ──
+  [-5,5].forEach(x=>{
+    add(new THREE.BoxGeometry(2.5,.18,1.5), M2('#8d6e63'), x,.8,5.5);
+    add(new THREE.CylinderGeometry(.12,.12,.8,6), M2('#6d4c41'), x,.4,5.5);
+    // Shells as decor
+    add(new THREE.SphereGeometry(.18,6,6), M2('#f9e4b7'), x-.4,.96,5.5);
+    add(new THREE.SphereGeometry(.14,6,6), M2('#ff8a65'), x+.3,.96,5.5);
+  });
+}
+
+function initRestaurantRenderer(){
+  const canvas = document.getElementById('home-restaurant-canvas');
+  if(!canvas || rp.renderer) return;
+
+  // Size renderer to match wrap dimensions
+  const wrap = document.getElementById('home-restaurant-wrap');
+  const pw = (wrap ? wrap.offsetWidth  : 0) || window.innerWidth;
+  const ph = (wrap ? wrap.offsetHeight : 0) || Math.round(window.innerHeight * 0.46);
+
+  rp.renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
+  rp.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
+  rp.renderer.setSize(pw, ph, false);
+  rp.renderer.shadowMap.enabled = true;
+  rp.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  rp.scene = new THREE.Scene();
+
+  // Isometric-ish camera angle matching in-game view
+  rp.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+  rp.camera.position.set(0, 12, 26);
+  rp.camera.lookAt(0, 3, 0);
+
+  buildRestaurantScene(rp.storeIdx);
+  // Defer resize to after first paint so wrap has real dimensions
+  requestAnimationFrame(()=>{ resizeRestaurantCanvas(); });
+  initRestaurantSwipe();
+  updateStoreDots();
+}
+
+function resizeRestaurantCanvas(){
+  if(!rp.renderer) return;
+  const wrap = document.getElementById('home-restaurant-wrap');
+  if(!wrap) return;
+  // Use getBoundingClientRect for accurate size after layout
+  const rect = wrap.getBoundingClientRect();
+  const w = Math.max(Math.round(rect.width),  window.innerWidth);
+  const h = Math.max(Math.round(rect.height), Math.round(window.innerHeight * 0.46));
+  rp.renderer.setSize(w, h, false);
+  rp.camera.aspect = w / h;
+  rp.camera.updateProjectionMatrix();
+}
+
+function runRestaurantAnim(){
+  rp.animId = requestAnimationFrame(runRestaurantAnim);
+  if(!rp.renderer || !rp.scene) return;
+  // Pan camera slightly left/right for life
+  const t = Date.now() / 1000;
+  rp.camera.position.x = Math.sin(t * 0.12) * 1.2;
+  rp.camera.lookAt(0, 3, 0);
+  rp.renderer.render(rp.scene, rp.camera);
+}
+
+function stopRestaurantAnim(){
+  if(rp.animId){ cancelAnimationFrame(rp.animId); rp.animId = null; }
+}
+
+// ── Swipe between stores ──────────────────────────────────────
+function initRestaurantSwipe(){
+  const canvas = document.getElementById('home-restaurant-canvas');
+  if(!canvas) return;
+  let startX = null, moved = false;
+  canvas.addEventListener('pointerdown', e=>{ startX = e.clientX; moved=false; });
+  canvas.addEventListener('pointermove', e=>{ if(Math.abs(e.clientX-(startX||0))>8) moved=true; });
+  canvas.addEventListener('pointerup', e=>{
+    if(startX===null) return;
+    const dx = e.clientX - startX; startX=null;
+    if(moved && Math.abs(dx) > 40) homeSwipeStore(dx < 0 ? 1 : -1);
+  });
+}
+
+function homeSwipeStore(dir){
+  const totalSlots = STORE_COLORS.length;
+  const newIdx = (rp.storeIdx + dir + totalSlots) % totalSlots;
+  rp.storeIdx = newIdx;
+  buildRestaurantScene(rp.storeIdx);
+  updateStoreDots();
+
+  const ownedStore = stores[rp.storeIdx];
+  const colDef = STORE_COLORS[rp.storeIdx % STORE_COLORS.length];
+  const storeName = ownedStore ? ownedStore.name : colDef.name;
+  // Index 1 (Seafood Shack) is always unlocked — only higher indices need purchasing
+  const locked = !ownedStore && rp.storeIdx >= 2;
+
+  const el = document.getElementById('home-store-name');
+  if(el) el.textContent = locked ? '🔒 ' + storeName + ' (Day 30)' : storeName;
+
+  const playBtn = document.querySelector('.hbtn-play');
+  if(playBtn) {
+    playBtn.disabled = locked;
+    playBtn.style.opacity = locked ? '.5' : '1';
+  }
+
+  // Update play button day number to reflect this store's current day
+  const storeDay = ownedStore ? (ownedStore.eco?.day ?? 0) : 0;
+  const nextDayEl = document.getElementById('home-next-day');
+  if(nextDayEl) nextDayEl.textContent = storeDay + 1;
+}
+window.homeSwipeStore = homeSwipeStore;
+
+function updateStoreDots(){
+  const dotsEl = document.getElementById('home-store-dots');
+  if(!dotsEl) return;
+  dotsEl.innerHTML='';
+  STORE_COLORS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'store-dot' + (i === rp.storeIdx ? ' active' : '');
+    dotsEl.appendChild(d);
+  });
+}
+
+function stopHomeAnim(){
+  if(hc.animId){ cancelAnimationFrame(hc.animId); hc.animId = null; }
+  stopRestaurantAnim();
+}
+
+function positionHomeChef(){ resizeHomeCanvas(); }
 
 // ─────────────────────────────────────────────────────────────
 //  SKIN APPLICATION — gameplay chef + SVG home chef
@@ -1578,8 +2446,8 @@ function applyChefSkin(skinId) {
     pBody.material    = M(sk.bodyColor);
     pHead.material    = M(sk.headColor);
   } catch(e){}
-  // SVG home chef
-  applyChefSkinToSVG(skinId);
+  // Home screen 3D chef — rebuild with new skin
+  if(hc.scene) buildHomeChef();
   // Trail color
   window._trailColor = sk.trailColor || null;
 }
@@ -1629,15 +2497,28 @@ function showStartMenu(){
   document.getElementById('home-rating').textContent=getCumRating();
   document.getElementById('home-day').textContent=eco.day;
   document.getElementById('home-next-day').textContent=eco.day+1;
-  document.getElementById('home-nametag').textContent = stores[activeStoreIdx]?.name || 'Burger Bar';
+  document.getElementById('home-nametag').textContent = stores[activeStoreIdx]?.name || 'Burger Bar #1';
+
+  // Sync restaurant preview to current active store
+  rp.storeIdx = activeStoreIdx;
 
   const storeBtn = document.getElementById('home-stores-btn');
   if(storeBtn) storeBtn.style.display = eco.day >= 30 ? 'flex' : 'none';
 
   document.getElementById('home-screen').style.display='flex';
 
-  // Apply skin to SVG chef
+  // Init 3D home chef renderer (once) then start anim
+  stopHomeAnim();
+  if(!hc.renderer) { initHomeRenderer(); initChefDrag(); }
+  else { resizeHomeCanvas(); buildHomeChef(); }
   applyChefSkin(cosm.equippedSkin);
+  runHomeAnim();
+
+  // Init restaurant preview renderer (once)
+  stopRestaurantAnim();
+  if(!rp.renderer) initRestaurantRenderer();
+  else { resizeRestaurantCanvas(); buildRestaurantScene(rp.storeIdx); updateStoreDots(); }
+  runRestaurantAnim();
 }
 window.showStartMenu = showStartMenu;
 
@@ -1677,6 +2558,21 @@ function quitToMenu(){
   document.getElementById('top-hud').style.display='none';
   document.getElementById('pause-btn').style.display='none';
   hlRing.visible=false;
+
+  // ── Roll back to pre-day state ──
+  if(window._daySnapshot){
+    eco.day        = window._daySnapshot.day - 1;  // undo the day++ from executeDayStart
+    eco.cash       = window._daySnapshot.cash;      // undo any cash earned mid-day
+    gStats.lifeStars  = window._daySnapshot.gStars;  // undo partial star progress
+    gStats.lifeGroups = window._daySnapshot.gGroups;
+    window._daySnapshot = null;
+  }
+
+  // Clean up any customers/groups that were spawned
+  groups.forEach(g => scene.remove(g.mesh));
+  groups = [];
+
+  updateCashUI();
   saveGame();
   showStartMenu();
 }
@@ -1724,6 +2620,59 @@ function closeSkinsShop(){
   showStartMenu();
 }
 window.showSkinsShop=showSkinsShop; window.closeSkinsShop=closeSkinsShop;
+
+// ── PRACTICE / TUTORIAL ─────────────────────────────────────
+const PRACTICE_STEPS = {
+  burger: [
+    { icon:'🧊', title:`Step 1 — Grab Raw Meat`, desc:`Walk to the Fridge and press ACT to pick up a raw patty.` },
+    { icon:'🔥', title:`Step 2 — Cook on the Grill`, desc:`Carry the patty to the Grill and press ACT to place it. Watch the green progress bar fill up. When it turns orange, it's cooked — pick it up before it burns (turns black)!` },
+    { icon:'🍱', title:`Step 3 — Grab a Tray`, desc:`Go to the Tray Rack and press ACT to pick up a clean tray.` },
+    { icon:'🍔', title:`Step 4 — Assemble on Counter`, desc:`Bring the cooked patty to a Counter while holding a tray — or place the patty on the counter, then grab the tray and come back — the burger auto-assembles on the counter.` },
+    { icon:'🛎️', title:`Step 5 — Serve the Table`, desc:`Carry the burger tray to a table with waiting customers (look for the 🍔 bubble above their head) and press ACT to serve them.` },
+    { icon:'🍽️', title:`After Eating — Clean Up`, desc:`After customers eat, dirty trays appear on the table. Pick them up, take to the Sink (hold ACT for 3 seconds to wash), then return the clean tray to the Tray Rack.` },
+    { icon:'🥤', title:`Bonus — Soda Fountain`, desc:`After Day 5 you can unlock a Soda Fountain. Customers may order soda or a burger+soda combo. Use the tray + soda fountain to assemble a combo before serving.` },
+    { icon:'🤖', title:`Robots Help You!`, desc:`Buy robots from the Shop. Set their role in Edit Mode: Chef cooks patties, Waiter serves food, Busser cleans trays. Robots level up each day!` },
+  ],
+  seafood: [
+    { icon:'🐟', title:`Step 1 — Grab Raw Fish`, desc:`Walk to the Cooler (blue station) and press ACT to pick up a raw fish fillet. It refills automatically — unlimited supply!` },
+    { icon:'🔥', title:`Step 2 — Grill the Fish`, desc:`Carry raw fish to the Beach Grill and press ACT to place it on the grill. Watch the progress bar — green means cooking, orange means done. Pick it up before it turns black (charred)!` },
+    { icon:'🌮', title:`Step 3 — Make a Fish Taco`, desc:`Bring the cooked fish to the Assembly Station and press ACT. It auto-wraps into a fish taco using the shells on the counter.` },
+    { icon:'🍲', title:`Chowder — Easy!`, desc:`The Chowder Pot is always ready. Press ACT empty-handed to ladle out a bowl of clam chowder anytime — no cooking required.` },
+    { icon:'🍋', title:`Lemonade — Easy Too!`, desc:`Press ACT at the Lemonade Station while empty-handed to pour a cup of lemonade instantly.` },
+    { icon:'🧺', title:`Step 4 — Basket the Order`, desc:`Carry any food item (taco, chowder, or lemonade) to the Basket Rack and press ACT. The food auto-goes into a wicker basket, ready to serve. For COMBO orders, place two items in one basket.` },
+    { icon:'🛎️', title:`Step 5 — Serve the Table`, desc:`Carry the filled basket to a table with waiting customers. Look for the 🌮🍲🍋 bubbles above their heads. Press ACT to serve them!` },
+    { icon:'🚿', title:`Clean Up — Dirty Baskets`, desc:`After customers eat, dirty baskets appear. Pick them up, take to the Sink and hold ACT for 3 seconds to wash, then return the clean basket to the Basket Rack.` },
+    { icon:'🤖', title:`Robots Work Here Too!`, desc:`Same robots as the Burger Bar — just with new jobs. Chef grills fish + makes tacos, Waiter fills baskets + serves, Busser washes dirty baskets.` },
+  ],
+};
+
+function showPractice(){
+  // Use the currently-viewed store type (may differ from active store)
+  const viewedType = (STORE_COLORS[rp.storeIdx] || {}).type || 'burger';
+  const steps = viewedType === 'seafood' ? PRACTICE_STEPS.seafood : PRACTICE_STEPS.burger;
+  const sub = viewedType === 'seafood' ? `Seafood Shack — Beach cooking guide` : `Burger Bar — Cooking guide`;
+  const container = document.getElementById('practice-steps');
+  const subtitleEl = document.getElementById('practice-subtitle-text') || document.getElementById('practice-subtitle');
+  if(subtitleEl) subtitleEl.textContent = sub;
+  container.innerHTML = '';
+  steps.forEach((step, i) => {
+    const div = document.createElement('div');
+    div.className = 'practice-step' + (isSeafood() ? ' seafood' : '');
+    div.innerHTML = `
+      <div class="pstep-icon">${step.icon}</div>
+      <div class="pstep-body">
+        <div class="pstep-title">${step.title}</div>
+        <div class="pstep-desc">${step.desc}</div>
+      </div>`;
+    container.appendChild(div);
+  });
+  document.getElementById('practice-screen').style.display = 'flex';
+}
+function closePractice(){
+  document.getElementById('practice-screen').style.display = 'none';
+}
+window.showPractice = showPractice;
+window.closePractice = closePractice;
 
 // ── MULTI-STORE ──────────────────────────────────────────────
 function calcPassiveIncome(store) {
@@ -1798,15 +2747,40 @@ function closeStores(){
   document.getElementById('stores-screen').style.display='none';
   showStartMenu();
 }
+let groups=[];
+let wings_obj=[];
+
+function cleanupGameScene(){
+  // Remove all customers from scene
+  groups.forEach(g => scene.remove(g.mesh));
+  groups = [];
+  // Remove all station visuals
+  for(const k in stations){
+    if(stations[k].visuals) stations[k].visuals.forEach(v => scene.remove(v));
+    stGrp.remove(stations[k].mesh);
+    delete stations[k];
+  }
+  // Remove all wings geometry
+  wings_obj.forEach(w=>{ scene.remove(w.obj||w); });
+  wings_obj = [];
+  // Clear any held item
+  player.holding = null;
+  updateHolding();
+  // Reset stats
+  stats = {groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:0, spawnTimer:0, initialGroups:1, maxSimultaneous:1};
+  // Reset day snapshot
+  window._daySnapshot = null;
+  // Hide in-game HUD
+  document.getElementById('top-hud').style.display = 'none';
+  document.getElementById('pause-btn').style.display = 'none';
+  hlRing.visible = false;
+}
+
 function switchToStore(idx){
-  // Save current store
   saveGame();
+  cleanupGameScene();
   activeStoreIdx = idx;
   loadActiveStore();
-  // Rebuild world for new store
-  for(const k in stations){ stGrp.remove(stations[k].mesh); delete stations[k]; }
-  wings_obj.forEach(w=>{scene.remove(w.obj||w);});
-  wings_obj=[];
   if(stores[idx].layout && stores[idx].layout.length>0){
     stores[idx].layout.forEach(l=>addStation(l.id,l.type,l.x,l.z,l.w,l.d,{role:l.role,hiredDay:l.hiredDay}));
   } else {
@@ -1821,9 +2795,15 @@ function openNewStore(){
   if(eco.cash < 5000 || eco.day < 30) return;
   eco.cash -= 5000;
   const newId = stores.length;
-  const names = ['Downtown Diner','Westside Burger','East End Grill','North Star Kitchen','Harbor Bites','Midtown Munch'];
-  const name = names[newId-1] || `Burger Bar #${newId+1}`;
-  const newStore = defStore(newId, name);
+  const storeTypes = [
+    {name:'Seafood Shack',    type:'seafood'},
+    {name:'Downtown Diner',   type:'burger'},
+    {name:'Westside Grill',   type:'burger'},
+    {name:'East End Kitchen', type:'burger'},
+    {name:'Harbor Bites',     type:'burger'},
+  ];
+  const def = storeTypes[newId-1] || {name:`Location #${newId+1}`, type:'burger'};
+  const newStore = defStore(newId, def.name, def.type);
   stores.push(newStore);
   updateCashUI();
   saveGame();
@@ -1832,8 +2812,6 @@ function openNewStore(){
   showStores();
 }
 window.showStores=showStores; window.closeStores=closeStores; window.switchToStore=switchToStore; window.openNewStore=openNewStore;
-
-let wings_obj=[];
 
 function startNextDay(){
   if(eco.day === 4 && upg.sodaCount === 0 && !upg.sodaDeclined) {
@@ -1872,6 +2850,14 @@ function decisionDeclineSoda() {
 
 function executeDayStart() {
   eco.day++;
+
+  // Snapshot state BEFORE the day runs so we can restore on quit
+  window._daySnapshot = {
+    day: eco.day,
+    cash: eco.cash,
+    gStars: gStats.lifeStars,
+    gGroups: gStats.lifeGroups,
+  };
   
   let rating = parseFloat(getCumRating());
   if(eco.day === 1) rating = 3.0;
@@ -1886,8 +2872,10 @@ function executeDayStart() {
   // After day 10, multiple groups can spawn simultaneously (up to # of tables)
   const maxSimultaneousGroups = eco.day >= 10 ? Math.min(upg.tableCount, 3) : 1;
   
-  stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount, spawnTimer: 60,
-         maxSimultaneous: maxSimultaneousGroups};
+  // First spawn: give player 8 seconds to get ready (longer on early days)
+  const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
+  stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
+         spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups};
 
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
@@ -1909,6 +2897,13 @@ function executeDayStart() {
     if(s.type==='sink')    s.cleanTrays=0;
     if(s.type==='trayrack') { s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; traysAssigned = true; }
     if(s.type==='table')   { s.group=null; s.served=0; s.dirtyTrays=0; }
+    // seafood resets
+    if(s.type==='beachgrill')  s.slots=[null,null];
+    if(s.type==='assembly')    s.item=null;
+    if(s.type==='chowderpot')  { s.chowderReady=true; s.cooldown=0; }
+    if(s.type==='lemonadestation') s.item=null;
+    if(s.type==='basketrack')  { if(!traysAssigned){ s.cleanBaskets=eco.totalTrays; traysAssigned=true; } else s.cleanBaskets=0; }
+    if(s.type==='cooler')      s.item=null;
   }
 
   player.holding=null; updateHolding();
@@ -1938,6 +2933,28 @@ function executeDayStart() {
   }
 }
 window.startNextDay = startNextDay;
+
+function homePlaySelected(){
+  const targetIdx = rp.storeIdx;
+  if(targetIdx >= stores.length) return; // shouldn't happen but guard
+
+  if(targetIdx !== activeStoreIdx){
+    saveGame();
+    cleanupGameScene();
+    activeStoreIdx = targetIdx;
+    loadActiveStore();
+    if(stores[targetIdx].layout && stores[targetIdx].layout.length>0){
+      stores[targetIdx].layout.forEach(l=>addStation(l.id,l.type,l.x,l.z,l.w,l.d,{role:l.role,hiredDay:l.hiredDay}));
+    } else {
+      initStations();
+    }
+    rebuildAll();
+    updateCashUI();
+    saveGame();
+  }
+  startNextDay();
+}
+window.homePlaySelected = homePlaySelected;
 
 function closeShop(){
   document.getElementById('shop-screen').style.display='none';
@@ -2035,7 +3052,7 @@ function showResults(){
 // ─────────────────────────────────────────────────────────────
 //  CUSTOMERS
 // ─────────────────────────────────────────────────────────────
-let groups=[];
+// groups declared above cleanupGameScene
 function doorX(){ return (baseBounds.l+baseBounds.r)/2; }
 
 function spawnGroup(){
@@ -2061,11 +3078,22 @@ function spawnGroup(){
   };
 
   for(let i=0; i<size; i++) {
-     let orderType = 'burger_on_tray';
-     if(upg.sodaCount > 0) {
+     let orderType;
+     if(isSeafood()){
+       // Seafood Shack orders
+       const r = Math.random();
+       if(r < 0.35)      orderType = 'taco_in_basket';
+       else if(r < 0.55) orderType = 'chowder_in_basket';
+       else if(r < 0.70) orderType = 'lemonade_in_basket';
+       else if(r < 0.85) orderType = 'taco_chowder_basket';
+       else              orderType = 'taco_lemonade_basket';
+     } else {
+       orderType = 'burger_on_tray';
+       if(upg.sodaCount > 0) {
          const r = Math.random();
          if(r < 0.25) orderType = 'soda_on_tray';
          else if(r < 0.70) orderType = 'burger_soda_on_tray';
+       }
      }
      g.orders.push(orderType);
   }
@@ -2119,11 +3147,21 @@ function updateStationVisuals(){
     }
     if(s.type==='table'){
       if(s.served>0) for(let i=0;i<s.served;i++){
-        const itemName = s.group && s.group.orders[i] ? s.group.orders[i] : 'burger_on_tray';
+        const itemName = s.group && s.group.orders[i] ? s.group.orders[i] : (isSeafood()?'taco_in_basket':'burger_on_tray');
         const m=itemMesh(itemName); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
       } else if(s.dirtyTrays>0) for(let i=0;i<s.dirtyTrays;i++){
-        const m=itemMesh('dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+        const m=itemMesh(isSeafood()?'dirty_basket':'dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
       }
+    }
+    // Seafood station visuals
+    if(s.type==='beachgrill'&&s.slots) s.slots.forEach((sl,i)=>{
+      if(!sl) return;
+      const m=itemMesh(sl.state==='cooked'?'cooked_fish':sl.state==='charred_fish'?'charred_fish':'raw_fish');
+      m.position.set(s.x-0.6+i*1.2, gY, s.z+0.2); scene.add(m); s.visuals.push(m);
+    });
+    if(s.type==='assembly' && s.item){ const m=itemMesh(s.item); m.position.set(s.x,cY,s.z); scene.add(m); s.visuals.push(m); }
+    if(s.type==='basketrack') for(let i=0;i<Math.min(s.cleanBaskets,8);i++){
+      const p=itemMesh('basket'); p.position.set(s.x,2.95+i*.1,s.z); scene.add(p); s.visuals.push(p);
     }
   }
 }
@@ -2170,6 +3208,69 @@ function handleAction(){
   const t=getClosest(); if(!t) return;
   const type=t.type; let ok=false;
 
+  // ── SEAFOOD PLAYER ACTIONS ─────────────────────────────────
+  if(isSeafood()){
+    if(type==='cooler' && !player.holding){
+      player.holding='raw_fish'; ok=true;
+    }
+    else if(type==='beachgrill'){
+      if(player.holding==='raw_fish'){
+        const i=t.slots.indexOf(null);
+        if(i!==-1){ t.slots[i]={state:'raw_fish',progress:0,burnTimer:0}; player.holding=null; ok=true; }
+      } else if(!player.holding){
+        const ci=t.slots.findIndex(s=>s&&s.state==='charred_fish');
+        if(ci!==-1){ player.holding='charred_fish'; t.slots[ci]=null; ok=true; }
+        else {
+          const ci2=t.slots.findIndex(s=>s&&s.state==='cooked_fish');
+          if(ci2!==-1){ player.holding='cooked_fish'; t.slots[ci2]=null; ok=true; }
+        }
+      }
+    }
+    else if(type==='assembly'){
+      // cooked fish → taco. Also acts as staging counter.
+      if(player.holding==='cooked_fish' && !t.item){
+        t.item='fish_taco'; player.holding=null; ok=true; playSound('sizzle');
+      } else if(!player.holding && t.item){
+        player.holding=t.item; t.item=null; ok=true;
+      } else if(player.holding && player.holding!=='cooked_fish' && !t.item){
+        t.item=player.holding; player.holding=null; ok=true;
+      }
+    }
+    else if(type==='chowderpot'){
+      if(!player.holding){ player.holding='chowder'; ok=true; playSound('sizzle'); }
+    }
+    else if(type==='lemonadestation'){
+      if(!player.holding){ player.holding='lemonade'; ok=true; playSound('sizzle'); }
+    }
+    else if(type==='basketrack'){
+      if(player.holding==='basket'){ player.holding=null; t.cleanBaskets++; ok=true; }
+      else if(!player.holding && t.cleanBaskets>0){ player.holding='basket'; t.cleanBaskets--; ok=true; }
+      // Smart basket assembly: if holding food item, auto-grab a basket and combine
+      else if(player.holding==='fish_taco' && t.cleanBaskets>0){ player.holding='taco_in_basket'; t.cleanBaskets--; ok=true; }
+      else if(player.holding==='chowder' && t.cleanBaskets>0){ player.holding='chowder_in_basket'; t.cleanBaskets--; ok=true; }
+      else if(player.holding==='lemonade' && t.cleanBaskets>0){ player.holding='lemonade_in_basket'; t.cleanBaskets--; ok=true; }
+      // Combine two items already in basket
+      else if(player.holding==='taco_in_basket' && t.item==='chowder'){ player.holding='taco_chowder_basket'; t.item=null; ok=true; }
+      else if(player.holding==='taco_in_basket' && t.item==='lemonade'){ player.holding='taco_lemonade_basket'; t.item=null; ok=true; }
+    }
+    else if(type==='sink'){
+      if(player.holding==='dirty_basket'){ startSinkHold(t); return; }
+    }
+    else if(type==='trash'){
+      const seafoodWaste=['raw_fish','cooked_fish','charred_fish','fish_taco','chowder','lemonade','basket','taco_in_basket','chowder_in_basket','lemonade_in_basket'];
+      if(t.contents>=4 && !player.holding){ player.holding='trash_bag'; t.contents=0; ok=true; }
+      else if(seafoodWaste.includes(player.holding) && t.contents<4){
+        player.holding=player.holding.includes('basket')?'basket':null; t.contents++; ok=true; playSound('error');
+      }
+    }
+    else if(type==='dumpster'){
+      if(player.holding==='trash_bag'){ player.holding=null; ok=true; playSound('dump'); }
+    }
+    if(ok){ updateHolding(); updateStationVisuals(); }
+    return;
+  }
+
+  // ── BURGER PLAYER ACTIONS ──────────────────────────────────
   if(type==='fridge'&&!player.holding){ player.holding='raw'; ok=true; }
   if(type==='sink'){ 
     if(player.holding==='dirty_tray'){
@@ -2239,14 +3340,22 @@ function handleAction(){
     else if(t.item==='cooked' && player.holding==='soda_on_tray'){ t.item=null; player.holding='burger_soda_on_tray'; ok=true; }
   }
   else if(type==='table'){
-    if(player.holding && (player.holding.includes('burger') || player.holding.includes('soda')) && t.group && t.group.state==='ordering'){
+    const seafoodItems=['taco_in_basket','chowder_in_basket','lemonade_in_basket','taco_chowder_basket','taco_lemonade_basket'];
+    const burgerItems=['burger','soda'];
+    const heldIsFood = isSeafood()
+      ? seafoodItems.includes(player.holding)
+      : player.holding && (player.holding.includes('burger') || player.holding.includes('soda'));
+    if(player.holding && heldIsFood && t.group && t.group.state==='ordering'){
       const idx = t.group.unservedOrders.indexOf(player.holding);
       if(idx !== -1) {
          t.group.unservedOrders.splice(idx, 1);
          player.holding=null; t.served++; ok=true;
          if(t.group.unservedOrders.length === 0){ t.group.eatTimer=200; t.group.state='eating'; }
       }
-    } else if(!player.holding && t.dirtyTrays>0){ player.holding='dirty_tray'; t.dirtyTrays--; ok=true; }
+    } else if(!player.holding && t.dirtyTrays>0){
+      player.holding = isSeafood() ? 'dirty_basket' : 'dirty_tray';
+      t.dirtyTrays--; ok=true;
+    }
   }
 
   if(ok){ updateHolding(); updateStationVisuals(); }
@@ -2278,18 +3387,23 @@ function updateSinkHold(ds){
   if(!sinkHoldActive) return;
   // Check player is still at the sink
   const t = getClosest();
-  if(!t || t !== sinkHoldTarget || player.holding !== 'dirty_tray'){
+  if(!t || t !== sinkHoldTarget || (player.holding !== 'dirty_tray' && player.holding !== 'dirty_basket')){
     cancelSinkHold(); return;
   }
   sinkHoldProgress += ds / 60; // ds is in frames; TARGET=1/60
   const pct = Math.min(1, sinkHoldProgress / SINK_HOLD_TIME);
   document.getElementById('sink-hold-fill').style.width=(pct*100)+'%';
   if(pct >= 1){
-    player.holding='tray';
+    if(player.holding==='dirty_basket'){
+      player.holding='basket';
+      showToast('🧺 Basket cleaned!', 1200);
+    } else {
+      player.holding='tray';
+      showToast('🍽️ Tray washed!', 1200);
+    }
     playSound('sizzle');
     updateHolding(); updateStationVisuals();
     cancelSinkHold();
-    showToast('🍽️ Tray washed!', 1200);
   }
 }
 
@@ -2359,17 +3473,92 @@ function updateRobots(ds){
         }
       } 
       else if(bot.role==='busser'){
-        if(bot.holding === 'dirty_tray') {
-            const sink = Object.values(stations).find(s => s.type === 'sink');
-            if(sink) { bot.target = sink; bot.state = 'moving'; }
-        } else if(bot.holding === 'tray') {
-            const rack = Object.values(stations).find(s => s.type === 'trayrack');
-            if(rack) { bot.target = rack; bot.state = 'moving'; }
-        } else if(!bot.holding) {
-            const t = Object.values(stations).find(s => s.type === 'table' && s.dirtyTrays > 0);
-            if(t) { bot.target = t; bot.state = 'moving'; }
+        if(isSeafood()){
+          // Seafood busser: dirty_basket → sink → basketrack
+          if(bot.holding==='dirty_basket'){
+            const sink=Object.values(stations).find(s=>s.type==='sink');
+            if(sink){bot.target=sink;bot.state='moving';}
+          } else if(bot.holding==='basket'){
+            const rack=Object.values(stations).find(s=>s.type==='basketrack');
+            if(rack){bot.target=rack;bot.state='moving';}
+          } else if(!bot.holding){
+            const t=Object.values(stations).find(s=>s.type==='table'&&s.dirtyTrays>0);
+            if(t){bot.target=t;bot.state='moving';}
+          }
+        } else {
+          if(bot.holding === 'dirty_tray') {
+              const sink = Object.values(stations).find(s => s.type === 'sink');
+              if(sink) { bot.target = sink; bot.state = 'moving'; }
+          } else if(bot.holding === 'tray') {
+              const rack = Object.values(stations).find(s => s.type === 'trayrack');
+              if(rack) { bot.target = rack; bot.state = 'moving'; }
+          } else if(!bot.holding) {
+              const t = Object.values(stations).find(s => s.type === 'table' && s.dirtyTrays > 0);
+              if(t) { bot.target = t; bot.state = 'moving'; }
+          }
         }
       } 
+      else if(bot.role==='chef' && isSeafood()){
+        // Seafood chef: cooler → beachgrill → assembly
+        if(bot.holding==='charred_fish'){
+          const trash=Object.values(stations).find(s=>s.type==='trash');
+          if(trash&&trash.contents<4){bot.target=trash;bot.state='moving';}
+        } else if(bot.holding==='cooked_fish'){
+          const asm=Object.values(stations).find(s=>s.type==='assembly'&&!s.item);
+          if(asm){bot.target=asm;bot.state='moving';}
+          else { const trash=Object.values(stations).find(s=>s.type==='trash'); if(trash&&trash.contents<4){bot.target=trash;bot.state='moving';} }
+        } else if(bot.holding==='raw_fish'){
+          const bg=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.includes(null));
+          if(bg){bot.target=bg;bot.state='moving';}
+        } else if(!bot.holding){
+          const bgCharred=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.some(sl=>sl&&sl.state==='charred_fish'));
+          if(bgCharred){bot.target=bgCharred;bot.state='moving';}
+          else {
+            const bgCooked=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.some(sl=>sl&&sl.state==='cooked_fish'));
+            if(bgCooked){bot.target=bgCooked;bot.state='moving';}
+            else {
+              const bgEmpty=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.includes(null));
+              if(bgEmpty){const cooler=Object.values(stations).find(s=>s.type==='cooler');if(cooler){bot.target=cooler;bot.state='moving';}}
+            }
+          }
+        }
+      }
+      else if(bot.role==='waiter' && isSeafood()){
+        // Seafood waiter: assembly/chowder/lemonade → basket rack → table
+        let foundTarget=false;
+        if(bot.holding && bot.holding!=='basket'){
+          const t=Object.values(stations).find(s=>s.type==='table'&&s.group&&s.group.state==='ordering'&&s.group.unservedOrders.includes(bot.holding));
+          if(t){bot.target=t;bot.state='moving';foundTarget=true;}
+          if(!foundTarget){const rack=Object.values(stations).find(s=>s.type==='basketrack');if(rack){bot.target=rack;bot.state='moving';foundTarget=true;}}
+        } else if(bot.holding==='basket'){
+          const needsFood=Object.values(stations).filter(s=>s.type==='table'&&s.group&&s.group.state==='ordering'&&s.group.unservedOrders.length>0);
+          for(const t of needsFood){
+            const order=t.group.unservedOrders[0];
+            if(order.includes('taco')){
+              const asm=Object.values(stations).find(s=>s.type==='assembly'&&s.item==='fish_taco');
+              if(asm){bot.target=asm;bot.state='moving';foundTarget=true;break;}
+            }
+            if(order.includes('chowder')){
+              const cp=Object.values(stations).find(s=>s.type==='chowderpot');
+              if(cp){bot.target=cp;bot.state='moving';foundTarget=true;break;}
+            }
+            if(order.includes('lemonade')){
+              const ls=Object.values(stations).find(s=>s.type==='lemonadestation');
+              if(ls){bot.target=ls;bot.state='moving';foundTarget=true;break;}
+            }
+          }
+          if(!foundTarget){const rack=Object.values(stations).find(s=>s.type==='basketrack');if(rack){bot.target=rack;bot.state='moving';}}
+        } else if(!bot.holding){
+          const needsFood=Object.values(stations).filter(s=>s.type==='table'&&s.group&&s.group.state==='ordering'&&s.group.unservedOrders.length>0);
+          for(const t of needsFood){
+            const order=t.group.unservedOrders[0];
+            const readyBasket=Object.values(stations).find(s=>s.type==='basketrack'&&(s.item===order));
+            if(readyBasket){bot.target=readyBasket;bot.state='moving';foundTarget=true;break;}
+            const rack=Object.values(stations).find(s=>s.type==='basketrack'&&s.cleanBaskets>0);
+            if(rack){bot.target=rack;bot.state='moving';foundTarget=true;break;}
+          }
+        }
+      }
       else if(bot.role==='waiter'){
         // Waiter AI: deliberate, single-purpose decisions. No 'continue' — fall through to movement.
         let foundTarget = false;
@@ -2476,7 +3665,39 @@ function updateRobots(ds){
       const t = bot.target;
       let actionDone = false;
 
-      if(bot.role === 'chef') {
+      if(bot.role === 'chef' && isSeafood()) {
+          // Seafood chef actions
+          if(t.type==='cooler' && !bot.holding){ bot.holding='raw_fish'; actionDone=true; }
+          else if(t.type==='beachgrill'){
+            if(bot.holding==='raw_fish'){ const i=t.slots.indexOf(null); if(i!==-1){t.slots[i]={state:'raw_fish',progress:0,burnTimer:0};bot.holding=null;actionDone=true;} }
+            else if(!bot.holding){
+              const ci=t.slots.findIndex(s=>s&&s.state==='charred_fish'); if(ci!==-1){bot.holding='charred_fish';t.slots[ci]=null;actionDone=true;}
+              else { const ci2=t.slots.findIndex(s=>s&&s.state==='cooked_fish'); if(ci2!==-1){bot.holding='cooked_fish';t.slots[ci2]=null;actionDone=true;} }
+            }
+          }
+          else if(t.type==='assembly'){ if(bot.holding==='cooked_fish'&&!t.item){t.item='fish_taco';bot.holding=null;actionDone=true;} }
+          else if(t.type==='trash' && bot.holding==='charred_fish' && t.contents<4){ t.contents++;bot.holding=null;actionDone=true; }
+      }
+      else if(bot.role === 'busser' && isSeafood()){
+          if(t.type==='table'&&!bot.holding&&t.dirtyTrays>0){ t.dirtyTrays--;bot.holding='dirty_basket';actionDone=true; }
+          else if(t.type==='sink'&&bot.holding==='dirty_basket'){ bot.holding='basket';bot.timer=80-(lvl*12);bot.state='washing';actionDone=true; }
+          else if(t.type==='basketrack'&&bot.holding==='basket'){ t.cleanBaskets++;bot.holding=null;actionDone=true; }
+      }
+      else if(bot.role==='waiter' && isSeafood()){
+          if(t.type==='basketrack'&&!bot.holding&&t.cleanBaskets>0){ t.cleanBaskets--;bot.holding='basket';actionDone=true; }
+          else if(t.type==='assembly'&&bot.holding==='basket'&&t.item==='fish_taco'){ t.item=null;bot.holding='taco_in_basket';actionDone=true; }
+          else if(t.type==='chowderpot'&&bot.holding==='basket'){ bot.holding='chowder_in_basket';actionDone=true; }
+          else if(t.type==='lemonadestation'&&bot.holding==='basket'){ bot.holding='lemonade_in_basket';actionDone=true; }
+          else if(t.type==='basketrack'&&bot.holding&&bot.holding!=='basket'){ t.item=bot.holding;bot.holding=null;actionDone=true; }
+          else if(t.type==='table'){
+            if(t.group&&t.group.state==='ordering'&&bot.holding){
+              const idx=t.group.unservedOrders.indexOf(bot.holding);
+              if(idx!==-1){t.group.unservedOrders.splice(idx,1);t.served++;bot.holding=null;actionDone=true;if(t.group.unservedOrders.length===0){t.group.eatTimer=200;t.group.state='eating';}}
+            }
+          }
+          else if(t.type==='trash'&&bot.holding&&t.contents<4){ t.contents++;bot.holding=bot.holding.includes('basket')?'basket':null;actionDone=true; }
+      }
+      else if(bot.role === 'chef') {
           if(t.type === 'fridge' && !bot.holding) { bot.holding = 'raw'; actionDone = true; }
           else if(t.type === 'grill') {
               if(bot.holding === 'raw') {
@@ -2596,11 +3817,12 @@ function drawFloatUI(){
   let stinkPenalty = false;
   for(const k in stations){ 
     const s=stations[k]; 
-    if(s.type==='grill') {
+    if(s.type==='grill' || s.type==='beachgrill') {
       s.slots.forEach((sl,i)=>{ if(!sl) return;
-        const p=scr(new THREE.Vector3(s.x-0.8+i*1.6,5,s.z)); if(p.z>=1) return;
-        let col = sl.state === 'cooked' ? '#FF9800' : '#4CAF50';
-        let pct = sl.state === 'cooked' ? ((sl.burnTimer || 0) / 300 * 100) : (sl.progress / 200 * 100);
+        const p=scr(new THREE.Vector3(s.x-0.6+i*1.2,5,s.z)); if(p.z>=1) return;
+        const isCooked = sl.state==='cooked'||sl.state==='cooked_fish';
+        let col = isCooked ? '#FF9800' : '#4CAF50';
+        let pct = isCooked ? ((sl.burnTimer||0)/300*100) : (sl.progress/200*100);
         html+=`<div class="fbar" style="left:${p.x}px;top:${p.y}px"><div class="fbar-fill" style="width:${pct}%;background:${col}"></div></div>`;
       });
     }
@@ -2642,9 +3864,18 @@ function drawFloatUI(){
               icon = '✔️';
           } else {
               const order = t.group.orders[i];
-              if (order === 'burger_soda_on_tray') icon = '🍔🥤';
-              else if (order === 'soda_on_tray') icon = '🥤';
-              else icon = '🍔';
+              if(isSeafood()){
+                if(order==='taco_in_basket') icon='🌮';
+                else if(order==='chowder_in_basket') icon='🍲';
+                else if(order==='lemonade_in_basket') icon='🍋';
+                else if(order==='taco_chowder_basket') icon='🌮🍲';
+                else if(order==='taco_lemonade_basket') icon='🌮🍋';
+                else icon='🌮';
+              } else {
+                if (order === 'burger_soda_on_tray') icon = '🍔🥤';
+                else if (order === 'soda_on_tray') icon = '🥤';
+                else icon = '🍔';
+              }
           }
           html+=`<div class="fbubble" style="left:${cp.x}px;top:${cp.y}px;padding:2px 6px;font-size:14px;">${icon}</div>`;
        }
@@ -2765,9 +3996,12 @@ function animate(){
       if(t){ 
           hlRing.visible=true; 
           if(t.type === 'robot') hlRing.position.set(t.pos.x, .12, t.pos.z);
-          else hlRing.position.set(t.x, .12, t.z); 
+          else hlRing.position.set(t.x, .12, t.z);
+          // Show station hint
+          // (hints removed — use Practice mode instead)
       } else {
           hlRing.visible=false;
+          // no hint to hide
       }
     } else {
       hlRing.visible=false;
@@ -2803,15 +4037,22 @@ function animate(){
       updateSinkHold(ds);
 
       let needVis=false;
-      for(const k in stations){ const s=stations[k]; if(s.type!=='grill') continue;
+      for(const k in stations){ const s=stations[k]; 
+        if(s.type!=='grill' && s.type!=='beachgrill') continue;
         s.slots.forEach(sl=>{ 
           if(!sl) return;
-          if(sl.state === 'raw') {
+          if(sl.state === 'raw' || sl.state === 'raw_fish') {
             sl.progress += upg.grillMult*ds; 
-            if(sl.progress >= 200){ sl.state='cooked'; sl.burnTimer=0; needVis=true; playSound('sizzle'); } 
-          } else if (sl.state === 'cooked') { 
-            sl.burnTimer += ds * (1 / upg.grillMult); // Slow burn for upgraded grills
-            if(sl.burnTimer >= 300) { sl.state='charred'; needVis=true; playSound('error'); }
+            if(sl.progress >= 200){
+              sl.state = (s.type==='beachgrill') ? 'cooked_fish' : 'cooked';
+              sl.burnTimer=0; needVis=true; playSound('sizzle');
+            }
+          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish') { 
+            sl.burnTimer += ds * (1 / upg.grillMult);
+            if(sl.burnTimer >= 300) {
+              sl.state = (s.type==='beachgrill') ? 'charred_fish' : 'charred';
+              needVis=true; playSound('error');
+            }
           }
         });
       }
@@ -2823,14 +4064,16 @@ function animate(){
         const toSpawn = Math.min(stats.groupsLeft, stats.maxSimultaneous||1);
         for(let _i=0;_i<toSpawn;_i++) { if(stats.groupsLeft>0) spawnGroup(); }
         let r = Math.random();
-        let delay = 10;
-        if(r < 0.05) delay = 5;
-        else if (r < 0.10) delay = 15;
+        // Spawn interval scales by day: early days slow, later days faster (but not before day 10)
+        const baseDelay = eco.day <= 3 ? 18 : eco.day <= 6 ? 14 : eco.day <= 10 ? 11 : 8;
+        let delay;
+        if(r < 0.05) delay = baseDelay * 0.55;
+        else if(r < 0.10) delay = baseDelay * 1.4;
         else {
-           let w = (Math.random() + Math.random() + Math.random()) / 3;
-           delay = 7 + w * 6;
+          const w = (Math.random() + Math.random() + Math.random()) / 3;
+          delay = baseDelay * (0.75 + w * 0.5);
         }
-        stats.spawnTimer = delay * 60; 
+        stats.spawnTimer = delay * 60;
       }
 
       if(stats.groupsLeft===0&&groups.length===0&&gameState==='playing'){
@@ -2878,10 +4121,17 @@ function animate(){
             const tot=ws*.3+fs*.7;
             const stars=tot>.8?5:tot>.6?4:tot>.4?3:tot>.2?2:1;
             
-            let rawCash = g.size * 12 * (stars/5);
-            
-            let sodaCount = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
-            rawCash += sodaCount * 6 * (stars/5);
+            let rawCash;
+            if(isSeafood()){
+              // Seafood items worth slightly more base
+              rawCash = g.size * 15 * (stars/5);
+              const comboCount = g.orders.filter(o=>o==='taco_chowder_basket'||o==='taco_lemonade_basket').length;
+              rawCash += comboCount * 5 * (stars/5);
+            } else {
+              rawCash = g.size * 12 * (stars/5);
+              const sodaCount = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
+              rawCash += sodaCount * 6 * (stars/5);
+            }
 
             if(g.type === 'vip') rawCash *= 3; 
             
@@ -2898,11 +4148,13 @@ function animate(){
                 g.state = 'ordering';
                 g.foodPatience = g.maxFood;
                 g.tbl.group = g; 
-                let orderType = 'burger_on_tray';
-                if(upg.sodaCount > 0) {
-                    const r = Math.random();
-                    if(r < 0.25) orderType = 'soda_on_tray';
-                    else if(r < 0.70) orderType = 'burger_soda_on_tray';
+                let orderType;
+                if(isSeafood()){
+                  const r=Math.random();
+                  orderType=r<0.5?'taco_in_basket':r<0.75?'chowder_in_basket':'lemonade_in_basket';
+                } else {
+                  orderType='burger_on_tray';
+                  if(upg.sodaCount>0){const r=Math.random();if(r<0.25)orderType='soda_on_tray';else if(r<0.70)orderType='burger_soda_on_tray';}
                 }
                 g.orders = [orderType];
                 g.unservedOrders = [...g.orders];
