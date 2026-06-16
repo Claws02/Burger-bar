@@ -2185,7 +2185,7 @@ function checkAchievements(){
     if(achievements.unlocked.includes(a.id)) continue;
     if(a.test(m)){
       achievements.unlocked.push(a.id);
-      if(a.cash) eco.cash += a.cash;
+      if(a.cash){ eco.cash += a.cash; stats._achvEarned = (stats._achvEarned||0) + a.cash; }
       if(a.skin && !cosm.ownedSkins.includes(a.skin)) cosm.ownedSkins.push(a.skin);
       unlockedNow.push(a);
     }
@@ -3367,7 +3367,9 @@ function showResults(){
   scr.style.display='flex';
   const todayStars=stats.groupsServed>0?Math.round(stats.totalStars/stats.groupsServed):0;
   const cum=getCumRating();
-  const cashBefore=eco.cash-stats.cashEarned;
+  // eco.cash already includes today's serving cash + passive + achievement
+  // bonuses, so back all of them out to get the true starting balance.
+  const cashBefore=eco.cash-stats.cashEarned-(stats._passiveEarned||0)-(stats._achvEarned||0);
 
   const el=id=>document.getElementById(id);
   el('res-day-lbl').style.opacity='0'; el('res-title').style.opacity='0'; el('res-title').style.transform='scale(.75)';
@@ -3389,13 +3391,15 @@ function showResults(){
   setTimeout(()=>{ el('res-rating-num').textContent=`⭐ ${cum} overall`; el('res-rating-num').style.opacity='1'; }, 1480);
   setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
   setTimeout(()=>{
-    // Show passive income if any
+    // Show passive + achievement income if any
     const passiveEarned = stats._passiveEarned || 0;
-    const totalEarned = stats.cashEarned + passiveEarned;
+    const achvEarned = stats._achvEarned || 0;
+    const totalEarned = stats.cashEarned + passiveEarned + achvEarned;
     el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+totalEarned.toFixed(2);
-    if(passiveEarned > 0) {
-      el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)} (+$${passiveEarned.toFixed(2)} passive 🤖)`;
-    }
+    let extra = '';
+    if(passiveEarned > 0) extra += ` (+$${passiveEarned.toFixed(2)} passive 🤖)`;
+    if(achvEarned > 0)    extra += ` (+$${achvEarned.toFixed(2)} 🏆)`;
+    if(extra) el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}${extra}`;
     el('res-total-row').style.opacity='1';
     const totalEl=el('res-new-total');
     const dur=900, t0=performance.now();
