@@ -3,12 +3,62 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1976D2">
+<meta name="description" content="Burger Bar — a fast, fun 3D cooking & restaurant tycoon game. Grill, serve, upgrade and build your food empire!">
+<meta property="og:title" content="Burger Bar">
+<meta property="og:description" content="Grill, serve, upgrade and build your food empire in this 3D cooking tycoon game!">
+<meta property="og:type" content="website">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Burger Bar</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Three.js with multi-CDN fallback: if one CDN is blocked or down, try the
+     next, then surface a friendly error instead of a silent black screen. -->
+<script>
+(function(){
+  var SOURCES = [
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js",
+    "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js",
+    "https://unpkg.com/three@0.128.0/build/three.min.js"
+  ];
+  function loadAt(i){
+    if(i >= SOURCES.length){ showLoadError(); return; }
+    var s = document.createElement('script');
+    s.src = SOURCES[i];
+    s.onload = function(){ if(window.THREE) startGame(); else loadAt(i+1); };
+    s.onerror = function(){ loadAt(i+1); };
+    document.head.appendChild(s);
+  }
+  var _started = false;
+  function startGame(){
+    if(_started) return;
+    // Wait for the DOM too — the game references elements at top level.
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', startGame, {once:true});
+      return;
+    }
+    _started = true;
+    var code = document.getElementById('game-code');
+    if(!code){ showLoadError(); return; }
+    var run = document.createElement('script');
+    run.textContent = code.textContent;   // executes in global scope
+    document.body.appendChild(run);
+  }
+  function showLoadError(){
+    var d = document.createElement('div');
+    d.style.cssText = "position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1f2e;color:#fff;font-family:sans-serif;text-align:center;padding:24px;z-index:9999;";
+    d.innerHTML = "<div style='font-size:48px'>🍔</div><h2 style='margin:12px 0 4px'>Couldn't load Burger Bar</h2><p style='opacity:.7;max-width:340px'>The 3D engine failed to load. Check your connection and try again.</p><button onclick='location.reload()' style='margin-top:16px;padding:12px 28px;border:none;border-radius:16px;background:#1976D2;color:#fff;font-weight:900;font-size:16px;cursor:pointer'>RELOAD</button>";
+    document.body.appendChild(d);
+  }
+  loadAt(0);
+})();
+</script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+/* Nunito is loaded non-blocking; a system font stack is always used as a
+   fallback so the game never depends on the webfont being available. */
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;
+  src:local('Nunito'),url('https://fonts.gstatic.com/s/nunito/v26/XRXV3I6Li01BKofINeaBTMnFcQ.woff2') format('woff2');}
 *{box-sizing:border-box;}
-body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito',sans-serif;user-select:none;touch-action:none;}
+body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;user-select:none;touch-action:none;}
 #gc{position:relative;width:100vw;height:100vh;}
 canvas{display:block;width:100%;height:100%;}
 
@@ -682,7 +732,9 @@ canvas{display:block;width:100%;height:100%;}
   </div>
 </div>
 
-<script>
+<!-- Game code is held inert (non-JS type) until the loader confirms Three.js
+     and the DOM are ready, then it is injected for execution in global scope. -->
+<script type="text/gamejs" id="game-code">
 // ─────────────────────────────────────────────────────────────
 //  AUDIO ENGINE
 // ─────────────────────────────────────────────────────────────
@@ -751,6 +803,33 @@ const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+// ── WebGL context-loss handling ──
+// On mobile, backgrounding the tab can drop the GL context, leaving a black
+// screen. Prevent the default (which blocks restoration) and rebuild the
+// scene's static geometry when the context comes back.
+canvas.addEventListener('webglcontextlost', (e)=>{
+  e.preventDefault();
+  gamePaused = true;
+}, false);
+canvas.addEventListener('webglcontextrestored', ()=>{
+  try {
+    buildWorld(); buildRoom();
+    for(const k in stations){
+      const s = stations[k];
+      if(s.mesh){ stGrp.add(s.mesh); }
+    }
+    updateStationVisuals();
+    // Only auto-resume if we're not sitting on the pause screen
+    if(document.getElementById('pause-screen').style.display !== 'flex') gamePaused = false;
+  } catch(err){ console.warn('Context restore failed', err); }
+}, false);
+
+// Auto-pause an in-progress day when the tab is hidden, so backgrounding the
+// game doesn't burn through customer patience while the player can't act.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && gameState === 'playing' && !gamePaused) togglePause();
+});
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#87CEEB'); 
@@ -2686,21 +2765,9 @@ function showStores(){
   const list = document.getElementById('stores-list');
   list.innerHTML='';
 
-  // Pay out passive income at start of viewing (once per day)
-  stores.forEach((store, idx) => {
-    if(idx !== activeStoreIdx && store.unlocked) {
-      const key = `passive_paid_${store.id}_day${eco.day}`;
-      if(!sessionStorage.getItem(key)) {
-        const inc = calcPassiveIncome(store);
-        if(inc > 0) {
-          eco.cash += inc;
-          store.eco.cash += inc;
-          updateCashUI();
-          sessionStorage.setItem(key, '1');
-        }
-      }
-    }
-  });
+  // NOTE: Passive income is accrued exclusively in endDay() (single source of
+  // truth). This screen is display-only and must not pay out, to avoid
+  // double-counting.
 
   for(let i=0;i<stores.length;i++){
     const store = stores[i];
@@ -2807,7 +2874,7 @@ function openNewStore(){
   stores.push(newStore);
   updateCashUI();
   saveGame();
-  showToast(`🎉 ${name} opened!`);
+  showToast(`🎉 ${def.name} opened!`);
   closeStores();
   showStores();
 }
@@ -3434,7 +3501,7 @@ function updateRobots(ds){
     }
 
     if(bot.state==='idle' && !(bot._actionCooldown > 0)){
-      if(bot.role==='chef'){
+      if(bot.role==='chef' && !isSeafood()){
         if(bot.holding === 'charred') {
             const trash = Object.values(stations).find(s => s.type === 'trash');
             if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
