@@ -5,6 +5,32 @@
 
 ---
 
+## Implementation status (this branch)
+
+**✅ Done**
+- **B1** seafood Chef robots now act · **B2** new-store toast · **B3** passive income paid once (Stores screen is display-only)
+- Removed stale `index.txt`
+- Multi-CDN Three.js loader + friendly error overlay; game code deferred until engine + DOM ready
+- Non-blocking webfont with a system fallback stack
+- WebGL context-loss recovery + auto-pause on tab hide
+- First-run tutorial auto-opens once
+- Economy: early payouts +~30%, 4–5★ mastery tip, burn window decoupled from grill speed, robot passive $8→$16, new store $5,000→$3,000
+- Forgiving rolling 3-day game-over check (lifetime rating still displayed)
+- Day-4 soda decline penalty is now small & temporary
+- PWA manifest + SVG icon + favicon/apple-touch-icon + share/meta tags
+- Audio: serve chime + day-complete fanfare; "PERFECT!/GREAT!" serve feedback
+- Early-game station labels (first 2 days)
+- Camera zooms out with floor expansions; version label
+
+**◻️ Not yet done (recommended next)**
+- True offline bundling of Three.js + font (blocked here by network egress — needs the library file committed) and a service worker
+- Full Settings panel (volume slider, music) — only mute exists today
+- Background music; achievements/milestones tied to skins; a genuinely distinct 3rd cuisine
+- Colorblind-safe cook/patience bars; contextual action-button prompt
+- B4 (`RESTAURANT_UNLOCK_DAYS` dead data), B6 partially addressed
+
+---
+
 ## 1. What the game is today
 
 **Burger Bar** is a 3D, top-down, mobile-first restaurant/cooking management game

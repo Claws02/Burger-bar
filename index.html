@@ -570,7 +570,8 @@ canvas{display:block;width:100%;height:100%;}
       </button>
     </div>
 
-    <button class="hbtn-reset" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save</button>
+    <button class="hbtn-reset" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');localStorage.removeItem('burgerBoss_tutorialSeen');location.reload();}">Reset Save</button>
+    <div style="position:absolute;bottom:6px;right:8px;color:rgba(255,255,255,.3);font-size:9px;font-weight:700;pointer-events:none;z-index:5;">v1.0</div>
   </div>
 
   <div id="ui-layer">
@@ -795,6 +796,29 @@ function playSound(type) {
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
     osc.start(t); osc.stop(t + 0.3);
+  } else if (type === 'serve') {
+    // Pleasant two-note "ding" when an order is delivered.
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.setValueAtTime(1318, t + 0.08);
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.22);
+    osc.start(t); osc.stop(t + 0.22);
+  } else if (type === 'daycomplete') {
+    // Little ascending fanfare on day-complete (chord arpeggio).
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((f, i) => {
+      const o = audioCtx.createOscillator();
+      const g2 = audioCtx.createGain();
+      o.connect(g2); g2.connect(audioCtx.destination);
+      o.type = 'triangle';
+      const st = t + i * 0.12;
+      o.frequency.setValueAtTime(f, st);
+      g2.gain.setValueAtTime(0.0001, st);
+      g2.gain.linearRampToValueAtTime(0.2, st + 0.03);
+      g2.gain.exponentialRampToValueAtTime(0.01, st + 0.32);
+      o.start(st); o.stop(st + 0.32);
+    });
   }
 }
 
@@ -1326,6 +1350,15 @@ function buildRobot(role){
   addMesh(g, GSph(.12,6), MB('#ffeb3b'), 0,2.5,0);
   return g;
 }
+
+// Friendly names shown as early-game station labels (first 2 days).
+const STATION_LABELS = {
+  fridge:'🧊 Fridge', grill:'🔥 Grill', trayrack:'🍱 Trays', counter:'🍽️ Counter',
+  sink:'🚿 Sink', sodafountain:'🥤 Soda', trash:'🗑️ Trash', dumpster:'🗑️ Dumpster',
+  table:'🪑 Table',
+  cooler:'🧊 Cooler', beachgrill:'🔥 Grill', assembly:'🌮 Assembly',
+  chowderpot:'🍲 Chowder', lemonadestation:'🍋 Lemonade', basketrack:'🧺 Baskets'
+};
 
 const stations = {};
 function addStation(id,type,x,z,w,d,opts={}){
@@ -1876,6 +1909,9 @@ function rebuildAll(){
   updateBoundsFromLevel();
   buildWorld(); buildRoom();
   updateStationVisuals();
+  // Zoom the camera out as the floor expands so stations stay on-screen.
+  frustumSize = 26 + (eco.floorLevel||0) * 2.5;
+  resize();
 }
 
 const SHOP_DEFS = [
@@ -3085,7 +3121,7 @@ function endDay(){
     stats._passiveEarned = passiveTotal;
   } else { stats._passiveEarned = 0; }
 
-  gameState='results'; saveGame(); showResults();
+  gameState='results'; saveGame(); playSound('daycomplete'); showResults();
 }
 
 function showResults(){
@@ -3977,6 +4013,20 @@ function drawFloatUI(){
 
   if(gameState!=='playing'){ floatUI.innerHTML=html; return; }
 
+  // Early-game station labels: show friendly names for the first two days so
+  // new players can learn what each station is, then they fade away.
+  if(eco.day <= 2){
+    for(const k in stations){
+      const s=stations[k];
+      const lbl=STATION_LABELS[s.type];
+      if(!lbl) continue;
+      const sx = s.pos ? s.pos.x : s.x, sz = s.pos ? s.pos.z : s.z;
+      const p=scr(new THREE.Vector3(sx, (s.type==='table'?3.2:4.4), sz));
+      if(p.z>=1) continue;
+      html+=`<div class="fbubble" style="left:${p.x}px;top:${p.y}px;font-size:11px;padding:2px 8px;opacity:.92;">${lbl}</div>`;
+    }
+  }
+
   let stinkPenalty = false;
   for(const k in stations){ 
     const s=stations[k]; 
@@ -4314,6 +4364,12 @@ function animate(){
             eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
             updateCashUI();
             playSound('coin');
+            // Mastery feedback: a chime + callout on great service.
+            if(stars >= 4){
+              playSound('serve');
+              spawnFloater(g.tbl.mesh.position.clone().add(new THREE.Vector3(0,0.9,0)),
+                stars===5?'PERFECT! ⭐':'GREAT! ⭐', '#FFD54F');
+            }
             spawnFloater(g.tbl.mesh.position, `+$${cash.toFixed(2)}`);
             
             g.tbl.dirtyTrays = g.tbl.served; g.tbl.served=0; g.tbl.group=null; updateStationVisuals();
