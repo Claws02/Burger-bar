@@ -688,6 +688,11 @@ canvas{display:block;width:100%;height:100%;}
         <span style="font-weight:900;font-size:14px;">👁️ Colorblind-friendly bars</span>
         <span id="set-cb-state" style="color:#888;font-weight:900;">OFF</span>
       </button>
+      <button class="upg-item" id="set-diff-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleDifficulty()">
+        <span style="font-weight:900;font-size:14px;">🎯 Difficulty</span>
+        <span id="set-diff-state" style="color:#90caf9;font-weight:900;">NORMAL</span>
+      </button>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Casual: customers wait longer, +15% tips, and the store never closes.</div>
       <button class="btn-red" onclick="if(confirm('Reset ALL progress?')){localStorage.removeItem('burgerBoss_save');localStorage.removeItem('burgerBoss_tutorialSeen');location.reload();}" style="width:100%;">🗑️ Reset All Progress</button>
     </div>
     <button class="btn-green" onclick="closeSettings()" style="margin-top:18px;">BACK</button>
@@ -790,7 +795,7 @@ canvas{display:block;width:100%;height:100%;}
 // ─────────────────────────────────────────────────────────────
 //  SETTINGS (persisted independently of the game save)
 // ─────────────────────────────────────────────────────────────
-let settings = { volume: 0.8, music: true, colorblind: false };
+let settings = { volume: 0.8, music: true, colorblind: false, difficulty: 'normal' };
 function loadSettings(){
   try {
     const raw = localStorage.getItem('burgerBoss_settings');
@@ -1668,6 +1673,9 @@ const SKIN_DEFS = [
   {id:'pink',     name:'Cotton Candy',  icon:'🩷',    price:250,  hatColor:'#f06292', bodyColor:'#ec407a', headColor:'#FFCC80', trailColor:'#F48FB1'},
   {id:'ice',      name:'Ice Chef',      icon:'🧊',    price:300,  hatColor:'#b3e5fc', bodyColor:'#81d4fa', headColor:'#FFCC80', trailColor:'#80DEEA'},
   {id:'fire',     name:'Fire Chef',     icon:'🔥',    price:450,  hatColor:'#bf360c', bodyColor:'#e64a19', headColor:'#FFCC80', trailColor:'#FF6D00'},
+  {id:'robot',    name:'Robo Chef',     icon:'🤖',    price:550,  hatColor:'#90a4ae', bodyColor:'#607d8b', headColor:'#cfd8dc', trailColor:'#B0BEC5'},
+  {id:'cowboy',   name:'Rodeo Chef',    icon:'🤠',    price:400,  hatColor:'#8d6e63', bodyColor:'#a1887f', headColor:'#FFCC80', trailColor:'#D7CCC8'},
+  {id:'wizard',   name:'Wizard Chef',   icon:'🧙',    price:700,  hatColor:'#4527a0', bodyColor:'#5e35b1', headColor:'#FFCC80', trailColor:'#B388FF'},
 ];
 
 // ─── MULTI-STORE ─────────────────────────────────────────────
@@ -1694,6 +1702,9 @@ let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic' };
 
 // Achievements unlocked (account-wide; persisted in the save).
 let achievements = { unlocked: [] };
+
+// Lifetime records (account-wide; persisted in the save).
+let records = { bestDayCash: 0, bestDayStars: 0, totalServed: 0 };
 
 function getActiveSkin() {
   return SKIN_DEFS.find(s => s.id === cosm.equippedSkin) || SKIN_DEFS[0];
@@ -1739,7 +1750,7 @@ function saveGame(){
       }
       stores[activeStoreIdx].layout = layout;
     }
-    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements}));
+    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records}));
   }catch(e){}
 }
 
@@ -1768,6 +1779,7 @@ function loadSave(){
     }
     if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic'}, s.cosm);
     if(s.achievements) achievements = Object.assign({unlocked:[]}, s.achievements);
+    if(s.records) records = Object.assign({bestDayCash:0, bestDayStars:0, totalServed:0}, s.records);
 
     loadActiveStore();
   }catch(e){ console.warn('Load failed',e); bootstrapNewSave(); }
@@ -2128,6 +2140,7 @@ function doBuy(id){
   updateCashUI();
   document.getElementById('shop-cash-display').textContent='$'+eco.cash.toFixed(2);
   updateShop(); updateStationVisuals(); saveGame();
+  if(typeof checkAchievements==='function') checkAchievements();
 }
 window.doBuy=doBuy;
 
@@ -2204,6 +2217,14 @@ function showAchievements(){
   document.getElementById('home-screen').style.display='none';
   const list = document.getElementById('achievements-list');
   list.innerHTML='';
+  // Lifetime records summary banner.
+  const rec = document.createElement('div');
+  rec.style.cssText='display:flex;justify-content:space-around;gap:8px;background:rgba(255,255,255,.06);border-radius:12px;padding:12px;margin-bottom:12px;text-align:center;';
+  rec.innerHTML=`
+    <div><div style="font-size:18px;font-weight:900;color:#66BB6A;">$${(records.bestDayCash||0).toFixed(0)}</div><div style="font-size:10px;color:rgba(255,255,255,.5);">BEST DAY</div></div>
+    <div><div style="font-size:18px;font-weight:900;color:#ffca28;">${(records.bestDayStars||0).toFixed(1)}★</div><div style="font-size:10px;color:rgba(255,255,255,.5);">BEST RATING</div></div>
+    <div><div style="font-size:18px;font-weight:900;color:#90caf9;">${records.totalServed||0}</div><div style="font-size:10px;color:rgba(255,255,255,.5);">SERVED</div></div>`;
+  list.appendChild(rec);
   const done = achievements.unlocked || [];
   for(const a of ACHIEVEMENTS){
     const got = done.includes(a.id);
@@ -2857,6 +2878,8 @@ function refreshSettingsUI(){
   if(ms){ ms.textContent = settings.music!==false?'ON':'OFF'; ms.style.color = settings.music!==false?'#66BB6A':'#888'; }
   const cb = document.getElementById('set-cb-state');
   if(cb){ cb.textContent = settings.colorblind?'ON':'OFF'; cb.style.color = settings.colorblind?'#66BB6A':'#888'; }
+  const df = document.getElementById('set-diff-state');
+  if(df){ const casual = settings.difficulty==='casual'; df.textContent = casual?'CASUAL':'NORMAL'; df.style.color = casual?'#66BB6A':'#90caf9'; }
 }
 function showSettings(){
   stopHomeAnim();
@@ -2887,8 +2910,17 @@ function toggleColorblind(){
   settings.colorblind = !settings.colorblind;
   refreshSettingsUI(); saveSettings();
 }
+function toggleDifficulty(){
+  settings.difficulty = (settings.difficulty==='casual') ? 'normal' : 'casual';
+  refreshSettingsUI(); saveSettings();
+}
+// Difficulty helpers used by gameplay.
+function diffPatienceMult(){ return settings.difficulty==='casual' ? 1.4 : 1.0; }
+function diffPayoutMult(){ return settings.difficulty==='casual' ? 1.15 : 1.0; }
+function diffNoFail(){ return settings.difficulty==='casual'; }
 window.showSettings=showSettings; window.closeSettings=closeSettings;
 window.setVolume=setVolume; window.toggleMusic=toggleMusic; window.toggleColorblind=toggleColorblind;
+window.toggleDifficulty=toggleDifficulty;
 
 // ── PAUSE ────────────────────────────────────────────────────
 let gamePaused = false;
@@ -3150,6 +3182,7 @@ function openNewStore(){
   stores.push(newStore);
   updateCashUI();
   saveGame();
+  if(typeof checkAchievements==='function') checkAchievements();
   showToast(`🎉 ${def.name} opened!`);
   closeStores();
   showStores();
@@ -3337,7 +3370,7 @@ function endDay(){
   const rollAvg = gStats.recentDays.length
     ? gStats.recentDays.reduce((a,b)=>a+b,0) / gStats.recentDays.length
     : 5;
-  if(eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0){
+  if(!diffNoFail() && eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0){
     gameState='gameover';
     document.getElementById('fail-days').textContent=eco.day;
     document.getElementById('gameover-screen').style.display='flex';
@@ -3358,6 +3391,13 @@ function endDay(){
     stats._passiveEarned = passiveTotal;
   } else { stats._passiveEarned = 0; }
 
+  // Lifetime records
+  records.totalServed += stats.groupsServed;
+  const todayStarsAvg = stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0;
+  stats._newRecord = false;
+  if(stats.cashEarned > records.bestDayCash){ records.bestDayCash = stats.cashEarned; stats._newRecord = true; }
+  if(todayStarsAvg > records.bestDayStars) records.bestDayStars = todayStarsAvg;
+
   checkAchievements();
   gameState='results'; saveGame(); playSound('daycomplete'); showResults();
 }
@@ -3365,6 +3405,12 @@ function endDay(){
 function showResults(){
   const scr=document.getElementById('results-screen');
   scr.style.display='flex';
+  // Highlight a new daily-earnings record in the header.
+  const dayLbl=document.getElementById('res-day-lbl');
+  if(dayLbl){
+    dayLbl.textContent = stats._newRecord ? '🏆 NEW BEST DAY!' : 'Day Complete';
+    dayLbl.style.color = stats._newRecord ? '#FFD54F' : 'rgba(255,255,255,.4)';
+  }
   const todayStars=stats.groupsServed>0?Math.round(stats.totalStars/stats.groupsServed):0;
   const cum=getCumRating();
   // eco.cash already includes today's serving cash + passive + achievement
@@ -3429,12 +3475,13 @@ function spawnGroup(){
   const size = type === 'heavy' ? 1 : (Math.random()>.55?2:1);
   const sx = doorX()+(Math.random()-.5)*2, sz = bounds.b+12;
   
+  const dpm = diffPatienceMult();
   const g = {
     id:Math.random(), size, type, state:'approach_door', stoodUp: false,
-    waitPatience: 1800 * upg.patienceMult * (type==='vip'?0.5:1.0), 
-    maxWait: 1800 * upg.patienceMult * (type==='vip'?0.5:1.0),
-    foodPatience: size * 1300 * upg.patienceMult, 
-    maxFood: size * 1300 * upg.patienceMult,
+    waitPatience: 1800 * upg.patienceMult * dpm * (type==='vip'?0.5:1.0),
+    maxWait: 1800 * upg.patienceMult * dpm * (type==='vip'?0.5:1.0),
+    foodPatience: size * 1300 * upg.patienceMult * dpm,
+    maxFood: size * 1300 * upg.patienceMult * dpm,
     eatTimer:0, pos:new THREE.Vector3(sx,0,sz), target:new THREE.Vector3(sx,0,sz),
     mesh:new THREE.Group(), wobble:0, 
     orders: [], unservedOrders: [], heavyCount: type === 'heavy' ? 3 : 1
@@ -4645,7 +4692,8 @@ function animate(){
             if(stars >= 4) rawCash += (stars - 3) * g.size * 1.5;
 
             if(g.type === 'vip') rawCash *= 3;
-            
+            rawCash *= diffPayoutMult();
+
             const cash = Math.round(rawCash * 100) / 100;
             eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
             updateCashUI();

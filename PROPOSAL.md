@@ -27,11 +27,15 @@
 - **Contextual action prompt**: a label by the ACT button shows what it will do
 - **Colorblind-friendly** patience faces (🙂/😐/😡) via the new toggle
 - **B4** fixed: store-lock UI is now driven by `RESTAURANT_UNLOCK_DAYS`
+- **3 new skins** (Robo / Rodeo / Wizard) — now 12 total
+- **Casual difficulty** mode (longer patience, +15% tips, never closes) in Settings
+- **Lifetime records** (best day, best rating, total served) with a "NEW BEST DAY!" results callout and a records banner on the Achievements screen
+- Achievements now also unlock immediately after relevant purchases, not only at day-end
 
 **◻️ Not yet done (recommended next)**
 - True offline bundling of Three.js + font (blocked here by network egress — needs the library file committed) and a service worker
 - A genuinely distinct 3rd cuisine (large gameplay addition; best done with live playtesting)
-- Optional: difficulty modes, daily challenges, cloud/export save
+- Optional: daily challenges, cloud/export save
 
 ---
 
