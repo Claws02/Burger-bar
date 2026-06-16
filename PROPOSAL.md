@@ -21,13 +21,17 @@
 - Audio: serve chime + day-complete fanfare; "PERFECT!/GREAT!" serve feedback
 - Early-game station labels (first 2 days)
 - Camera zooms out with floor expansions; version label
+- **Settings panel**: master volume slider, background-music toggle, colorblind toggle, safe reset (reachable from home + pause)
+- **Background music**: gentle generative chord-pad loop, volume/mute-aware
+- **Achievements**: 10 milestones with cash + skin rewards, unlock toasts, and a dedicated screen; persisted in the save
+- **Contextual action prompt**: a label by the ACT button shows what it will do
+- **Colorblind-friendly** patience faces (🙂/😐/😡) via the new toggle
+- **B4** fixed: store-lock UI is now driven by `RESTAURANT_UNLOCK_DAYS`
 
 **◻️ Not yet done (recommended next)**
 - True offline bundling of Three.js + font (blocked here by network egress — needs the library file committed) and a service worker
-- Full Settings panel (volume slider, music) — only mute exists today
-- Background music; achievements/milestones tied to skins; a genuinely distinct 3rd cuisine
-- Colorblind-safe cook/patience bars; contextual action-button prompt
-- B4 (`RESTAURANT_UNLOCK_DAYS` dead data), B6 partially addressed
+- A genuinely distinct 3rd cuisine (large gameplay addition; best done with live playtesting)
+- Optional: difficulty modes, daily challenges, cloud/export save
 
 ---
 
