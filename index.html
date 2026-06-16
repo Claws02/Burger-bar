@@ -4549,6 +4549,7 @@ const TARGET=1/60;
 
 function animate(){
   requestAnimationFrame(animate);
+  try {
   if(gamePaused) return;
   const now=performance.now();
   ds=Math.min((now-lastT)/1000,0.1)/TARGET; lastT=now;
@@ -4790,6 +4791,18 @@ function animate(){
     drawFloatUI();
   }
   renderer.render(scene,camera);
+  } catch(err){
+    // A per-frame error shouldn't blank the screen forever. Log it and, once,
+    // tell the player how to recover instead of leaving a frozen black canvas.
+    console.error('Frame error:', err);
+    if(!window._frameErrShown){
+      window._frameErrShown = true;
+      const d=document.createElement('div');
+      d.style.cssText="position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(183,28,28,.95);color:#fff;font-family:sans-serif;font-size:13px;font-weight:700;padding:10px 16px;border-radius:14px;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.5);";
+      d.innerHTML="Something glitched. <a href='#' onclick='location.reload();return false;' style='color:#fff;text-decoration:underline;'>Reload</a>";
+      document.body.appendChild(d);
+    }
+  }
 }
 
 animate();
