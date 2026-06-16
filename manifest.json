@@ -1,0 +1,19 @@
+{
+  "name": "Burger Bar",
+  "short_name": "Burger Bar",
+  "description": "A fast, fun 3D cooking & restaurant tycoon game. Grill, serve, upgrade and build your food empire!",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#87CEEB",
+  "theme_color": "#1976D2",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

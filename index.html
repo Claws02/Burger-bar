@@ -3,12 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1976D2">
+<meta name="description" content="Burger Bar — a fast, fun 3D cooking & restaurant tycoon game. Grill, serve, upgrade and build your food empire!">
+<meta property="og:title" content="Burger Bar">
+<meta property="og:description" content="Grill, serve, upgrade and build your food empire in this 3D cooking tycoon game!">
+<meta property="og:type" content="website">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>Burger Bar</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Three.js with multi-CDN fallback: if one CDN is blocked or down, try the
+     next, then surface a friendly error instead of a silent black screen. -->
+<script>
+(function(){
+  var SOURCES = [
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js",
+    "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js",
+    "https://unpkg.com/three@0.128.0/build/three.min.js"
+  ];
+  function loadAt(i){
+    if(i >= SOURCES.length){ showLoadError(); return; }
+    var s = document.createElement('script');
+    s.src = SOURCES[i];
+    s.onload = function(){ if(window.THREE) startGame(); else loadAt(i+1); };
+    s.onerror = function(){ loadAt(i+1); };
+    document.head.appendChild(s);
+  }
+  var _started = false;
+  function startGame(){
+    if(_started) return;
+    // Wait for the DOM too — the game references elements at top level.
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', startGame, {once:true});
+      return;
+    }
+    _started = true;
+    var code = document.getElementById('game-code');
+    if(!code){ showLoadError(); return; }
+    var run = document.createElement('script');
+    run.textContent = code.textContent;   // executes in global scope
+    document.body.appendChild(run);
+  }
+  function showLoadError(){
+    var d = document.createElement('div');
+    d.style.cssText = "position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1f2e;color:#fff;font-family:sans-serif;text-align:center;padding:24px;z-index:9999;";
+    d.innerHTML = "<div style='font-size:48px'>🍔</div><h2 style='margin:12px 0 4px'>Couldn't load Burger Bar</h2><p style='opacity:.7;max-width:340px'>The 3D engine failed to load. Check your connection and try again.</p><button onclick='location.reload()' style='margin-top:16px;padding:12px 28px;border:none;border-radius:16px;background:#1976D2;color:#fff;font-weight:900;font-size:16px;cursor:pointer'>RELOAD</button>";
+    document.body.appendChild(d);
+  }
+  loadAt(0);
+})();
+</script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+/* Nunito is loaded non-blocking; a system font stack is always used as a
+   fallback so the game never depends on the webfont being available. */
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;
+  src:local('Nunito'),url('https://fonts.gstatic.com/s/nunito/v26/XRXV3I6Li01BKofINeaBTMnFcQ.woff2') format('woff2');}
 *{box-sizing:border-box;}
-body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito',sans-serif;user-select:none;touch-action:none;}
+body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;user-select:none;touch-action:none;}
 #gc{position:relative;width:100vw;height:100vh;}
 canvas{display:block;width:100%;height:100%;}
 
@@ -517,7 +570,21 @@ canvas{display:block;width:100%;height:100%;}
       </button>
     </div>
 
-    <button class="hbtn-reset" onclick="if(confirm('Reset all progress?')){localStorage.removeItem('burgerBoss_save');location.reload();}">Reset Save</button>
+    <!-- SETTINGS — top left, small square -->
+    <div style="position:absolute;top:78px;left:10px;z-index:6;">
+      <button class="hbtn-square" style="background:linear-gradient(135deg,#546E7A,#37474F);box-shadow:0 5px 0 #1c262b;" onclick="showSettings()">
+        <span class="btn-icon">⚙️</span>Settings
+      </button>
+    </div>
+
+    <!-- ACHIEVEMENTS — top left below settings -->
+    <div style="position:absolute;top:158px;left:10px;z-index:6;">
+      <button class="hbtn-square" style="background:linear-gradient(135deg,#FBC02D,#F57F17);box-shadow:0 5px 0 #8a4d00;" onclick="showAchievements()">
+        <span class="btn-icon">🏆</span>Awards
+      </button>
+    </div>
+
+    <div style="position:absolute;bottom:6px;right:8px;color:rgba(255,255,255,.3);font-size:9px;font-weight:700;pointer-events:none;z-index:5;">v1.0</div>
   </div>
 
   <div id="ui-layer">
@@ -528,6 +595,7 @@ canvas{display:block;width:100%;height:100%;}
     <div id="touch-overlay"></div>
     <div id="joystick-zone"><div id="joystick-knob"></div></div>
     <div id="action-btn">✋</div>
+    <div id="act-label" style="position:fixed;display:none;transform:translate(-50%,-50%);background:rgba(0,0,0,.78);color:#fff;font-size:12px;font-weight:900;padding:4px 12px;border-radius:14px;pointer-events:none;z-index:7;white-space:nowrap;border:1.5px solid rgba(255,255,255,.25);"></div>
     <div id="touch-hint">Left thumb · move &nbsp;&nbsp; Right thumb · act</div>
     <div id="role-tooltip"></div>
   </div>
@@ -550,6 +618,10 @@ canvas{display:block;width:100%;height:100%;}
       <div class="pause-btn-row">
         <button class="pbtn pbtn-resume" onclick="togglePause()">▶ RESUME</button>
         <button class="pbtn pbtn-sound" id="sound-toggle-btn" onclick="toggleSound()">🔊 Sound</button>
+      </div>
+      <div class="pause-btn-row">
+        <button class="pbtn pbtn-sound" onclick="showSettings()">⚙️ Settings</button>
+        <button class="pbtn pbtn-sound" onclick="showPractice()">📖 How to Play</button>
       </div>
       <button class="pbtn pbtn-quit" onclick="showQuitConfirm()">🚪 Quit to Menu</button>
       <!-- Quit confirmation slides up over the panel -->
@@ -590,6 +662,45 @@ canvas{display:block;width:100%;height:100%;}
     <h1 style="font-size:26px;margin:0 0 16px;color:#ab47bc;">🏪 YOUR EMPIRE</h1>
     <div id="stores-list" style="width:100%;max-width:480px;"></div>
     <button class="btn-green" onclick="closeStores()" style="margin-top:14px;">BACK</button>
+  </div>
+
+  <!-- ACHIEVEMENTS SCREEN -->
+  <div id="achievements-screen" class="overlay" style="z-index:11;">
+    <h1 style="font-size:26px;margin:0 0 6px;color:#ffca28;">🏆 ACHIEVEMENTS</h1>
+    <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px;">Hit milestones to earn cash & skins</div>
+    <div id="achievements-list" style="width:100%;max-width:480px;max-height:60vh;overflow-y:auto;"></div>
+    <button class="btn-green" onclick="closeAchievements()" style="margin-top:14px;">BACK</button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="settings-screen" class="overlay" style="z-index:12;">
+    <h1 style="font-size:26px;margin:0 0 18px;color:#90caf9;">⚙️ SETTINGS</h1>
+    <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;">
+      <div style="background:rgba(255,255,255,.06);border-radius:14px;padding:14px 16px;">
+        <div style="font-weight:900;font-size:14px;margin-bottom:8px;">🔊 Volume <span id="set-vol-val" style="float:right;color:#90caf9;">80%</span></div>
+        <input id="set-vol" type="range" min="0" max="100" value="80" style="width:100%;" oninput="setVolume(this.value)">
+      </div>
+      <button class="upg-item" id="set-music-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleMusic()">
+        <span style="font-weight:900;font-size:14px;">🎵 Background Music</span>
+        <span id="set-music-state" style="color:#66BB6A;font-weight:900;">ON</span>
+      </button>
+      <button class="upg-item" id="set-cb-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleColorblind()">
+        <span style="font-weight:900;font-size:14px;">👁️ Colorblind-friendly bars</span>
+        <span id="set-cb-state" style="color:#888;font-weight:900;">OFF</span>
+      </button>
+      <button class="upg-item" id="set-diff-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleDifficulty()">
+        <span style="font-weight:900;font-size:14px;">🎯 Difficulty</span>
+        <span id="set-diff-state" style="color:#90caf9;font-weight:900;">NORMAL</span>
+      </button>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Casual: customers wait longer, +15% tips, and the store never closes.</div>
+      <div class="pause-btn-row">
+        <button class="pbtn pbtn-sound" onclick="exportSave()">📤 Export Save</button>
+        <button class="pbtn pbtn-sound" onclick="importSave()">📥 Import Save</button>
+      </div>
+      <button class="btn-red" onclick="if(confirm('Reset ALL progress?')){localStorage.removeItem('burgerBoss_save');localStorage.removeItem('burgerBoss_tutorialSeen');location.reload();}" style="width:100%;">🗑️ Reset All Progress</button>
+    </div>
+    <button class="btn-green" onclick="closeSettings()" style="margin-top:18px;">BACK</button>
+    <div style="margin-top:10px;color:rgba(255,255,255,.3);font-size:11px;">Burger Bar · v1.0</div>
   </div>
 
   <div id="edit-hud">
@@ -682,14 +793,42 @@ canvas{display:block;width:100%;height:100%;}
   </div>
 </div>
 
-<script>
+<!-- Game code is held inert (non-JS type) until the loader confirms Three.js
+     and the DOM are ready, then it is injected for execution in global scope. -->
+<script type="text/gamejs" id="game-code">
+// ─────────────────────────────────────────────────────────────
+//  SETTINGS (persisted independently of the game save)
+// ─────────────────────────────────────────────────────────────
+let settings = { volume: 0.8, music: true, colorblind: false, difficulty: 'normal' };
+function loadSettings(){
+  try {
+    const raw = localStorage.getItem('burgerBoss_settings');
+    if(raw) settings = Object.assign(settings, JSON.parse(raw));
+  } catch(e){}
+}
+function saveSettings(){
+  try { localStorage.setItem('burgerBoss_settings', JSON.stringify(settings)); } catch(e){}
+}
+loadSettings();
+
 // ─────────────────────────────────────────────────────────────
 //  AUDIO ENGINE
 // ─────────────────────────────────────────────────────────────
 let audioCtx = null;
+let masterGain = null, sfxGain = null, musicGain = null;
 function initAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // master → destination; sfx and music feed master so a single volume
+    // slider controls everything while music can be toggled independently.
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = (settings.volume!=null ? settings.volume : 0.8);
+    masterGain.connect(audioCtx.destination);
+    sfxGain = audioCtx.createGain();   sfxGain.gain.value = 1.0;   sfxGain.connect(masterGain);
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = (settings.music===false ? 0 : 0.35);
+    musicGain.connect(masterGain);
+    if(settings.music !== false) startMusic();
   }
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
@@ -703,7 +842,7 @@ function playSound(type) {
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain);
-  gain.connect(audioCtx.destination);
+  gain.connect(sfxGain || audioCtx.destination);
 
   const t = audioCtx.currentTime;
   if (type === 'coin') {
@@ -740,7 +879,67 @@ function playSound(type) {
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
     osc.start(t); osc.stop(t + 0.3);
+  } else if (type === 'serve') {
+    // Pleasant two-note "ding" when an order is delivered.
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.setValueAtTime(1318, t + 0.08);
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.22);
+    osc.start(t); osc.stop(t + 0.22);
+  } else if (type === 'daycomplete') {
+    // Little ascending fanfare on day-complete (chord arpeggio).
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((f, i) => {
+      const o = audioCtx.createOscillator();
+      const g2 = audioCtx.createGain();
+      o.connect(g2); g2.connect(sfxGain || audioCtx.destination);
+      o.type = 'triangle';
+      const st = t + i * 0.12;
+      o.frequency.setValueAtTime(f, st);
+      g2.gain.setValueAtTime(0.0001, st);
+      g2.gain.linearRampToValueAtTime(0.2, st + 0.03);
+      g2.gain.exponentialRampToValueAtTime(0.01, st + 0.32);
+      o.start(st); o.stop(st + 0.32);
+    });
   }
+}
+
+// ── BACKGROUND MUSIC ──────────────────────────────────────────
+// A gentle, generative chord-pad loop (no external assets). It plays a slow
+// progression so it never gets grating, and routes through musicGain so it can
+// be muted/volume-controlled independently of SFX.
+let musicTimer = null;
+const MUSIC_CHORDS = [
+  [261.63, 329.63, 392.00], // C
+  [293.66, 349.23, 440.00], // Dm
+  [349.23, 440.00, 523.25], // F
+  [392.00, 493.88, 587.33], // G
+];
+let musicStep = 0;
+function startMusic(){
+  if(!audioCtx || musicTimer) return;
+  const playChord = () => {
+    if(!audioCtx || audioCtx.state !== 'running') return;
+    const chord = MUSIC_CHORDS[musicStep % MUSIC_CHORDS.length];
+    musicStep++;
+    const t = audioCtx.currentTime;
+    chord.forEach(f => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      o.connect(g); g.connect(musicGain);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.8);
+      g.gain.linearRampToValueAtTime(0.0001, t + 3.6);
+      o.start(t); o.stop(t + 3.8);
+    });
+  };
+  playChord();
+  musicTimer = setInterval(playChord, 3600);
+}
+function stopMusic(){
+  if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -751,6 +950,33 @@ const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+// ── WebGL context-loss handling ──
+// On mobile, backgrounding the tab can drop the GL context, leaving a black
+// screen. Prevent the default (which blocks restoration) and rebuild the
+// scene's static geometry when the context comes back.
+canvas.addEventListener('webglcontextlost', (e)=>{
+  e.preventDefault();
+  gamePaused = true;
+}, false);
+canvas.addEventListener('webglcontextrestored', ()=>{
+  try {
+    buildWorld(); buildRoom();
+    for(const k in stations){
+      const s = stations[k];
+      if(s.mesh){ stGrp.add(s.mesh); }
+    }
+    updateStationVisuals();
+    // Only auto-resume if we're not sitting on the pause screen
+    if(document.getElementById('pause-screen').style.display !== 'flex') gamePaused = false;
+  } catch(err){ console.warn('Context restore failed', err); }
+}, false);
+
+// Auto-pause an in-progress day when the tab is hidden, so backgrounding the
+// game doesn't burn through customer patience while the player can't act.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && gameState === 'playing' && !gamePaused) togglePause();
+});
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#87CEEB'); 
@@ -1245,6 +1471,15 @@ function buildRobot(role){
   return g;
 }
 
+// Friendly names shown as early-game station labels (first 2 days).
+const STATION_LABELS = {
+  fridge:'🧊 Fridge', grill:'🔥 Grill', trayrack:'🍱 Trays', counter:'🍽️ Counter',
+  sink:'🚿 Sink', sodafountain:'🥤 Soda', trash:'🗑️ Trash', dumpster:'🗑️ Dumpster',
+  table:'🪑 Table',
+  cooler:'🧊 Cooler', beachgrill:'🔥 Grill', assembly:'🌮 Assembly',
+  chowderpot:'🍲 Chowder', lemonadestation:'🍋 Lemonade', basketrack:'🧺 Baskets'
+};
+
 const stations = {};
 function addStation(id,type,x,z,w,d,opts={}){
   if(stations[id]) return stations[id];
@@ -1428,8 +1663,8 @@ function itemMesh(type){
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
 function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
-function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false}; }
-function defGS()   { return {lifeStars:0, lifeGroups:0}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false, sodaDeclinedUntil:0}; }
+function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
 // ─── SKINS ───────────────────────────────────────────────────
 const SKIN_DEFS = [
@@ -1442,6 +1677,9 @@ const SKIN_DEFS = [
   {id:'pink',     name:'Cotton Candy',  icon:'🩷',    price:250,  hatColor:'#f06292', bodyColor:'#ec407a', headColor:'#FFCC80', trailColor:'#F48FB1'},
   {id:'ice',      name:'Ice Chef',      icon:'🧊',    price:300,  hatColor:'#b3e5fc', bodyColor:'#81d4fa', headColor:'#FFCC80', trailColor:'#80DEEA'},
   {id:'fire',     name:'Fire Chef',     icon:'🔥',    price:450,  hatColor:'#bf360c', bodyColor:'#e64a19', headColor:'#FFCC80', trailColor:'#FF6D00'},
+  {id:'robot',    name:'Robo Chef',     icon:'🤖',    price:550,  hatColor:'#90a4ae', bodyColor:'#607d8b', headColor:'#cfd8dc', trailColor:'#B0BEC5'},
+  {id:'cowboy',   name:'Rodeo Chef',    icon:'🤠',    price:400,  hatColor:'#8d6e63', bodyColor:'#a1887f', headColor:'#FFCC80', trailColor:'#D7CCC8'},
+  {id:'wizard',   name:'Wizard Chef',   icon:'🧙',    price:700,  hatColor:'#4527a0', bodyColor:'#5e35b1', headColor:'#FFCC80', trailColor:'#B388FF'},
 ];
 
 // ─── MULTI-STORE ─────────────────────────────────────────────
@@ -1466,6 +1704,12 @@ function isSeafood(){ return (stores[activeStoreIdx]?.type === 'seafood'); }
 // Skin/cosmetic state (global across stores)
 let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic' };
 
+// Achievements unlocked (account-wide; persisted in the save).
+let achievements = { unlocked: [] };
+
+// Lifetime records (account-wide; persisted in the save).
+let records = { bestDayCash: 0, bestDayStars: 0, totalServed: 0 };
+
 function getActiveSkin() {
   return SKIN_DEFS.find(s => s.id === cosm.equippedSkin) || SKIN_DEFS[0];
 }
@@ -1476,6 +1720,9 @@ let stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:0, spawnTimer:
 let loadedLayout = null; 
 
 let floaters = [];
+
+// Serve-streak: serving groups in quick succession builds a tip multiplier.
+let serveStreak = 0, streakTimer = 0;
 function spawnFloater(pos, txt, color='#66BB6A'){
   floaters.push({pos:pos.clone().add(new THREE.Vector3(0,2,0)), text:txt, color:color, life:1.5});
 }
@@ -1510,7 +1757,7 @@ function saveGame(){
       }
       stores[activeStoreIdx].layout = layout;
     }
-    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm}));
+    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records}));
   }catch(e){}
 }
 
@@ -1538,6 +1785,8 @@ function loadSave(){
       activeStoreIdx = s.activeStoreIdx || 0;
     }
     if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic'}, s.cosm);
+    if(s.achievements) achievements = Object.assign({unlocked:[]}, s.achievements);
+    if(s.records) records = Object.assign({bestDayCash:0, bestDayStars:0, totalServed:0}, s.records);
 
     loadActiveStore();
   }catch(e){ console.warn('Load failed',e); bootstrapNewSave(); }
@@ -1794,6 +2043,9 @@ function rebuildAll(){
   updateBoundsFromLevel();
   buildWorld(); buildRoom();
   updateStationVisuals();
+  // Zoom the camera out as the floor expands so stations stay on-screen.
+  frustumSize = 26 + (eco.floorLevel||0) * 2.5;
+  resize();
 }
 
 const SHOP_DEFS = [
@@ -1895,6 +2147,7 @@ function doBuy(id){
   updateCashUI();
   document.getElementById('shop-cash-display').textContent='$'+eco.cash.toFixed(2);
   updateShop(); updateStationVisuals(); saveGame();
+  if(typeof checkAchievements==='function') checkAchievements();
 }
 window.doBuy=doBuy;
 
@@ -1913,6 +2166,92 @@ function showToast(msg, dur=2200){
   clearTimeout(t._tid);
   t._tid = setTimeout(()=>t.style.display='none', dur);
 }
+
+// ─────────────────────────────────────────────────────────────
+//  ACHIEVEMENTS
+// ─────────────────────────────────────────────────────────────
+const ACHIEVEMENTS = [
+  {id:'first_day', icon:'🌅', name:'Open for Business', desc:'Complete your first day',     cash:25,   test:m=>m.maxDay>=1},
+  {id:'serve50',   icon:'🍔', name:'Line Cook',         desc:'Serve 50 groups',             cash:100,  test:m=>m.groups>=50},
+  {id:'perfectday',icon:'⭐', name:'Flawless Service',  desc:'Finish a day at ~5 stars',    cash:150,  test:m=>m.todayStars>=4.5},
+  {id:'rich1000',  icon:'💰', name:'Turning a Profit',  desc:'Hold $1,000 at once',         cash:0,    test:m=>m.cash>=1000},
+  {id:'robots3',   icon:'🤖', name:'Automation',        desc:'Hire 3 robots',               cash:200,  test:m=>m.robots>=3},
+  {id:'day10',     icon:'📅', name:'Regular',           desc:'Reach Day 10',                cash:150,  test:m=>m.maxDay>=10},
+  {id:'serve250',  icon:'👨‍🍳', name:'Head Chef',        desc:'Serve 250 groups',  cash:400,  skin:'gold',  test:m=>m.groups>=250},
+  {id:'day30',     icon:'🗓️', name:'Established',        desc:'Reach Day 30',      cash:500,  skin:'fire',  test:m=>m.maxDay>=30},
+  {id:'empire',    icon:'🏪', name:'Empire Builder',    desc:'Own 3 store locations', cash:500, skin:'alien', test:m=>m.stores>=3},
+  {id:'day100',    icon:'👑', name:'Centurion',         desc:'Reach Day 100',     cash:2000, test:m=>m.maxDay>=100},
+];
+
+function achvMetrics(){
+  let groups=0, robots=0, maxDay=0;
+  stores.forEach((s,idx)=>{
+    const gs = idx===activeStoreIdx ? gStats : (s.gStats||{});
+    const up = idx===activeStoreIdx ? upg   : (s.upg||{});
+    const ec = idx===activeStoreIdx ? eco   : (s.eco||{});
+    groups += gs.lifeGroups||0;
+    robots += up.robotCount||0;
+    maxDay  = Math.max(maxDay, ec.day||0);
+  });
+  return { groups, robots, maxDay, cash:eco.cash, stores:stores.length,
+           todayStars: stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0 };
+}
+
+function checkAchievements(){
+  if(!achievements.unlocked) achievements.unlocked=[];
+  const m = achvMetrics();
+  const unlockedNow = [];
+  for(const a of ACHIEVEMENTS){
+    if(achievements.unlocked.includes(a.id)) continue;
+    if(a.test(m)){
+      achievements.unlocked.push(a.id);
+      if(a.cash){ eco.cash += a.cash; stats._achvEarned = (stats._achvEarned||0) + a.cash; }
+      if(a.skin && !cosm.ownedSkins.includes(a.skin)) cosm.ownedSkins.push(a.skin);
+      unlockedNow.push(a);
+    }
+  }
+  if(unlockedNow.length){
+    updateCashUI(); saveGame();
+    unlockedNow.forEach((a,i)=> setTimeout(()=>{
+      playSound('coin');
+      showToast(`🏆 ${a.name}!${a.cash?'  +$'+a.cash:''}${a.skin?'  · Skin unlocked!':''}`, 2600);
+    }, i*1300));
+  }
+}
+
+function showAchievements(){
+  stopHomeAnim();
+  document.getElementById('home-screen').style.display='none';
+  const list = document.getElementById('achievements-list');
+  list.innerHTML='';
+  // Lifetime records summary banner.
+  const rec = document.createElement('div');
+  rec.style.cssText='display:flex;justify-content:space-around;gap:8px;background:rgba(255,255,255,.06);border-radius:12px;padding:12px;margin-bottom:12px;text-align:center;';
+  rec.innerHTML=`
+    <div><div style="font-size:18px;font-weight:900;color:#66BB6A;">$${(records.bestDayCash||0).toFixed(0)}</div><div style="font-size:10px;color:rgba(255,255,255,.5);">BEST DAY</div></div>
+    <div><div style="font-size:18px;font-weight:900;color:#ffca28;">${(records.bestDayStars||0).toFixed(1)}★</div><div style="font-size:10px;color:rgba(255,255,255,.5);">BEST RATING</div></div>
+    <div><div style="font-size:18px;font-weight:900;color:#90caf9;">${records.totalServed||0}</div><div style="font-size:10px;color:rgba(255,255,255,.5);">SERVED</div></div>`;
+  list.appendChild(rec);
+  const done = achievements.unlocked || [];
+  for(const a of ACHIEVEMENTS){
+    const got = done.includes(a.id);
+    const div = document.createElement('div');
+    div.className = 'upg-item' + (got?'':' locked');
+    let reward = (a.cash?`+$${a.cash}`:'') + (a.skin?(a.cash?' · ':'')+'👕 Skin':'');
+    div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:30px;">${got?a.icon:'🔒'}</div>
+        <div><div style="font-weight:900;font-size:14px;">${a.name}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);">${a.desc}</div></div></div>
+      <div style="font-size:12px;font-weight:900;color:${got?'#66BB6A':'#ffc107'};">${got?'✓ DONE':reward}</div>`;
+    list.appendChild(div);
+  }
+  document.getElementById('achievements-screen').style.display='flex';
+}
+function closeAchievements(){
+  document.getElementById('achievements-screen').style.display='none';
+  showStartMenu();
+}
+window.showAchievements=showAchievements; window.closeAchievements=closeAchievements;
 
 // ─────────────────────────────────────────────────────────────
 //  HOME SCREEN 3D CHEF RENDERER  (dedicated canvas, same mesh as gameplay)
@@ -2384,11 +2723,13 @@ function homeSwipeStore(dir){
   const ownedStore = stores[rp.storeIdx];
   const colDef = STORE_COLORS[rp.storeIdx % STORE_COLORS.length];
   const storeName = ownedStore ? ownedStore.name : colDef.name;
-  // Index 1 (Seafood Shack) is always unlocked — only higher indices need purchasing
-  const locked = !ownedStore && rp.storeIdx >= 2;
+  // A slot is locked until you've actually opened that store. The unlock day
+  // (when it becomes purchasable) is data-driven via RESTAURANT_UNLOCK_DAYS.
+  const unlockDay = RESTAURANT_UNLOCK_DAYS[rp.storeIdx] || 0;
+  const locked = !ownedStore;
 
   const el = document.getElementById('home-store-name');
-  if(el) el.textContent = locked ? '🔒 ' + storeName + ' (Day 30)' : storeName;
+  if(el) el.textContent = locked ? `🔒 ${storeName} (Day ${unlockDay})` : storeName;
 
   const playBtn = document.querySelector('.hbtn-play');
   if(playBtn) {
@@ -2535,6 +2876,82 @@ const _origPlaySound = playSound;
 window.playSound = function(type){ if(!soundMuted) _origPlaySound(type); };
 window.toggleSound=toggleSound;
 
+// ── SETTINGS PANEL ───────────────────────────────────────────
+function refreshSettingsUI(){
+  const v = Math.round((settings.volume!=null?settings.volume:0.8)*100);
+  const vol = document.getElementById('set-vol'); if(vol) vol.value = v;
+  const volv = document.getElementById('set-vol-val'); if(volv) volv.textContent = v+'%';
+  const ms = document.getElementById('set-music-state');
+  if(ms){ ms.textContent = settings.music!==false?'ON':'OFF'; ms.style.color = settings.music!==false?'#66BB6A':'#888'; }
+  const cb = document.getElementById('set-cb-state');
+  if(cb){ cb.textContent = settings.colorblind?'ON':'OFF'; cb.style.color = settings.colorblind?'#66BB6A':'#888'; }
+  const df = document.getElementById('set-diff-state');
+  if(df){ const casual = settings.difficulty==='casual'; df.textContent = casual?'CASUAL':'NORMAL'; df.style.color = casual?'#66BB6A':'#90caf9'; }
+}
+function showSettings(){
+  stopHomeAnim();
+  document.getElementById('home-screen').style.display='none';
+  document.getElementById('pause-screen').style.display='none';
+  refreshSettingsUI();
+  document.getElementById('settings-screen').style.display='flex';
+}
+function closeSettings(){
+  document.getElementById('settings-screen').style.display='none';
+  // Return to wherever makes sense: home if not mid-day, else resume pause.
+  if(gameState==='playing'){ document.getElementById('pause-screen').style.display = gamePaused?'flex':'none'; }
+  else showStartMenu();
+}
+function setVolume(val){
+  settings.volume = Math.max(0, Math.min(1, val/100));
+  document.getElementById('set-vol-val').textContent = Math.round(settings.volume*100)+'%';
+  if(masterGain) masterGain.gain.value = settings.volume;
+  saveSettings();
+}
+function toggleMusic(){
+  settings.music = !(settings.music!==false);
+  if(musicGain) musicGain.gain.value = settings.music?0.35:0;
+  if(settings.music){ if(audioCtx) startMusic(); } else { stopMusic(); }
+  refreshSettingsUI(); saveSettings();
+}
+function toggleColorblind(){
+  settings.colorblind = !settings.colorblind;
+  refreshSettingsUI(); saveSettings();
+}
+function toggleDifficulty(){
+  settings.difficulty = (settings.difficulty==='casual') ? 'normal' : 'casual';
+  refreshSettingsUI(); saveSettings();
+}
+// Difficulty helpers used by gameplay.
+function diffPatienceMult(){ return settings.difficulty==='casual' ? 1.4 : 1.0; }
+function diffPayoutMult(){ return settings.difficulty==='casual' ? 1.15 : 1.0; }
+function diffNoFail(){ return settings.difficulty==='casual'; }
+// ── SAVE EXPORT / IMPORT (backup & transfer; no cloud) ───────
+function exportSave(){
+  try {
+    saveGame();
+    const raw = localStorage.getItem('burgerBoss_save') || '';
+    if(!raw){ showToast('No save to export'); return; }
+    const code = btoa(unescape(encodeURIComponent(raw)));
+    // Prefill a prompt so the player can copy the backup code.
+    window.prompt('Your backup code (copy & keep it safe):', code);
+  } catch(e){ showToast('Export failed'); }
+}
+function importSave(){
+  const code = window.prompt('Paste a backup code to restore (this overwrites current progress):', '');
+  if(!code) return;
+  try {
+    const json = decodeURIComponent(escape(atob(code.trim())));
+    const obj = JSON.parse(json);          // validate it parses
+    if(!obj || typeof obj !== 'object' || !obj.stores) throw new Error('bad');
+    localStorage.setItem('burgerBoss_save', json);
+    showToast('✅ Save imported! Reloading…');
+    setTimeout(()=>location.reload(), 800);
+  } catch(e){ showToast('❌ Invalid backup code'); }
+}
+window.showSettings=showSettings; window.closeSettings=closeSettings;
+window.setVolume=setVolume; window.toggleMusic=toggleMusic; window.toggleColorblind=toggleColorblind;
+window.toggleDifficulty=toggleDifficulty; window.exportSave=exportSave; window.importSave=importSave;
+
 // ── PAUSE ────────────────────────────────────────────────────
 let gamePaused = false;
 function togglePause(){
@@ -2676,9 +3093,9 @@ window.closePractice = closePractice;
 
 // ── MULTI-STORE ──────────────────────────────────────────────
 function calcPassiveIncome(store) {
-  // Each robot generates $8/day passively
+  // Each robot generates $16/day passively at an idle store
   const robotCount = (store.upg && store.upg.robotCount) || 0;
-  return Math.round(robotCount * 8 * 100) / 100;
+  return Math.round(robotCount * 16 * 100) / 100;
 }
 
 function showStores(){
@@ -2686,21 +3103,9 @@ function showStores(){
   const list = document.getElementById('stores-list');
   list.innerHTML='';
 
-  // Pay out passive income at start of viewing (once per day)
-  stores.forEach((store, idx) => {
-    if(idx !== activeStoreIdx && store.unlocked) {
-      const key = `passive_paid_${store.id}_day${eco.day}`;
-      if(!sessionStorage.getItem(key)) {
-        const inc = calcPassiveIncome(store);
-        if(inc > 0) {
-          eco.cash += inc;
-          store.eco.cash += inc;
-          updateCashUI();
-          sessionStorage.setItem(key, '1');
-        }
-      }
-    }
-  });
+  // NOTE: Passive income is accrued exclusively in endDay() (single source of
+  // truth). This screen is display-only and must not pay out, to avoid
+  // double-counting.
 
   for(let i=0;i<stores.length;i++){
     const store = stores[i];
@@ -2727,17 +3132,17 @@ function showStores(){
   }
 
   // New store unlock
-  const canUnlock = eco.day >= 30 && eco.cash >= 5000;
+  const canUnlock = eco.day >= 30 && eco.cash >= 3000;
   const newCard = document.createElement('div');
   newCard.className = 'store-card locked-store';
   newCard.innerHTML = `
     <div style="font-size:36px;">🔒</div>
     <div style="flex:1;">
       <div style="font-weight:900;font-size:16px;">Open New Location</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">Requires Day 30 · Costs $5,000</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">Requires Day 30 · Costs $3,000</div>
       <div style="font-size:12px;color:rgba(255,255,255,.4);">Day ${Math.max(0,30-eco.day)} days away</div>
     </div>
-    <button class="buy-btn" ${canUnlock?'':'disabled'} onclick="openNewStore()">$5,000</button>
+    <button class="buy-btn" ${canUnlock?'':'disabled'} onclick="openNewStore()">$3,000</button>
   `;
   list.appendChild(newCard);
 
@@ -2792,8 +3197,8 @@ function switchToStore(idx){
   closeStores();
 }
 function openNewStore(){
-  if(eco.cash < 5000 || eco.day < 30) return;
-  eco.cash -= 5000;
+  if(eco.cash < 3000 || eco.day < 30) return;
+  eco.cash -= 3000;
   const newId = stores.length;
   const storeTypes = [
     {name:'Seafood Shack',    type:'seafood'},
@@ -2807,7 +3212,8 @@ function openNewStore(){
   stores.push(newStore);
   updateCashUI();
   saveGame();
-  showToast(`🎉 ${name} opened!`);
+  if(typeof checkAchievements==='function') checkAchievements();
+  showToast(`🎉 ${def.name} opened!`);
   closeStores();
   showStores();
 }
@@ -2844,6 +3250,7 @@ function decisionBuySoda() {
 
 function decisionDeclineSoda() {
     upg.sodaDeclined = true;
+    upg.sodaDeclinedUntil = (eco.day || 0) + 4; // temporary dip, then recovers
     document.getElementById('decision-popup').style.display='none';
     executeDayStart();
 }
@@ -2864,7 +3271,9 @@ function executeDayStart() {
   let multi = 1.0;
   if(rating >= 4.0) multi = 1.3;
   if(rating < 3.0) multi = 0.7;
-  if(upg.sodaDeclined) multi *= 0.85;
+  // Declining the soda fountain is now a small, TEMPORARY traffic dip rather
+  // than a permanent penalty (the fountain is still buyable in the Shop).
+  if(upg.sodaDeclined && eco.day <= (upg.sodaDeclinedUntil||0)) multi *= 0.92;
 
   const baseGroups = eco.day + 1; 
   const groupCount = Math.max(1, Math.floor(baseGroups * multi));
@@ -2876,6 +3285,7 @@ function executeDayStart() {
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
   stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
          spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups};
+  serveStreak = 0; streakTimer = 0;
 
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
@@ -2928,7 +3338,7 @@ function executeDayStart() {
      const p = document.getElementById('alert-popup');
      document.getElementById('alert-title').style.color = '#ab47bc';
      document.getElementById('alert-title').textContent = '🏪 EXPAND!';
-     document.getElementById('alert-desc').innerHTML = "You've been running for <b>30 days!</b><br><br>You can now <b>Open a New Store Location</b> from the Stores menu for <b>$5,000</b>.<br><br>Your robots will automatically earn passive income at idle stores!";
+     document.getElementById('alert-desc').innerHTML = "You've been running for <b>30 days!</b><br><br>You can now <b>Open a New Store Location</b> from the Stores menu for <b>$3,000</b>.<br><br>Your robots will automatically earn passive income at idle stores!";
      p.style.display = 'flex';
   }
 }
@@ -2978,8 +3388,20 @@ function endDay(){
   gStats.lifeGroups+=stats.groupsServed;
   hlRing.visible=false;
   document.getElementById('pause-btn').style.display='none';
-  const cum=parseFloat(getCumRating());
-  if(eco.day>=5&&cum<2.0){
+
+  // Track a ROLLING rating (today's average, last 3 days) for the fail check so
+  // one or two rough days can be recovered from instead of a sticky lifetime
+  // average causing an unrecoverable death spiral. Lifetime rating is still
+  // shown everywhere via getCumRating().
+  if(!gStats.recentDays) gStats.recentDays = [];
+  if(stats.groupsServed > 0){
+    gStats.recentDays.push(stats.totalStars / stats.groupsServed);
+    if(gStats.recentDays.length > 3) gStats.recentDays.shift();
+  }
+  const rollAvg = gStats.recentDays.length
+    ? gStats.recentDays.reduce((a,b)=>a+b,0) / gStats.recentDays.length
+    : 5;
+  if(!diffNoFail() && eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0){
     gameState='gameover';
     document.getElementById('fail-days').textContent=eco.day;
     document.getElementById('gameover-screen').style.display='flex';
@@ -3000,15 +3422,31 @@ function endDay(){
     stats._passiveEarned = passiveTotal;
   } else { stats._passiveEarned = 0; }
 
-  gameState='results'; saveGame(); showResults();
+  // Lifetime records
+  records.totalServed += stats.groupsServed;
+  const todayStarsAvg = stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0;
+  stats._newRecord = false;
+  if(stats.cashEarned > records.bestDayCash){ records.bestDayCash = stats.cashEarned; stats._newRecord = true; }
+  if(todayStarsAvg > records.bestDayStars) records.bestDayStars = todayStarsAvg;
+
+  checkAchievements();
+  gameState='results'; saveGame(); playSound('daycomplete'); showResults();
 }
 
 function showResults(){
   const scr=document.getElementById('results-screen');
   scr.style.display='flex';
+  // Highlight a new daily-earnings record in the header.
+  const dayLbl=document.getElementById('res-day-lbl');
+  if(dayLbl){
+    dayLbl.textContent = stats._newRecord ? '🏆 NEW BEST DAY!' : 'Day Complete';
+    dayLbl.style.color = stats._newRecord ? '#FFD54F' : 'rgba(255,255,255,.4)';
+  }
   const todayStars=stats.groupsServed>0?Math.round(stats.totalStars/stats.groupsServed):0;
   const cum=getCumRating();
-  const cashBefore=eco.cash-stats.cashEarned;
+  // eco.cash already includes today's serving cash + passive + achievement
+  // bonuses, so back all of them out to get the true starting balance.
+  const cashBefore=eco.cash-stats.cashEarned-(stats._passiveEarned||0)-(stats._achvEarned||0);
 
   const el=id=>document.getElementById(id);
   el('res-day-lbl').style.opacity='0'; el('res-title').style.opacity='0'; el('res-title').style.transform='scale(.75)';
@@ -3030,13 +3468,15 @@ function showResults(){
   setTimeout(()=>{ el('res-rating-num').textContent=`⭐ ${cum} overall`; el('res-rating-num').style.opacity='1'; }, 1480);
   setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
   setTimeout(()=>{
-    // Show passive income if any
+    // Show passive + achievement income if any
     const passiveEarned = stats._passiveEarned || 0;
-    const totalEarned = stats.cashEarned + passiveEarned;
+    const achvEarned = stats._achvEarned || 0;
+    const totalEarned = stats.cashEarned + passiveEarned + achvEarned;
     el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+totalEarned.toFixed(2);
-    if(passiveEarned > 0) {
-      el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)} (+$${passiveEarned.toFixed(2)} passive 🤖)`;
-    }
+    let extra = '';
+    if(passiveEarned > 0) extra += ` (+$${passiveEarned.toFixed(2)} passive 🤖)`;
+    if(achvEarned > 0)    extra += ` (+$${achvEarned.toFixed(2)} 🏆)`;
+    if(extra) el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}${extra}`;
     el('res-total-row').style.opacity='1';
     const totalEl=el('res-new-total');
     const dur=900, t0=performance.now();
@@ -3066,12 +3506,13 @@ function spawnGroup(){
   const size = type === 'heavy' ? 1 : (Math.random()>.55?2:1);
   const sx = doorX()+(Math.random()-.5)*2, sz = bounds.b+12;
   
+  const dpm = diffPatienceMult();
   const g = {
     id:Math.random(), size, type, state:'approach_door', stoodUp: false,
-    waitPatience: 1800 * upg.patienceMult * (type==='vip'?0.5:1.0), 
-    maxWait: 1800 * upg.patienceMult * (type==='vip'?0.5:1.0),
-    foodPatience: size * 1300 * upg.patienceMult, 
-    maxFood: size * 1300 * upg.patienceMult,
+    waitPatience: 1800 * upg.patienceMult * dpm * (type==='vip'?0.5:1.0),
+    maxWait: 1800 * upg.patienceMult * dpm * (type==='vip'?0.5:1.0),
+    foodPatience: size * 1300 * upg.patienceMult * dpm,
+    maxFood: size * 1300 * upg.patienceMult * dpm,
     eatTimer:0, pos:new THREE.Vector3(sx,0,sz), target:new THREE.Vector3(sx,0,sz),
     mesh:new THREE.Group(), wobble:0, 
     orders: [], unservedOrders: [], heavyCount: type === 'heavy' ? 3 : 1
@@ -3169,6 +3610,35 @@ function updateStationVisuals(){
 // ─────────────────────────────────────────────────────────────
 //  ACTION HANDLER
 // ─────────────────────────────────────────────────────────────
+// Short human-readable description of what ACT will do at the nearest station,
+// given what the player is currently holding. Used for the contextual prompt.
+function actionPromptFor(t){
+  if(!t) return '';
+  const h = player.holding, ty = t.type;
+  if(isSeafood()){
+    if(ty==='cooler')          return !h?'Grab fish':'';
+    if(ty==='beachgrill')      return h==='raw_fish'?'Place on grill':(!h?'Take fish':'');
+    if(ty==='assembly')        return h==='cooked_fish'?'Make taco':((!h&&t.item)?'Pick up':((h&&!t.item)?'Place down':''));
+    if(ty==='chowderpot')      return !h?'Ladle chowder':'';
+    if(ty==='lemonadestation') return !h?'Pour lemonade':'';
+    if(ty==='basketrack')      return (h&&h!=='basket')?'Put in basket':((!h&&t.cleanBaskets>0)?'Take basket':'');
+    if(ty==='sink')            return h==='dirty_basket'?'Hold to wash':'';
+    if(ty==='trash')           return (t.contents>=4&&!h)?'Bag trash':(h?'Toss':'');
+    if(ty==='dumpster')        return h==='trash_bag'?'Dump bag':'';
+    if(ty==='table')           return (h&&t.group&&t.group.state==='ordering')?'Serve!':((!h&&t.dirtyTrays>0)?'Clear table':'');
+    return '';
+  }
+  if(ty==='fridge')        return !h?'Grab patty':'';
+  if(ty==='grill')         return h==='raw'?'Place on grill':(!h?'Take burger':((h==='tray'||h==='soda_on_tray')?'Plate burger':''));
+  if(ty==='trayrack')      return h==='tray'?'Return tray':((!h&&t.cleanTrays>0)?'Take tray':(h==='cooked'?'Plate burger':''));
+  if(ty==='sodafountain')  return (h==='tray'||h==='burger_on_tray')?'Add soda':'';
+  if(ty==='counter')       return (!t.item&&h)?'Place down':((t.item&&!h)?'Pick up':'Combine');
+  if(ty==='trash')         return (t.contents>=4&&!h)?'Bag trash':(h?'Toss':'');
+  if(ty==='dumpster')      return h==='trash_bag'?'Dump bag':'';
+  if(ty==='table')         return (h&&t.group&&t.group.state==='ordering')?'Serve!':((!h&&t.dirtyTrays>0)?'Clear table':'');
+  return '';
+}
+
 function handleAction(){
   if(gameState==='edit'){
     if(dragStation){
@@ -3434,7 +3904,7 @@ function updateRobots(ds){
     }
 
     if(bot.state==='idle' && !(bot._actionCooldown > 0)){
-      if(bot.role==='chef'){
+      if(bot.role==='chef' && !isSeafood()){
         if(bot.holding === 'charred') {
             const trash = Object.values(stations).find(s => s.type === 'trash');
             if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
@@ -3892,6 +4362,20 @@ function drawFloatUI(){
 
   if(gameState!=='playing'){ floatUI.innerHTML=html; return; }
 
+  // Early-game station labels: show friendly names for the first two days so
+  // new players can learn what each station is, then they fade away.
+  if(eco.day <= 2){
+    for(const k in stations){
+      const s=stations[k];
+      const lbl=STATION_LABELS[s.type];
+      if(!lbl) continue;
+      const sx = s.pos ? s.pos.x : s.x, sz = s.pos ? s.pos.z : s.z;
+      const p=scr(new THREE.Vector3(sx, (s.type==='table'?3.2:4.4), sz));
+      if(p.z>=1) continue;
+      html+=`<div class="fbubble" style="left:${p.x}px;top:${p.y}px;font-size:11px;padding:2px 8px;opacity:.92;">${lbl}</div>`;
+    }
+  }
+
   let stinkPenalty = false;
   for(const k in stations){ 
     const s=stations[k]; 
@@ -3929,6 +4413,11 @@ function drawFloatUI(){
     const pct=Math.max(0,t.group.foodPatience/t.group.maxFood);
     const col=pct>.5?'#4CAF50':pct>.25?'#FFEB3B':'#F44336';
     html+=`<div class="fbar" style="left:${p.x}px;top:${p.y}px;width:76px"><div class="fbar-fill" style="width:${pct*100}%;background:${col}"></div></div>`;
+    // Colorblind aid: a mood face encodes patience independently of colour.
+    if(settings.colorblind){
+      const face = pct>.5?'🙂':pct>.25?'😐':'😡';
+      html+=`<div style="position:absolute;left:${p.x}px;top:${p.y-13}px;transform:translate(-50%,-50%);font-size:13px;pointer-events:none;">${face}</div>`;
+    }
 
     // Draw individual order bubbles above each customer's head
     t.group.mesh.children.forEach((c, i) => {
@@ -4045,6 +4534,13 @@ rebuildAll();
 updateCashUI();
 showStartMenu();
 
+// First-run onboarding: auto-open the how-to-play guide exactly once so new
+// players aren't dropped in cold. The tutorial content already exists.
+if(!localStorage.getItem('burgerBoss_tutorialSeen')){
+  try { localStorage.setItem('burgerBoss_tutorialSeen','1'); } catch(e){}
+  setTimeout(()=>{ try{ showPractice(); }catch(e){} }, 500);
+}
+
 // ─────────────────────────────────────────────────────────────
 //  MAIN LOOP
 // ─────────────────────────────────────────────────────────────
@@ -4053,6 +4549,7 @@ const TARGET=1/60;
 
 function animate(){
   requestAnimationFrame(animate);
+  try {
   if(gamePaused) return;
   const now=performance.now();
   ds=Math.min((now-lastT)/1000,0.1)/TARGET; lastT=now;
@@ -4071,18 +4568,28 @@ function animate(){
     } else if (gameState==='edit' || gameState==='playing') {
       placeGhost.visible=false;
       const t=getClosest();
-      if(t){ 
-          hlRing.visible=true; 
+      if(t){
+          hlRing.visible=true;
           if(t.type === 'robot') hlRing.position.set(t.pos.x, .12, t.pos.z);
           else hlRing.position.set(t.x, .12, t.z);
-          // Show station hint
-          // (hints removed — use Practice mode instead)
       } else {
           hlRing.visible=false;
-          // no hint to hide
+      }
+      // Contextual action prompt: tell the player what ACT will do right now.
+      const al=document.getElementById('act-label');
+      if(al){
+        const prompt = (gameState==='playing') ? actionPromptFor(t) : '';
+        if(prompt && actionBtn.classList.contains('active')){
+          const r = actionBtn.getBoundingClientRect();
+          al.textContent = prompt;
+          al.style.left = (r.left + r.width/2) + 'px';
+          al.style.top  = (r.top - 18) + 'px';
+          al.style.display = 'block';
+        } else { al.style.display = 'none'; }
       }
     } else {
       hlRing.visible=false;
+      const al=document.getElementById('act-label'); if(al) al.style.display='none';
     }
 
     const spd=player.speed+upg.speedLv*.035;
@@ -4125,8 +4632,10 @@ function animate(){
               sl.state = (s.type==='beachgrill') ? 'cooked_fish' : 'cooked';
               sl.burnTimer=0; needVis=true; playSound('sizzle');
             }
-          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish') { 
-            sl.burnTimer += ds * (1 / upg.grillMult);
+          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish') {
+            // Burn window is fixed (independent of grill speed) so upgrading the
+            // grill makes cooking faster WITHOUT making food burn faster.
+            sl.burnTimer += ds;
             if(sl.burnTimer >= 300) {
               sl.state = (s.type==='beachgrill') ? 'charred_fish' : 'charred';
               needVis=true; playSound('error');
@@ -4136,6 +4645,7 @@ function animate(){
       }
       if(needVis) updateStationVisuals();
 
+      if(streakTimer>0){ streakTimer-=ds; if(streakTimer<=0) serveStreak=0; }
       if(stats.spawnTimer>0) stats.spawnTimer-=ds;
       if(stats.groupsLeft>0&&stats.spawnTimer<=0){ 
         // After day 10: spawn up to maxSimultaneous groups at once when timer fires
@@ -4202,21 +4712,42 @@ function animate(){
             let rawCash;
             if(isSeafood()){
               // Seafood items worth slightly more base
-              rawCash = g.size * 15 * (stars/5);
+              rawCash = g.size * 19 * (stars/5);
               const comboCount = g.orders.filter(o=>o==='taco_chowder_basket'||o==='taco_lemonade_basket').length;
-              rawCash += comboCount * 5 * (stars/5);
+              rawCash += comboCount * 6 * (stars/5);
             } else {
-              rawCash = g.size * 12 * (stars/5);
+              rawCash = g.size * 16 * (stars/5);
               const sodaCount = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
-              rawCash += sodaCount * 6 * (stars/5);
+              rawCash += sodaCount * 7 * (stars/5);
             }
 
-            if(g.type === 'vip') rawCash *= 3; 
-            
+            // Mastery tip: a small bonus for 4-5 star service rewards getting good.
+            if(stars >= 4) rawCash += (stars - 3) * g.size * 1.5;
+
+            if(g.type === 'vip') rawCash *= 3;
+            rawCash *= diffPayoutMult();
+
+            // Serve streak: consecutive serves within the window stack a tip
+            // bonus (up to +40%).
+            if(streakTimer > 0) serveStreak++; else serveStreak = 1;
+            streakTimer = 360; // ~6s window
+            const streakBonus = 1 + Math.min(serveStreak - 1, 4) * 0.1;
+            rawCash *= streakBonus;
+
             const cash = Math.round(rawCash * 100) / 100;
             eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
             updateCashUI();
             playSound('coin');
+            // Mastery feedback: a chime + callout on great service.
+            if(stars >= 4){
+              playSound('serve');
+              spawnFloater(g.tbl.mesh.position.clone().add(new THREE.Vector3(0,0.9,0)),
+                stars===5?'PERFECT! ⭐':'GREAT! ⭐', '#FFD54F');
+            }
+            if(serveStreak >= 2){
+              spawnFloater(g.tbl.mesh.position.clone().add(new THREE.Vector3(0,1.7,0)),
+                `🔥 STREAK x${serveStreak}`, '#FF8A65');
+            }
             spawnFloater(g.tbl.mesh.position, `+$${cash.toFixed(2)}`);
             
             g.tbl.dirtyTrays = g.tbl.served; g.tbl.served=0; g.tbl.group=null; updateStationVisuals();
@@ -4260,6 +4791,18 @@ function animate(){
     drawFloatUI();
   }
   renderer.render(scene,camera);
+  } catch(err){
+    // A per-frame error shouldn't blank the screen forever. Log it and, once,
+    // tell the player how to recover instead of leaving a frozen black canvas.
+    console.error('Frame error:', err);
+    if(!window._frameErrShown){
+      window._frameErrShown = true;
+      const d=document.createElement('div');
+      d.style.cssText="position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(183,28,28,.95);color:#fff;font-family:sans-serif;font-size:13px;font-weight:700;padding:10px 16px;border-radius:14px;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.5);";
+      d.innerHTML="Something glitched. <a href='#' onclick='location.reload();return false;' style='color:#fff;text-decoration:underline;'>Reload</a>";
+      document.body.appendChild(d);
+    }
+  }
 }
 
 animate();

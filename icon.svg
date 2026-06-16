@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#1976D2"/>
+  <!-- top bun -->
+  <path d="M116 196c0-66 63-112 140-112s140 46 140 112z" fill="#e6b873"/>
+  <circle cx="196" cy="150" r="7" fill="#fff8e1"/>
+  <circle cx="256" cy="134" r="7" fill="#fff8e1"/>
+  <circle cx="316" cy="150" r="7" fill="#fff8e1"/>
+  <!-- lettuce -->
+  <path d="M108 206h296c-10 22-34 22-49 12-16 12-34 12-50 0-16 12-34 12-50 0-16 12-34 12-50 0-15 10-39 10-47-12z" fill="#7cb342"/>
+  <!-- tomato -->
+  <rect x="116" y="232" width="280" height="22" rx="11" fill="#e53935"/>
+  <!-- patty -->
+  <rect x="108" y="256" width="296" height="40" rx="20" fill="#6a4220"/>
+  <!-- cheese -->
+  <path d="M120 296h272l-28 40h-50l-30-30-30 30h-50z" fill="#ffc107"/>
+  <!-- bottom bun -->
+  <path d="M116 320h280c0 44-63 64-140 64s-140-20-140-64z" fill="#d49a4e"/>
+</svg>
