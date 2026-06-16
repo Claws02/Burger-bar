@@ -693,6 +693,10 @@ canvas{display:block;width:100%;height:100%;}
         <span id="set-diff-state" style="color:#90caf9;font-weight:900;">NORMAL</span>
       </button>
       <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Casual: customers wait longer, +15% tips, and the store never closes.</div>
+      <div class="pause-btn-row">
+        <button class="pbtn pbtn-sound" onclick="exportSave()">📤 Export Save</button>
+        <button class="pbtn pbtn-sound" onclick="importSave()">📥 Import Save</button>
+      </div>
       <button class="btn-red" onclick="if(confirm('Reset ALL progress?')){localStorage.removeItem('burgerBoss_save');localStorage.removeItem('burgerBoss_tutorialSeen');location.reload();}" style="width:100%;">🗑️ Reset All Progress</button>
     </div>
     <button class="btn-green" onclick="closeSettings()" style="margin-top:18px;">BACK</button>
@@ -1716,6 +1720,9 @@ let stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:0, spawnTimer:
 let loadedLayout = null; 
 
 let floaters = [];
+
+// Serve-streak: serving groups in quick succession builds a tip multiplier.
+let serveStreak = 0, streakTimer = 0;
 function spawnFloater(pos, txt, color='#66BB6A'){
   floaters.push({pos:pos.clone().add(new THREE.Vector3(0,2,0)), text:txt, color:color, life:1.5});
 }
@@ -2918,9 +2925,32 @@ function toggleDifficulty(){
 function diffPatienceMult(){ return settings.difficulty==='casual' ? 1.4 : 1.0; }
 function diffPayoutMult(){ return settings.difficulty==='casual' ? 1.15 : 1.0; }
 function diffNoFail(){ return settings.difficulty==='casual'; }
+// ── SAVE EXPORT / IMPORT (backup & transfer; no cloud) ───────
+function exportSave(){
+  try {
+    saveGame();
+    const raw = localStorage.getItem('burgerBoss_save') || '';
+    if(!raw){ showToast('No save to export'); return; }
+    const code = btoa(unescape(encodeURIComponent(raw)));
+    // Prefill a prompt so the player can copy the backup code.
+    window.prompt('Your backup code (copy & keep it safe):', code);
+  } catch(e){ showToast('Export failed'); }
+}
+function importSave(){
+  const code = window.prompt('Paste a backup code to restore (this overwrites current progress):', '');
+  if(!code) return;
+  try {
+    const json = decodeURIComponent(escape(atob(code.trim())));
+    const obj = JSON.parse(json);          // validate it parses
+    if(!obj || typeof obj !== 'object' || !obj.stores) throw new Error('bad');
+    localStorage.setItem('burgerBoss_save', json);
+    showToast('✅ Save imported! Reloading…');
+    setTimeout(()=>location.reload(), 800);
+  } catch(e){ showToast('❌ Invalid backup code'); }
+}
 window.showSettings=showSettings; window.closeSettings=closeSettings;
 window.setVolume=setVolume; window.toggleMusic=toggleMusic; window.toggleColorblind=toggleColorblind;
-window.toggleDifficulty=toggleDifficulty;
+window.toggleDifficulty=toggleDifficulty; window.exportSave=exportSave; window.importSave=importSave;
 
 // ── PAUSE ────────────────────────────────────────────────────
 let gamePaused = false;
@@ -3255,6 +3285,7 @@ function executeDayStart() {
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
   stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
          spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups};
+  serveStreak = 0; streakTimer = 0;
 
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
@@ -4613,6 +4644,7 @@ function animate(){
       }
       if(needVis) updateStationVisuals();
 
+      if(streakTimer>0){ streakTimer-=ds; if(streakTimer<=0) serveStreak=0; }
       if(stats.spawnTimer>0) stats.spawnTimer-=ds;
       if(stats.groupsLeft>0&&stats.spawnTimer<=0){ 
         // After day 10: spawn up to maxSimultaneous groups at once when timer fires
@@ -4694,6 +4726,13 @@ function animate(){
             if(g.type === 'vip') rawCash *= 3;
             rawCash *= diffPayoutMult();
 
+            // Serve streak: consecutive serves within the window stack a tip
+            // bonus (up to +40%).
+            if(streakTimer > 0) serveStreak++; else serveStreak = 1;
+            streakTimer = 360; // ~6s window
+            const streakBonus = 1 + Math.min(serveStreak - 1, 4) * 0.1;
+            rawCash *= streakBonus;
+
             const cash = Math.round(rawCash * 100) / 100;
             eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
             updateCashUI();
@@ -4703,6 +4742,10 @@ function animate(){
               playSound('serve');
               spawnFloater(g.tbl.mesh.position.clone().add(new THREE.Vector3(0,0.9,0)),
                 stars===5?'PERFECT! ⭐':'GREAT! ⭐', '#FFD54F');
+            }
+            if(serveStreak >= 2){
+              spawnFloater(g.tbl.mesh.position.clone().add(new THREE.Vector3(0,1.7,0)),
+                `🔥 STREAK x${serveStreak}`, '#FF8A65');
             }
             spawnFloater(g.tbl.mesh.position, `+$${cash.toFixed(2)}`);
             

@@ -31,11 +31,13 @@
 - **Casual difficulty** mode (longer patience, +15% tips, never closes) in Settings
 - **Lifetime records** (best day, best rating, total served) with a "NEW BEST DAY!" results callout and a records banner on the Achievements screen
 - Achievements now also unlock immediately after relevant purchases, not only at day-end
+- **Serve-streak tips**: consecutive serves within ~6s stack up to +40% bonus, with 🔥 STREAK callouts
+- **Save export/import** backup codes in Settings (backup & device transfer; no cloud)
 
 **◻️ Not yet done (recommended next)**
 - True offline bundling of Three.js + font (blocked here by network egress — needs the library file committed) and a service worker
 - A genuinely distinct 3rd cuisine (large gameplay addition; best done with live playtesting)
-- Optional: daily challenges, cloud/export save
+- Optional: daily challenges, cloud save
 
 ---
 
