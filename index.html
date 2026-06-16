@@ -10,6 +10,9 @@
 <meta property="og:type" content="website">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>Burger Bar</title>
 <!-- Three.js with multi-CDN fallback: if one CDN is blocked or down, try the
      next, then surface a friendly error instead of a silent black screen. -->
@@ -1507,8 +1510,8 @@ function itemMesh(type){
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
 function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
-function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false}; }
-function defGS()   { return {lifeStars:0, lifeGroups:0}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false, sodaDeclinedUntil:0}; }
+function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
 // ─── SKINS ───────────────────────────────────────────────────
 const SKIN_DEFS = [
@@ -2755,9 +2758,9 @@ window.closePractice = closePractice;
 
 // ── MULTI-STORE ──────────────────────────────────────────────
 function calcPassiveIncome(store) {
-  // Each robot generates $8/day passively
+  // Each robot generates $16/day passively at an idle store
   const robotCount = (store.upg && store.upg.robotCount) || 0;
-  return Math.round(robotCount * 8 * 100) / 100;
+  return Math.round(robotCount * 16 * 100) / 100;
 }
 
 function showStores(){
@@ -2794,17 +2797,17 @@ function showStores(){
   }
 
   // New store unlock
-  const canUnlock = eco.day >= 30 && eco.cash >= 5000;
+  const canUnlock = eco.day >= 30 && eco.cash >= 3000;
   const newCard = document.createElement('div');
   newCard.className = 'store-card locked-store';
   newCard.innerHTML = `
     <div style="font-size:36px;">🔒</div>
     <div style="flex:1;">
       <div style="font-weight:900;font-size:16px;">Open New Location</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">Requires Day 30 · Costs $5,000</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">Requires Day 30 · Costs $3,000</div>
       <div style="font-size:12px;color:rgba(255,255,255,.4);">Day ${Math.max(0,30-eco.day)} days away</div>
     </div>
-    <button class="buy-btn" ${canUnlock?'':'disabled'} onclick="openNewStore()">$5,000</button>
+    <button class="buy-btn" ${canUnlock?'':'disabled'} onclick="openNewStore()">$3,000</button>
   `;
   list.appendChild(newCard);
 
@@ -2859,8 +2862,8 @@ function switchToStore(idx){
   closeStores();
 }
 function openNewStore(){
-  if(eco.cash < 5000 || eco.day < 30) return;
-  eco.cash -= 5000;
+  if(eco.cash < 3000 || eco.day < 30) return;
+  eco.cash -= 3000;
   const newId = stores.length;
   const storeTypes = [
     {name:'Seafood Shack',    type:'seafood'},
@@ -2911,6 +2914,7 @@ function decisionBuySoda() {
 
 function decisionDeclineSoda() {
     upg.sodaDeclined = true;
+    upg.sodaDeclinedUntil = (eco.day || 0) + 4; // temporary dip, then recovers
     document.getElementById('decision-popup').style.display='none';
     executeDayStart();
 }
@@ -2931,7 +2935,9 @@ function executeDayStart() {
   let multi = 1.0;
   if(rating >= 4.0) multi = 1.3;
   if(rating < 3.0) multi = 0.7;
-  if(upg.sodaDeclined) multi *= 0.85;
+  // Declining the soda fountain is now a small, TEMPORARY traffic dip rather
+  // than a permanent penalty (the fountain is still buyable in the Shop).
+  if(upg.sodaDeclined && eco.day <= (upg.sodaDeclinedUntil||0)) multi *= 0.92;
 
   const baseGroups = eco.day + 1; 
   const groupCount = Math.max(1, Math.floor(baseGroups * multi));
@@ -2995,7 +3001,7 @@ function executeDayStart() {
      const p = document.getElementById('alert-popup');
      document.getElementById('alert-title').style.color = '#ab47bc';
      document.getElementById('alert-title').textContent = '🏪 EXPAND!';
-     document.getElementById('alert-desc').innerHTML = "You've been running for <b>30 days!</b><br><br>You can now <b>Open a New Store Location</b> from the Stores menu for <b>$5,000</b>.<br><br>Your robots will automatically earn passive income at idle stores!";
+     document.getElementById('alert-desc').innerHTML = "You've been running for <b>30 days!</b><br><br>You can now <b>Open a New Store Location</b> from the Stores menu for <b>$3,000</b>.<br><br>Your robots will automatically earn passive income at idle stores!";
      p.style.display = 'flex';
   }
 }
@@ -3045,8 +3051,20 @@ function endDay(){
   gStats.lifeGroups+=stats.groupsServed;
   hlRing.visible=false;
   document.getElementById('pause-btn').style.display='none';
-  const cum=parseFloat(getCumRating());
-  if(eco.day>=5&&cum<2.0){
+
+  // Track a ROLLING rating (today's average, last 3 days) for the fail check so
+  // one or two rough days can be recovered from instead of a sticky lifetime
+  // average causing an unrecoverable death spiral. Lifetime rating is still
+  // shown everywhere via getCumRating().
+  if(!gStats.recentDays) gStats.recentDays = [];
+  if(stats.groupsServed > 0){
+    gStats.recentDays.push(stats.totalStars / stats.groupsServed);
+    if(gStats.recentDays.length > 3) gStats.recentDays.shift();
+  }
+  const rollAvg = gStats.recentDays.length
+    ? gStats.recentDays.reduce((a,b)=>a+b,0) / gStats.recentDays.length
+    : 5;
+  if(eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0){
     gameState='gameover';
     document.getElementById('fail-days').textContent=eco.day;
     document.getElementById('gameover-screen').style.display='flex';
@@ -4112,6 +4130,13 @@ rebuildAll();
 updateCashUI();
 showStartMenu();
 
+// First-run onboarding: auto-open the how-to-play guide exactly once so new
+// players aren't dropped in cold. The tutorial content already exists.
+if(!localStorage.getItem('burgerBoss_tutorialSeen')){
+  try { localStorage.setItem('burgerBoss_tutorialSeen','1'); } catch(e){}
+  setTimeout(()=>{ try{ showPractice(); }catch(e){} }, 500);
+}
+
 // ─────────────────────────────────────────────────────────────
 //  MAIN LOOP
 // ─────────────────────────────────────────────────────────────
@@ -4192,8 +4217,10 @@ function animate(){
               sl.state = (s.type==='beachgrill') ? 'cooked_fish' : 'cooked';
               sl.burnTimer=0; needVis=true; playSound('sizzle');
             }
-          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish') { 
-            sl.burnTimer += ds * (1 / upg.grillMult);
+          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish') {
+            // Burn window is fixed (independent of grill speed) so upgrading the
+            // grill makes cooking faster WITHOUT making food burn faster.
+            sl.burnTimer += ds;
             if(sl.burnTimer >= 300) {
               sl.state = (s.type==='beachgrill') ? 'charred_fish' : 'charred';
               needVis=true; playSound('error');
@@ -4269,16 +4296,19 @@ function animate(){
             let rawCash;
             if(isSeafood()){
               // Seafood items worth slightly more base
-              rawCash = g.size * 15 * (stars/5);
+              rawCash = g.size * 19 * (stars/5);
               const comboCount = g.orders.filter(o=>o==='taco_chowder_basket'||o==='taco_lemonade_basket').length;
-              rawCash += comboCount * 5 * (stars/5);
+              rawCash += comboCount * 6 * (stars/5);
             } else {
-              rawCash = g.size * 12 * (stars/5);
+              rawCash = g.size * 16 * (stars/5);
               const sodaCount = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
-              rawCash += sodaCount * 6 * (stars/5);
+              rawCash += sodaCount * 7 * (stars/5);
             }
 
-            if(g.type === 'vip') rawCash *= 3; 
+            // Mastery tip: a small bonus for 4-5 star service rewards getting good.
+            if(stars >= 4) rawCash += (stars - 3) * g.size * 1.5;
+
+            if(g.type === 'vip') rawCash *= 3;
             
             const cash = Math.round(rawCash * 100) / 100;
             eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
