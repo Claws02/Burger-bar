@@ -61,8 +61,8 @@
    fallback so the game never depends on the webfont being available. */
 @font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;
   src:local('Nunito'),url('https://fonts.gstatic.com/s/nunito/v26/XRXV3I6Li01BKofINeaBTMnFcQ.woff2') format('woff2');}
-*{box-sizing:border-box;}
-body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;user-select:none;touch-action:none;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}
+body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none;}
 
 /* ── BRANDED LOADING / SPLASH SCREEN ── */
 #boot-splash{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(circle at 50% 38%,#1c2740 0%,#0a0e16 72%);transition:opacity .6s ease;}
@@ -299,6 +299,37 @@ canvas{display:block;width:100%;height:100%;}
   top:136px;right:10px;
   z-index:6;
 }
+
+/* Achievements showcase — right side, under Shop */
+#home-achv-panel{
+  position:absolute;
+  top:196px;right:10px;
+  width:160px;
+  z-index:6;
+  cursor:pointer;
+}
+.home-achv-title{
+  font-size:10px;font-weight:900;letter-spacing:.6px;
+  color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45);
+  display:flex;align-items:center;gap:4px;
+  padding-left:3px;margin-bottom:6px;
+}
+#home-achv-list{display:flex;flex-direction:column;gap:7px;}
+.home-achv-card{
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,rgba(255,255,255,.94),rgba(244,244,247,.9));
+  border:2px solid rgba(255,255,255,.7);border-radius:13px;
+  padding:6px 8px;
+  box-shadow:0 3px 0 rgba(0,0,0,.18);
+  transition:transform .09s,box-shadow .09s;
+}
+#home-achv-panel:active .home-achv-card{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.18);}
+.home-achv-card .ico{font-size:22px;flex-shrink:0;width:26px;text-align:center;}
+.home-achv-card .txt{display:flex;flex-direction:column;line-height:1.1;overflow:hidden;}
+.home-achv-card .nm{font-size:11px;font-weight:900;color:#2b2b2b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.home-achv-card .st{font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.home-achv-card.locked{background:linear-gradient(135deg,rgba(228,228,233,.88),rgba(206,206,213,.82));}
+.home-achv-card.locked .nm{color:#555;}
 
 /* Stores — small square, bottom-left */
 #home-btn-stores{
@@ -568,6 +599,12 @@ canvas{display:block;width:100%;height:100%;}
         <span class="btn-icon">🛒</span>
         <span class="btn-label">Shop<span class="btn-sub">Upgrades</span></span>
       </button>
+    </div>
+
+    <!-- ACHIEVEMENTS SHOWCASE — right side, under Shop -->
+    <div id="home-achv-panel" onclick="showAchievements()">
+      <div class="home-achv-title">🏆 ACHIEVEMENTS</div>
+      <div id="home-achv-list"></div>
     </div>
 
     <!-- PLAY — just below screen center -->
@@ -2270,6 +2307,31 @@ function closeAchievements(){
   document.getElementById('achievements-screen').style.display='none';
   showStartMenu();
 }
+
+// Showcase 3 achievements on the home screen (under the Shop button).
+// Prefers the most recently unlocked, then fills with the next ones to chase.
+function renderHomeAchievements(){
+  const wrap = document.getElementById('home-achv-list');
+  if(!wrap) return;
+  wrap.innerHTML='';
+  const done = achievements.unlocked || [];
+  const unlocked = ACHIEVEMENTS.filter(a=>done.includes(a.id));
+  const locked   = ACHIEVEMENTS.filter(a=>!done.includes(a.id));
+  const picks = unlocked.slice(-3).reverse();
+  for(const a of locked){ if(picks.length>=3) break; picks.push(a); }
+  for(const a of unlocked){ if(picks.length>=3) break; if(!picks.includes(a)) picks.push(a); }
+  picks.slice(0,3).forEach(a=>{
+    const got = done.includes(a.id);
+    const card = document.createElement('div');
+    card.className = 'home-achv-card' + (got?'':' locked');
+    const status = got ? '✓ Unlocked' : a.desc;
+    const color  = got ? '#2e9e4f' : '#888';
+    card.innerHTML = `<div class="ico">${got?a.icon:'🔒'}</div>
+      <div class="txt"><div class="nm">${a.name}</div>
+      <div class="st" style="color:${color};">${status}</div></div>`;
+    wrap.appendChild(card);
+  });
+}
 window.showAchievements=showAchievements; window.closeAchievements=closeAchievements;
 
 // ─────────────────────────────────────────────────────────────
@@ -2864,6 +2926,8 @@ function showStartMenu(){
 
   const storeBtn = document.getElementById('home-stores-btn');
   if(storeBtn) storeBtn.style.display = eco.day >= 30 ? 'flex' : 'none';
+
+  renderHomeAchievements();
 
   document.getElementById('home-screen').style.display='flex';
 
