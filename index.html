@@ -327,9 +327,8 @@ canvas{display:block;width:100%;height:100%;}
 .home-achv-card .ico{font-size:22px;flex-shrink:0;width:26px;text-align:center;}
 .home-achv-card .txt{display:flex;flex-direction:column;line-height:1.1;overflow:hidden;}
 .home-achv-card .nm{font-size:11px;font-weight:900;color:#2b2b2b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.home-achv-card .st{font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.home-achv-card.locked{background:linear-gradient(135deg,rgba(228,228,233,.88),rgba(206,206,213,.82));}
-.home-achv-card.locked .nm{color:#555;}
+.home-achv-card .st{font-size:9px;font-weight:800;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.home-achv-card.active{border-left:4px solid #FBC02D;}
 
 /* Stores — small square, bottom-left */
 #home-btn-stores{
@@ -489,6 +488,51 @@ canvas{display:block;width:100%;height:100%;}
 .pstep-body{flex:1;min-width:0;}
 .pstep-title{font-size:13px;font-weight:900;color:#fff;margin-bottom:3px;}
 .pstep-desc{font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.45;}
+
+/* ── FIRST-RUN INTRO CAROUSEL ── */
+#intro-screen{
+  position:fixed;inset:0;z-index:400;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 28%,#163a5c 0%,#070f1a 78%);
+  padding:20px;
+}
+.intro-card{width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;}
+.intro-shot{
+  width:100%;aspect-ratio:10/13;max-height:46vh;
+  border-radius:24px;overflow:hidden;
+  border:3px solid rgba(255,255,255,.2);
+  box-shadow:0 18px 44px rgba(0,0,0,.55);
+}
+.intro-skip{
+  position:absolute;top:max(16px,env(safe-area-inset-top,0px));right:16px;
+  background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;
+  font-family:inherit;font-weight:900;font-size:13px;padding:9px 16px;cursor:pointer;z-index:2;
+}
+.intro-dots{display:flex;gap:7px;margin:16px 0 12px;}
+.intro-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);transition:all .25s;}
+.intro-dots span.on{background:#29b6f6;width:22px;border-radius:5px;}
+.intro-title{font-size:21px;font-weight:900;color:#fff;text-align:center;margin-bottom:8px;}
+.intro-desc{font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.72);text-align:center;min-height:80px;max-width:340px;}
+.intro-nav{display:flex;gap:12px;width:100%;max-width:340px;margin-top:12px;}
+.intro-back,.intro-next{flex:1;font-family:inherit;font-weight:900;font-size:15px;padding:14px;border-radius:16px;cursor:pointer;border:none;transition:transform .09s;}
+.intro-back:active,.intro-next:active{transform:translateY(3px);}
+.intro-back{background:rgba(255,255,255,.12);color:#fff;}
+.intro-back:disabled{opacity:.3;}
+.intro-next{background:linear-gradient(135deg,#29b6f6,#0288d1);color:#fff;box-shadow:0 5px 0 #01579b;}
+.intro-next:active{box-shadow:0 2px 0 #01579b;}
+/* Mock "screenshot" scenes */
+.iscene{
+  position:relative;width:100%;height:100%;
+  background:linear-gradient(180deg,#9fd8ff 0%,#cfe9ff 47%,#7ec850 47%,#5fae3f 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.iscene .ibig{font-size:62px;text-align:center;line-height:1.25;filter:drop-shadow(0 6px 8px rgba(0,0,0,.22));}
+.iscene .iflow{display:flex;align-items:center;gap:8px;font-size:40px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.22));}
+.iscene .iflow .arr{font-size:26px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+.iscene .ichip{position:absolute;top:12px;background:rgba(255,255,255,.9);color:#243b53;border-radius:14px;padding:6px 13px;font-size:13px;font-weight:900;box-shadow:0 3px 8px rgba(0,0,0,.18);}
+.iscene .ijoy{position:absolute;left:16px;bottom:16px;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.35);border:3px solid rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;}
+.iscene .iact{position:absolute;right:16px;bottom:16px;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#ff8a50,#e64a19);border:3px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 5px 0 #bf360c;}
+.iscene .ibubble{position:absolute;top:26%;left:56%;background:#fff;border-radius:16px 16px 16px 4px;min-width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px;padding:0 8px;box-shadow:0 3px 8px rgba(0,0,0,.2);}
 #practice-close{
   width:100%;max-width:300px;height:48px;
   background:linear-gradient(135deg,#0288d1,#01579b);
@@ -603,7 +647,7 @@ canvas{display:block;width:100%;height:100%;}
 
     <!-- ACHIEVEMENTS SHOWCASE — right side, under Shop -->
     <div id="home-achv-panel" onclick="showAchievements()">
-      <div class="home-achv-title">🏆 ACHIEVEMENTS</div>
+      <div class="home-achv-title" id="home-achv-title">🏆 ACHIEVEMENTS</div>
       <div id="home-achv-list"></div>
     </div>
 
@@ -639,13 +683,6 @@ canvas{display:block;width:100%;height:100%;}
     <div style="position:absolute;top:78px;left:10px;z-index:6;">
       <button class="hbtn-square" style="background:linear-gradient(135deg,#546E7A,#37474F);box-shadow:0 5px 0 #1c262b;" onclick="showSettings()">
         <span class="btn-icon">⚙️</span>Settings
-      </button>
-    </div>
-
-    <!-- ACHIEVEMENTS — top left below settings -->
-    <div style="position:absolute;top:158px;left:10px;z-index:6;">
-      <button class="hbtn-square" style="background:linear-gradient(135deg,#FBC02D,#F57F17);box-shadow:0 5px 0 #8a4d00;" onclick="showAchievements()">
-        <span class="btn-icon">🏆</span>Awards
       </button>
     </div>
 
@@ -709,6 +746,21 @@ canvas{display:block;width:100%;height:100%;}
       <div id="practice-subtitle" id="practice-subtitle-text">Learn the workflow step by step</div>
       <div id="practice-steps"></div>
       <button class="btn-green" id="practice-close" onclick="closePractice()">GOT IT ✓</button>
+    </div>
+  </div>
+
+  <!-- FIRST-RUN INTRO CAROUSEL -->
+  <div id="intro-screen">
+    <button class="intro-skip" onclick="endIntro()">Skip ✕</button>
+    <div class="intro-card">
+      <div class="intro-shot" id="intro-shot"></div>
+      <div class="intro-dots" id="intro-dots"></div>
+      <div class="intro-title" id="intro-title"></div>
+      <div class="intro-desc" id="intro-desc"></div>
+      <div class="intro-nav">
+        <button class="intro-back" id="intro-back" onclick="introPrev()">← Back</button>
+        <button class="intro-next" id="intro-next" onclick="introNext()">Next →</button>
+      </div>
     </div>
   </div>
 
@@ -2253,7 +2305,21 @@ function achvMetrics(){
            todayStars: stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0 };
 }
 
-function checkAchievements(){
+// Achievements unlocked since the last toast flush. When a day ends we award
+// the cash immediately (so the results screen math is right) but hold the
+// celebratory toast until the player is back on the Home Screen.
+let pendingAchvToasts = [];
+function flushAchvToasts(){
+  if(!pendingAchvToasts.length) return;
+  const queue = pendingAchvToasts; pendingAchvToasts = [];
+  queue.forEach((a,i)=> setTimeout(()=>{
+    playSound('coin');
+    showToast(`🏆 ${a.name}!${a.cash?'  +$'+a.cash:''}${a.skin?'  · Skin unlocked!':''}`, 2600);
+  }, 450 + i*1400));
+}
+
+// Pass deferToasts=true to hold the celebration toast for the Home Screen.
+function checkAchievements(deferToasts){
   if(!achievements.unlocked) achievements.unlocked=[];
   const m = achvMetrics();
   const unlockedNow = [];
@@ -2268,10 +2334,14 @@ function checkAchievements(){
   }
   if(unlockedNow.length){
     updateCashUI(); saveGame();
-    unlockedNow.forEach((a,i)=> setTimeout(()=>{
-      playSound('coin');
-      showToast(`🏆 ${a.name}!${a.cash?'  +$'+a.cash:''}${a.skin?'  · Skin unlocked!':''}`, 2600);
-    }, i*1300));
+    if(deferToasts){
+      pendingAchvToasts.push(...unlockedNow);
+    } else {
+      unlockedNow.forEach((a,i)=> setTimeout(()=>{
+        playSound('coin');
+        showToast(`🏆 ${a.name}!${a.cash?'  +$'+a.cash:''}${a.skin?'  · Skin unlocked!':''}`, 2600);
+      }, i*1300));
+    }
   }
 }
 
@@ -2309,24 +2379,25 @@ function closeAchievements(){
 }
 
 // Showcase 3 achievements on the home screen (under the Shop button).
-// Prefers the most recently unlocked, then fills with the next ones to chase.
+// Only ACTIVE (not-yet-earned) achievements are shown so players always see
+// the next goals to chase. Completed ones drop off the cards — once every
+// achievement is earned we celebrate by showcasing the final three instead.
 function renderHomeAchievements(){
   const wrap = document.getElementById('home-achv-list');
   if(!wrap) return;
   wrap.innerHTML='';
-  const done = achievements.unlocked || [];
-  const unlocked = ACHIEVEMENTS.filter(a=>done.includes(a.id));
-  const locked   = ACHIEVEMENTS.filter(a=>!done.includes(a.id));
-  const picks = unlocked.slice(-3).reverse();
-  for(const a of locked){ if(picks.length>=3) break; picks.push(a); }
-  for(const a of unlocked){ if(picks.length>=3) break; if(!picks.includes(a)) picks.push(a); }
-  picks.slice(0,3).forEach(a=>{
-    const got = done.includes(a.id);
+  const done    = achievements.unlocked || [];
+  const locked  = ACHIEVEMENTS.filter(a=>!done.includes(a.id));
+  const allDone = locked.length === 0;
+  const titleEl = document.getElementById('home-achv-title');
+  if(titleEl) titleEl.textContent = allDone ? '🏆 ALL COMPLETE!' : '🏆 ACHIEVEMENTS';
+  const picks = allDone ? ACHIEVEMENTS.slice(-3) : locked.slice(0,3);
+  picks.forEach(a=>{
     const card = document.createElement('div');
-    card.className = 'home-achv-card' + (got?'':' locked');
-    const status = got ? '✓ Unlocked' : a.desc;
-    const color  = got ? '#2e9e4f' : '#888';
-    card.innerHTML = `<div class="ico">${got?a.icon:'🔒'}</div>
+    card.className = 'home-achv-card' + (allDone?'':' active');
+    const status = allDone ? '✓ Unlocked' : a.desc;
+    const color  = allDone ? '#2e9e4f' : '#b06a00';
+    card.innerHTML = `<div class="ico">${a.icon}</div>
       <div class="txt"><div class="nm">${a.name}</div>
       <div class="st" style="color:${color};">${status}</div></div>`;
     wrap.appendChild(card);
@@ -2931,6 +3002,9 @@ function showStartMenu(){
 
   document.getElementById('home-screen').style.display='flex';
 
+  // Celebrate any achievements unlocked during the day just completed.
+  flushAchvToasts();
+
   // Init 3D home chef renderer (once) then start anim
   stopHomeAnim();
   if(!hc.renderer) { initHomeRenderer(); initChefDrag(); }
@@ -3173,6 +3247,48 @@ function closePractice(){
 }
 window.showPractice = showPractice;
 window.closePractice = closePractice;
+
+// ── FIRST-RUN INTRO CAROUSEL ─────────────────────────────────
+// A paged, screenshot-style walkthrough shown once to new players. Each slide
+// is a mocked-up game "screenshot" plus a short caption. Players can tap Next
+// to step through, Back to revisit, or Skip to jump straight into Day 1.
+const INTRO_SLIDES = [
+  { title:'Welcome to Burger Bar!',
+    desc:"You're the chef AND the boss. Cook food, serve hungry customers, and grow your restaurant one day at a time.",
+    art:`<div class="iscene"><div class="ichip">📅 Day 1 &nbsp;·&nbsp; ⭐ 5.0</div><div class="ibig">🍔<br>👨‍🍳</div></div>` },
+  { title:'Move & Act',
+    desc:'Drag your thumb on the LEFT side to walk around. Tap the ✋ button on the RIGHT to pick things up and use stations.',
+    art:`<div class="iscene"><div class="ibig">🧍</div><div class="ijoy">⊕</div><div class="iact">✋</div></div>` },
+  { title:'Cook the Food',
+    desc:'Grab a raw patty from the Fridge, cook it on the Grill until golden (don’t let it burn!), then grab a tray and build the burger on the Counter.',
+    art:`<div class="iscene"><div class="iflow"><span>🧊</span><span class="arr">→</span><span>🔥</span><span class="arr">→</span><span>🍔</span></div></div>` },
+  { title:'Serve Your Customers',
+    desc:'Watch for the 🍔 bubble above a table. Carry the finished order over and tap ✋ to serve. Faster service means more stars and bigger tips!',
+    art:`<div class="iscene"><div class="ibig">🪑😋</div><div class="ibubble">🍔</div><div class="iact">✋</div></div>` },
+  { title:'Keep It Clean',
+    desc:'After guests eat, dirty trays pile up. Take them to the Sink, hold ✋ to wash, then return them to the rack so you never run out.',
+    art:`<div class="iscene"><div class="ibig">🍽️ 🚿</div></div>` },
+  { title:'Grow Your Empire',
+    desc:'Spend earnings in the Shop on upgrades and 🤖 robots that cook for you. Hit milestones to unlock 🏆 achievements, new skins and more locations!',
+    art:`<div class="iscene"><div class="ichip">🏆 Achievements</div><div class="ibig">🛒 🤖 🏪</div></div>` },
+];
+let introIdx = 0;
+function renderIntro(){
+  const s = INTRO_SLIDES[introIdx];
+  document.getElementById('intro-shot').innerHTML = s.art;
+  document.getElementById('intro-title').textContent = s.title;
+  document.getElementById('intro-desc').textContent = s.desc;
+  const dots = document.getElementById('intro-dots'); dots.innerHTML='';
+  INTRO_SLIDES.forEach((_,i)=>{ const d=document.createElement('span'); if(i===introIdx) d.className='on'; dots.appendChild(d); });
+  document.getElementById('intro-back').disabled = (introIdx===0);
+  const last = (introIdx===INTRO_SLIDES.length-1);
+  document.getElementById('intro-next').textContent = last ? "Let's Cook! ▶" : 'Next →';
+}
+function showIntro(){ introIdx=0; renderIntro(); document.getElementById('intro-screen').style.display='flex'; }
+function introNext(){ if(introIdx>=INTRO_SLIDES.length-1){ endIntro(); return; } introIdx++; renderIntro(); }
+function introPrev(){ if(introIdx>0){ introIdx--; renderIntro(); } }
+function endIntro(){ document.getElementById('intro-screen').style.display='none'; }
+window.showIntro=showIntro; window.introNext=introNext; window.introPrev=introPrev; window.endIntro=endIntro;
 
 // ── MULTI-STORE ──────────────────────────────────────────────
 function calcPassiveIncome(store) {
@@ -3512,7 +3628,7 @@ function endDay(){
   if(stats.cashEarned > records.bestDayCash){ records.bestDayCash = stats.cashEarned; stats._newRecord = true; }
   if(todayStarsAvg > records.bestDayStars) records.bestDayStars = todayStarsAvg;
 
-  checkAchievements();
+  checkAchievements(true); // award now; celebrate on the Home Screen
   gameState='results'; saveGame(); playSound('daycomplete'); showResults();
 }
 
@@ -4619,11 +4735,12 @@ function hideBootSplash(){
 }
 hideBootSplash();
 
-// First-run onboarding: auto-open the how-to-play guide exactly once so new
-// players aren't dropped in cold. The tutorial content already exists.
+// First-run onboarding: auto-open the paged intro walkthrough exactly once so
+// new players aren't dropped in cold. They can step through with Next or Skip
+// straight to the game; the detailed step list stays available via Practice.
 if(!localStorage.getItem('burgerBoss_tutorialSeen')){
   try { localStorage.setItem('burgerBoss_tutorialSeen','1'); } catch(e){}
-  setTimeout(()=>{ try{ showPractice(); }catch(e){} }, 2500);
+  setTimeout(()=>{ try{ showIntro(); }catch(e){} }, 2200);
 }
 
 // ─────────────────────────────────────────────────────────────
