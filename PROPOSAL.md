@@ -19,8 +19,9 @@
 - Day-4 soda decline penalty is now small & temporary
 - PWA manifest + SVG icon + favicon/apple-touch-icon + share/meta tags
 - Audio: serve chime + day-complete fanfare; "PERFECT!/GREAT!" serve feedback
-- Early-game station labels (first 2 days)
+- Branded "CLAWEngineering" loading/splash screen on boot
 - Camera zooms out with floor expansions; version label
+- Results stars now show half-stars (4.5 → 4½, never rounds up to 5)
 - **Settings panel**: master volume slider, background-music toggle, colorblind toggle, safe reset (reachable from home + pause)
 - **Background music**: gentle generative chord-pad loop, volume/mute-aware
 - **Achievements**: 10 milestones with cash + skin rewards, unlock toasts, and a dedicated screen; persisted in the save

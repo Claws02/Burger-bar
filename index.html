@@ -51,6 +51,7 @@
     d.style.cssText = "position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1f2e;color:#fff;font-family:sans-serif;text-align:center;padding:24px;z-index:9999;";
     d.innerHTML = "<div style='font-size:48px'>🍔</div><h2 style='margin:12px 0 4px'>Couldn't load Burger Bar</h2><p style='opacity:.7;max-width:340px'>The 3D engine failed to load. Check your connection and try again.</p><button onclick='location.reload()' style='margin-top:16px;padding:12px 28px;border:none;border-radius:16px;background:#1976D2;color:#fff;font-weight:900;font-size:16px;cursor:pointer'>RELOAD</button>";
     document.body.appendChild(d);
+    var sp=document.getElementById('boot-splash'); if(sp) sp.remove();
   }
   loadAt(0);
 })();
@@ -62,6 +63,19 @@
   src:local('Nunito'),url('https://fonts.gstatic.com/s/nunito/v26/XRXV3I6Li01BKofINeaBTMnFcQ.woff2') format('woff2');}
 *{box-sizing:border-box;}
 body,html{margin:0;padding:0;overflow:hidden;background:#87CEFA;font-family:'Nunito','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;user-select:none;touch-action:none;}
+
+/* ── BRANDED LOADING / SPLASH SCREEN ── */
+#boot-splash{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(circle at 50% 38%,#1c2740 0%,#0a0e16 72%);transition:opacity .6s ease;}
+#boot-splash.hide{opacity:0;pointer-events:none;}
+.cl-emblem{filter:drop-shadow(0 6px 20px rgba(255,193,7,.28));animation:clPulse 2.2s ease-in-out infinite;}
+@keyframes clPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
+.cl-word{font-weight:900;font-size:30px;letter-spacing:.5px;text-shadow:0 2px 8px rgba(0,0,0,.55);}
+.cl-tag{color:rgba(255,255,255,.45);font-size:11px;letter-spacing:5px;font-weight:700;margin-top:-4px;}
+.cl-bar{width:170px;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;margin-top:14px;}
+.cl-bar-fill{height:100%;width:38%;background:linear-gradient(90deg,#FFC107,#FFD54F);border-radius:3px;animation:clSlide 1.1s ease-in-out infinite;}
+@keyframes clSlide{0%{transform:translateX(-130%);}100%{transform:translateX(360%);}}
+.cl-load{color:rgba(255,255,255,.45);font-size:12px;font-weight:700;letter-spacing:1px;margin-top:4px;}
+
 #gc{position:relative;width:100vw;height:100vh;}
 canvas{display:block;width:100%;height:100%;}
 
@@ -484,6 +498,20 @@ canvas{display:block;width:100%;height:100%;}
 </style>
 </head>
 <body>
+<!-- ── BRANDED LOADING / SPLASH SCREEN ── -->
+<div id="boot-splash">
+  <svg class="cl-emblem" viewBox="0 0 120 120" width="116" height="116" aria-hidden="true">
+    <circle cx="60" cy="60" r="46" fill="none" stroke="#FFC107" stroke-width="12" stroke-dasharray="10 8" stroke-linecap="round"/>
+    <circle cx="60" cy="60" r="37" fill="#10151f" stroke="#FFC107" stroke-width="2"/>
+    <path d="M48 82 C43 60 45 43 52 35 C55 50 55 67 53 83 Z" fill="#FFC107"/>
+    <path d="M60 84 C57 60 58 41 60 31 C63 43 63 66 64 84 Z" fill="#FFD54F"/>
+    <path d="M72 82 C77 60 75 43 68 35 C65 50 65 67 67 83 Z" fill="#FFC107"/>
+  </svg>
+  <div class="cl-word"><span style="color:#FFC107;">CLAW</span><span style="color:#fff;">Engineering</span></div>
+  <div class="cl-tag">PRESENTS</div>
+  <div class="cl-bar"><div class="cl-bar-fill"></div></div>
+  <div class="cl-load">Loading…</div>
+</div>
 <div id="gc">
   <canvas id="gameCanvas"></canvas>
   <div id="floating-ui"></div>
@@ -1470,15 +1498,6 @@ function buildRobot(role){
   addMesh(g, GSph(.12,6), MB('#ffeb3b'), 0,2.5,0);
   return g;
 }
-
-// Friendly names shown as early-game station labels (first 2 days).
-const STATION_LABELS = {
-  fridge:'🧊 Fridge', grill:'🔥 Grill', trayrack:'🍱 Trays', counter:'🍽️ Counter',
-  sink:'🚿 Sink', sodafountain:'🥤 Soda', trash:'🗑️ Trash', dumpster:'🗑️ Dumpster',
-  table:'🪑 Table',
-  cooler:'🧊 Cooler', beachgrill:'🔥 Grill', assembly:'🌮 Assembly',
-  chowderpot:'🍲 Chowder', lemonadestation:'🍋 Lemonade', basketrack:'🧺 Baskets'
-};
 
 const stations = {};
 function addStation(id,type,x,z,w,d,opts={}){
@@ -3442,7 +3461,11 @@ function showResults(){
     dayLbl.textContent = stats._newRecord ? '🏆 NEW BEST DAY!' : 'Day Complete';
     dayLbl.style.color = stats._newRecord ? '#FFD54F' : 'rgba(255,255,255,.4)';
   }
-  const todayStars=stats.groupsServed>0?Math.round(stats.totalStars/stats.groupsServed):0;
+  // Today's rating as an exact average; light full stars by floor and show a
+  // half-star for the .5 remainder so e.g. 4.5 shows 4½ stars, never 5.
+  const todayAvg = stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0;
+  const fullStars = Math.floor(todayAvg);
+  const hasHalf = (todayAvg - fullStars) >= 0.5;
   const cum=getCumRating();
   // eco.cash already includes today's serving cash + passive + achievement
   // bonuses, so back all of them out to get the true starting balance.
@@ -3462,10 +3485,12 @@ function showResults(){
   }
   for(let i=0;i<5;i++) setTimeout(()=>{
     const sl=row.children[i];
-    i<todayStars ? sl.classList.add('lit') : (sl.style.opacity='.18');
+    if(i < fullStars){ sl.classList.add('lit'); }
+    else if(i === fullStars && hasHalf){ sl.style.opacity='.5'; } // half star
+    else { sl.style.opacity='.18'; }
   }, 540+i*155);
 
-  setTimeout(()=>{ el('res-rating-num').textContent=`⭐ ${cum} overall`; el('res-rating-num').style.opacity='1'; }, 1480);
+  setTimeout(()=>{ el('res-rating-num').textContent=`⭐ ${todayAvg.toFixed(1)} today · ${cum} overall`; el('res-rating-num').style.opacity='1'; }, 1480);
   setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
   setTimeout(()=>{
     // Show passive + achievement income if any
@@ -4362,20 +4387,6 @@ function drawFloatUI(){
 
   if(gameState!=='playing'){ floatUI.innerHTML=html; return; }
 
-  // Early-game station labels: show friendly names for the first two days so
-  // new players can learn what each station is, then they fade away.
-  if(eco.day <= 2){
-    for(const k in stations){
-      const s=stations[k];
-      const lbl=STATION_LABELS[s.type];
-      if(!lbl) continue;
-      const sx = s.pos ? s.pos.x : s.x, sz = s.pos ? s.pos.z : s.z;
-      const p=scr(new THREE.Vector3(sx, (s.type==='table'?3.2:4.4), sz));
-      if(p.z>=1) continue;
-      html+=`<div class="fbubble" style="left:${p.x}px;top:${p.y}px;font-size:11px;padding:2px 8px;opacity:.92;">${lbl}</div>`;
-    }
-  }
-
   let stinkPenalty = false;
   for(const k in stations){ 
     const s=stations[k]; 
@@ -4534,11 +4545,21 @@ rebuildAll();
 updateCashUI();
 showStartMenu();
 
+// Fade out the CLAWEngineering splash once the game is ready (with a minimum
+// on-screen time so the brand moment is visible even on fast loads).
+function hideBootSplash(){
+  const sp=document.getElementById('boot-splash');
+  if(!sp) return;
+  const wait = Math.max(0, 1600 - performance.now());
+  setTimeout(()=>{ sp.classList.add('hide'); setTimeout(()=>{ if(sp.parentNode) sp.parentNode.removeChild(sp); }, 700); }, wait);
+}
+hideBootSplash();
+
 // First-run onboarding: auto-open the how-to-play guide exactly once so new
 // players aren't dropped in cold. The tutorial content already exists.
 if(!localStorage.getItem('burgerBoss_tutorialSeen')){
   try { localStorage.setItem('burgerBoss_tutorialSeen','1'); } catch(e){}
-  setTimeout(()=>{ try{ showPractice(); }catch(e){} }, 500);
+  setTimeout(()=>{ try{ showPractice(); }catch(e){} }, 2500);
 }
 
 // ─────────────────────────────────────────────────────────────
