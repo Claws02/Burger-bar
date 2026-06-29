@@ -286,27 +286,27 @@ canvas{display:block;width:100%;height:100%;}
   z-index:6;
 }
 
-/* Achievements showcase — right side, TOP (swapped above Skins/Shop) */
-#home-achv-panel{
-  position:absolute;
-  top:78px;right:10px;
-  width:160px;
-  z-index:6;
-  cursor:pointer;
-}
-
-/* Skins — small wide, top-right BELOW the achievements showcase */
+/* Skins — small wide, top-right */
 #home-btn-skins{
   position:absolute;
-  top:258px;right:10px;
+  top:78px;right:10px;
   z-index:6;
 }
 
 /* Shop — small wide, top-right below Skins */
 #home-btn-shop{
   position:absolute;
-  top:316px;right:10px;
+  top:136px;right:10px;
   z-index:6;
+}
+
+/* Achievements showcase — right side, under Shop */
+#home-achv-panel{
+  position:absolute;
+  top:196px;right:10px;
+  width:160px;
+  z-index:6;
+  cursor:pointer;
 }
 .home-achv-title{
   font-size:10px;font-weight:900;letter-spacing:.6px;
@@ -329,9 +329,6 @@ canvas{display:block;width:100%;height:100%;}
 .home-achv-card .nm{font-size:11px;font-weight:900;color:#2b2b2b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .home-achv-card .st{font-size:9px;font-weight:800;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .home-achv-card.active{border-left:4px solid #FBC02D;}
-.home-achv-card.next{border-left:4px solid #FB8C00;box-shadow:0 3px 0 rgba(0,0,0,.18),0 0 0 2px rgba(251,140,0,.35);}
-.home-achv-prog{height:4px;border-radius:3px;background:rgba(0,0,0,.13);margin-top:3px;overflow:hidden;}
-.home-achv-prog > i{display:block;height:100%;background:linear-gradient(90deg,#FBC02D,#F57F17);border-radius:3px;}
 
 /* Stores — small square, bottom-left */
 #home-btn-stores{
@@ -608,11 +605,11 @@ canvas{display:block;width:100%;height:100%;}
       <!-- store name + dots indicator -->
       <div id="home-store-label">
         <span id="home-store-name">Burger Bar #1</span>
-        <div id="home-store-dots" style="display:none;"></div>
+        <div id="home-store-dots"></div>
       </div>
-      <!-- swipe hint arrows — hidden in single-bar mode -->
-      <div id="home-swipe-left"  style="display:none;" onclick="homeSwipeStore(-1)">&#8249;</div>
-      <div id="home-swipe-right" style="display:none;" onclick="homeSwipeStore(1)">&#8250;</div>
+      <!-- swipe hint arrows -->
+      <div id="home-swipe-left"  onclick="homeSwipeStore(-1)">&#8249;</div>
+      <div id="home-swipe-right" onclick="homeSwipeStore(1)">&#8250;</div>
     </div>
 
         <!-- TOP STATS BAR (Golf Battle style) -->
@@ -1893,11 +1890,7 @@ function loadSave(){
       activeStoreIdx = 0;
     } else {
       stores = s.stores;
-      // SINGLE-BAR MODE: always return the player to the first Burger Bar.
-      // Any extra stores from older multi-map saves are preserved in the array
-      // (so nothing is lost) but are not reachable until we re-enable the
-      // multi-store empire. activeStoreIdx is pinned to the first burger bar.
-      activeStoreIdx = 0;
+      activeStoreIdx = s.activeStoreIdx || 0;
     }
     if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic'}, s.cosm);
     if(s.achievements) achievements = Object.assign({unlocked:[]}, s.achievements);
@@ -1908,12 +1901,9 @@ function loadSave(){
 }
 
 function bootstrapNewSave() {
-  // SINGLE-BAR MODE: we focus on mastering the first Burger Bar before adding
-  // more locations. The other "maps" (Seafood Shack + franchise reskins) live
-  // in archive/index-multimap-backup.html and are intentionally not created
-  // here. See ARCHITECTURE.md for the full first-bar design.
   stores = [
     defStore(0, 'Burger Bar #1', 'burger'),
+    defStore(1, 'Seafood Shack',  'seafood'),
   ];
   activeStoreIdx = 0;
   loadActiveStore();
@@ -2288,29 +2278,17 @@ function showToast(msg, dur=2200){
 // ─────────────────────────────────────────────────────────────
 //  ACHIEVEMENTS
 // ─────────────────────────────────────────────────────────────
-// Each achievement declares the metric it tracks and a numeric goal, so we can
-// (a) test completion uniformly and (b) compute a live progress fraction used
-// to order them by "how achievable" they are. The array is authored easy→hard;
-// that tier order is the tie-break when two locked goals are equally close.
-// (Multi-store "Empire" achievement removed: single-bar mode for now.)
 const ACHIEVEMENTS = [
-  {id:'first_day', icon:'🌅', name:'Open for Business', desc:'Complete your first day',   metric:'maxDay',     goal:1,    cash:25},
-  {id:'serve10',   icon:'🥪', name:'First Rush',        desc:'Serve 10 groups',           metric:'groups',     goal:10,   cash:40},
-  {id:'rich250',   icon:'🪙', name:'Petty Cash',        desc:'Hold $250 at once',         metric:'cash',       goal:250,  cash:0},
-  {id:'day5',      icon:'📆', name:'Getting the Hang',  desc:'Reach Day 5',               metric:'maxDay',     goal:5,    cash:75},
-  {id:'firstbot',  icon:'🔧', name:'New Hire',          desc:'Hire your first robot',     metric:'robots',     goal:1,    cash:60},
-  {id:'serve50',   icon:'🍔', name:'Line Cook',         desc:'Serve 50 groups',           metric:'groups',     goal:50,   cash:100},
-  {id:'perfectday',icon:'⭐', name:'Flawless Service',  desc:'Finish a day at ~5 stars',  metric:'todayStars', goal:4.5,  cash:150},
-  {id:'rich1000',  icon:'💰', name:'Turning a Profit',  desc:'Hold $1,000 at once',       metric:'cash',       goal:1000, cash:0},
-  {id:'tables4',   icon:'🪑', name:'Full House',        desc:'Run 4 tables at once',      metric:'tables',     goal:4,    base:1,   cash:120},
-  {id:'day10',     icon:'📅', name:'Regular',           desc:'Reach Day 10',              metric:'maxDay',     goal:10,   cash:150},
-  {id:'grillmax',  icon:'🔥', name:'Flame On',          desc:'Max out the Turbo Grill',   metric:'grillLv',    goal:3,    base:0.5, cash:200},
-  {id:'robots3',   icon:'🤖', name:'Automation',        desc:'Hire 3 robots',             metric:'robots',     goal:3,    cash:200},
-  {id:'serve250',  icon:'👨‍🍳', name:'Head Chef',         desc:'Serve 250 groups',          metric:'groups',     goal:250,  cash:400,  skin:'gold'},
-  {id:'day30',     icon:'🗓️', name:'Established',        desc:'Reach Day 30',              metric:'maxDay',     goal:30,   cash:500,  skin:'fire'},
-  {id:'rich5000',  icon:'🤑', name:'High Roller',       desc:'Hold $5,000 at once',       metric:'cash',       goal:5000, cash:0,    skin:'alien'},
-  {id:'serve1000', icon:'🏅', name:'Burger Legend',     desc:'Serve 1,000 groups',        metric:'groups',     goal:1000, cash:1000},
-  {id:'day100',    icon:'👑', name:'Centurion',         desc:'Reach Day 100',             metric:'maxDay',     goal:100,  cash:2000},
+  {id:'first_day', icon:'🌅', name:'Open for Business', desc:'Complete your first day',     cash:25,   test:m=>m.maxDay>=1},
+  {id:'serve50',   icon:'🍔', name:'Line Cook',         desc:'Serve 50 groups',             cash:100,  test:m=>m.groups>=50},
+  {id:'perfectday',icon:'⭐', name:'Flawless Service',  desc:'Finish a day at ~5 stars',    cash:150,  test:m=>m.todayStars>=4.5},
+  {id:'rich1000',  icon:'💰', name:'Turning a Profit',  desc:'Hold $1,000 at once',         cash:0,    test:m=>m.cash>=1000},
+  {id:'robots3',   icon:'🤖', name:'Automation',        desc:'Hire 3 robots',               cash:200,  test:m=>m.robots>=3},
+  {id:'day10',     icon:'📅', name:'Regular',           desc:'Reach Day 10',                cash:150,  test:m=>m.maxDay>=10},
+  {id:'serve250',  icon:'👨‍🍳', name:'Head Chef',        desc:'Serve 250 groups',  cash:400,  skin:'gold',  test:m=>m.groups>=250},
+  {id:'day30',     icon:'🗓️', name:'Established',        desc:'Reach Day 30',      cash:500,  skin:'fire',  test:m=>m.maxDay>=30},
+  {id:'empire',    icon:'🏪', name:'Empire Builder',    desc:'Own 3 store locations', cash:500, skin:'alien', test:m=>m.stores>=3},
+  {id:'day100',    icon:'👑', name:'Centurion',         desc:'Reach Day 100',     cash:2000, test:m=>m.maxDay>=100},
 ];
 
 function achvMetrics(){
@@ -2324,39 +2302,7 @@ function achvMetrics(){
     maxDay  = Math.max(maxDay, ec.day||0);
   });
   return { groups, robots, maxDay, cash:eco.cash, stores:stores.length,
-           tables:  upg.tableCount || 1,
-           grillLv: upg.grillMult  || 0,
            todayStars: stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0 };
-}
-
-// Live progress for an achievement against the current metrics.
-function achvProgress(a, m){
-  const cur  = m[a.metric] || 0;
-  const goal = a.goal;
-  const base = a.base || 0;   // starting floor (e.g. you already own 1 table)
-  const frac = Math.max(0, Math.min(1, (cur - base) / (goal - base)));
-  return { cur, goal, frac, done: cur >= goal };
-}
-
-// Human-readable "current / goal" label per metric type.
-function achvProgressText(a, m){
-  const cur = m[a.metric] || 0, goal = a.goal;
-  if(a.metric==='cash')       return `$${Math.floor(Math.min(cur,goal))} / $${goal}`;
-  if(a.metric==='todayStars') return `${cur.toFixed(1)} / ${goal}★`;
-  if(a.metric==='grillLv')    return `${Math.min(cur,goal).toFixed(2)} / ${goal}`;
-  return `${Math.min(Math.floor(cur),goal)} / ${goal}`;
-}
-
-// Locked achievements ordered by how close they are to completion (closest
-// first); ties fall back to authored easy→hard order. Used for the home
-// showcase and the full achievements screen.
-function lockedAchvByAchievability(m, done){
-  const order = new Map(ACHIEVEMENTS.map((a,i)=>[a.id,i]));
-  return ACHIEVEMENTS
-    .filter(a => !done.includes(a.id))
-    .map(a => ({ a, frac: achvProgress(a, m).frac }))
-    .sort((x,y) => (y.frac - x.frac) || (order.get(x.a.id) - order.get(y.a.id)))
-    .map(o => o.a);
 }
 
 // Achievements unlocked since the last toast flush. When a day ends we award
@@ -2379,7 +2325,7 @@ function checkAchievements(deferToasts){
   const unlockedNow = [];
   for(const a of ACHIEVEMENTS){
     if(achievements.unlocked.includes(a.id)) continue;
-    if((m[a.metric] || 0) >= a.goal){
+    if(a.test(m)){
       achievements.unlocked.push(a.id);
       if(a.cash){ eco.cash += a.cash; stats._achvEarned = (stats._achvEarned||0) + a.cash; }
       if(a.skin && !cosm.ownedSkins.includes(a.skin)) cosm.ownedSkins.push(a.skin);
@@ -2413,27 +2359,18 @@ function showAchievements(){
     <div><div style="font-size:18px;font-weight:900;color:#90caf9;">${records.totalServed||0}</div><div style="font-size:10px;color:rgba(255,255,255,.5);">SERVED</div></div>`;
   list.appendChild(rec);
   const done = achievements.unlocked || [];
-  const m    = achvMetrics();
-  // Organized by how achievable they are: still-locked goals first, ordered
-  // closest-to-earn → furthest; completed ones collected at the bottom.
-  const locked = lockedAchvByAchievability(m, done);
-  const earned = ACHIEVEMENTS.filter(a => done.includes(a.id));
-  const renderRow = (a, got) => {
+  for(const a of ACHIEVEMENTS){
+    const got = done.includes(a.id);
     const div = document.createElement('div');
     div.className = 'upg-item' + (got?'':' locked');
     let reward = (a.cash?`+$${a.cash}`:'') + (a.skin?(a.cash?' · ':'')+'👕 Skin':'');
-    const pr = achvProgress(a, m);
-    const bar = got ? '' : `<div style="height:5px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:5px;overflow:hidden;"><div style="height:100%;width:${(pr.frac*100).toFixed(0)}%;background:linear-gradient(90deg,#FBC02D,#F57F17);border-radius:3px;"></div></div>`;
-    const prog = got ? '' : `<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px;">${achvProgressText(a, m)}</div>`;
-    div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
-        <div style="font-size:30px;flex-shrink:0;">${got?a.icon:'🔒'}</div>
-        <div style="flex:1;min-width:0;"><div style="font-weight:900;font-size:14px;">${a.name}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.5);">${a.desc}</div>${prog}${bar}</div></div>
-      <div style="font-size:12px;font-weight:900;color:${got?'#66BB6A':'#ffc107'};flex-shrink:0;margin-left:8px;">${got?'✓ DONE':reward}</div>`;
+    div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:30px;">${got?a.icon:'🔒'}</div>
+        <div><div style="font-weight:900;font-size:14px;">${a.name}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);">${a.desc}</div></div></div>
+      <div style="font-size:12px;font-weight:900;color:${got?'#66BB6A':'#ffc107'};">${got?'✓ DONE':reward}</div>`;
     list.appendChild(div);
-  };
-  locked.forEach(a => renderRow(a, false));
-  earned.forEach(a => renderRow(a, true));
+  }
   document.getElementById('achievements-screen').style.display='flex';
 }
 function closeAchievements(){
@@ -2450,28 +2387,19 @@ function renderHomeAchievements(){
   if(!wrap) return;
   wrap.innerHTML='';
   const done    = achievements.unlocked || [];
-  const m       = achvMetrics();
-  // Sorted by how achievable they are — the NEXT most achievable sits on top.
-  const locked  = lockedAchvByAchievability(m, done);
+  const locked  = ACHIEVEMENTS.filter(a=>!done.includes(a.id));
   const allDone = locked.length === 0;
   const titleEl = document.getElementById('home-achv-title');
-  if(titleEl) titleEl.textContent = allDone ? '🏆 ALL COMPLETE!' : '🏆 NEXT GOALS';
+  if(titleEl) titleEl.textContent = allDone ? '🏆 ALL COMPLETE!' : '🏆 ACHIEVEMENTS';
   const picks = allDone ? ACHIEVEMENTS.slice(-3) : locked.slice(0,3);
-  picks.forEach((a, i)=>{
+  picks.forEach(a=>{
     const card = document.createElement('div');
-    // First card = the single next most achievable: highlighted as "next".
-    card.className = 'home-achv-card' + (allDone ? '' : (i===0 ? ' next' : ' active'));
-    if(allDone){
-      card.innerHTML = `<div class="ico">${a.icon}</div>
-        <div class="txt"><div class="nm">${a.name}</div>
-        <div class="st" style="color:#2e9e4f;">✓ Unlocked</div></div>`;
-    } else {
-      const pr = achvProgress(a, m);
-      card.innerHTML = `<div class="ico">${a.icon}</div>
-        <div class="txt"><div class="nm">${a.name}</div>
-        <div class="st" style="color:#b06a00;">${achvProgressText(a, m)}</div>
-        <div class="home-achv-prog"><i style="width:${(pr.frac*100).toFixed(0)}%;"></i></div></div>`;
-    }
+    card.className = 'home-achv-card' + (allDone?'':' active');
+    const status = allDone ? '✓ Unlocked' : a.desc;
+    const color  = allDone ? '#2e9e4f' : '#b06a00';
+    card.innerHTML = `<div class="ico">${a.icon}</div>
+      <div class="txt"><div class="nm">${a.name}</div>
+      <div class="st" style="color:${color};">${status}</div></div>`;
     wrap.appendChild(card);
   });
 }
@@ -3067,10 +2995,8 @@ function showStartMenu(){
   // Sync restaurant preview to current active store
   rp.storeIdx = activeStoreIdx;
 
-  // SINGLE-BAR MODE: the multi-store empire is disabled while we master the
-  // first bar, so the Stores button and store-swipe controls stay hidden.
   const storeBtn = document.getElementById('home-stores-btn');
-  if(storeBtn) storeBtn.style.display = 'none';
+  if(storeBtn) storeBtn.style.display = eco.day >= 30 ? 'flex' : 'none';
 
   renderHomeAchievements();
 
