@@ -54,19 +54,31 @@ The render loop always runs; `gameState==='playing'` gates simulation
 
 ## 3. Single-bar mode
 
-The multi-store empire is paused so the first bar can be perfected.
+The multi-store empire is paused so the first bar can be perfected. A single
+flag — **`const SINGLE_BAR_MODE = true`** (declared next to `stores`/
+`activeStoreIdx`) — gates every path that could reach another map:
 
 | Concern                | Behaviour now                                                             | Code |
 |------------------------|---------------------------------------------------------------------------|------|
-| New saves              | `bootstrapNewSave()` creates **only** `Burger Bar #1` (`type:'burger'`).   | ~L1903 |
-| Old multi-map saves    | Extra stores are **kept** in the `stores[]` array but `activeStoreIdx` is pinned to `0`; nothing is deleted. | `loadSave` else-branch ~L1891 |
-| Stores button          | Force-hidden in `showStartMenu()`.                                         | ~L3070 |
-| Store-swipe arrows/dots | `display:none` in the Home markup.                                        | ~L611, ~L607 |
+| New saves              | `bootstrapNewSave()` creates **only** `Burger Bar #1` (`type:'burger'`).   | ~L1910 |
+| Old multi-map saves    | Extra stores are **kept** in the `stores[]` array but `activeStoreIdx` is pinned to `0`; nothing is deleted. | `loadSave` else-branch ~L1898 |
+| Preview swipe gesture  | `initRestaurantSwipe()` + `homeSwipeStore()` early-return under the flag.  | ~L2956, ~L2970 |
+| PLAY button            | `homePlaySelected()` always launches store `0` under the flag.            | ~L3682 |
+| Stores screen          | `showStores()` redirects home under the flag; its VISIT/buy buttons never render. | ~L3434 |
+| Stores button / arrows / dots | Hidden in `showStartMenu()` / Home markup.                         | ~L3070, ~L614 |
 | Seafood / franchise code | Untouched and dormant (`isSeafood()` is simply never true with one burger store). | throughout |
 
-To **re-enable** more locations later: restore the extra `defStore(...)` calls
-in `bootstrapNewSave()`, un-pin `activeStoreIdx`, and unhide the Stores button +
-swipe controls. The archived backup is the reference implementation.
+To **re-enable** more locations later: flip `SINGLE_BAR_MODE` to `false`,
+restore the extra `defStore(...)` calls in `bootstrapNewSave()`, and unhide the
+Stores button + swipe controls. The archived backup is the reference
+implementation.
+
+### Resetting progress
+
+The Settings panel's **Reset All Progress** uses a **type-to-confirm** modal
+(`showResetConfirm` → type `RESET` → `doReset`), not a one-tap `confirm()`, so a
+destructive wipe can't happen by accident. It clears `burgerBoss_save` +
+`burgerBoss_tutorialSeen` and reloads. Suggest **Export Save** first.
 
 ---
 
