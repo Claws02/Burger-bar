@@ -268,6 +268,12 @@ Tiered by unlock day; all relevant to the single bar:
 | 3 | 🪑 Add Table, 🌸 Fancy Decor (patience), 🍽️ Extra Counter |
 | 5 | 🥤 Soda Fountain (unlocks combos), 🏗️ Expand Floorplan, 🍳 Extra Grill, 🚿 Extra Sink, 🤖 Hire Robot |
 
+`unlockDay:N` means an item becomes buyable **after Day N is complete** (locked
+while `eco.day < N`). So the **Soda Fountain** (`unlockDay:5`) first appears in
+the Shop on the **Day 6** prep screen — you buy it and arrange it in Edit Mode
+before Day 6 starts. (There is intentionally no earlier mid-transition "Business
+Decision" popup; the fountain is a normal purchase.)
+
 Building/equipment items call `addStation(...)` so upgrades physically appear on
 the floor; the camera zooms out as `floorLevel` grows (`rebuildAll`).
 

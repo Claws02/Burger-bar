@@ -869,22 +869,6 @@ canvas{display:block;width:100%;height:100%;}
     <button class="btn-green" onclick="document.getElementById('alert-popup').style.display='none'">GOT IT</button>
   </div>
 
-  <!-- DECISION POPUP (DAY 5) -->
-  <div id="decision-popup" class="overlay" style="z-index: 30; background:rgba(0,0,0,0.9);">
-    <div style="background:rgba(20,25,30,1); border: 3px solid #ffc107; border-radius: 16px; padding: 24px; max-width: 480px; text-align:center;">
-      <h1 style="font-size:30px;margin:0;color:#ffc107;">BUSINESS DECISION</h1>
-      <p style="font-size:15px;line-height:1.5;margin-top:16px;color:#fff;">
-        Your customers are thirsty. Should we expand the menu and install a <b>Soda Fountain</b>?<br><br>
-        <span style="color:#66BB6A;"><b>ACCEPT ($150):</b> Unlock Combo Meals (🍔🥤) for higher profits.</span><br><br>
-        <span style="color:#EF5350;"><b>DECLINE:</b> Refuse to innovate. Takes a permanent -15% penalty to daily customer traffic.</span>
-      </p>
-      <div style="display:flex; justify-content:center; gap:16px; margin-top:20px;">
-        <button class="btn-green" id="decision-buy-btn" onclick="decisionBuySoda()">BUY ($150)</button>
-        <button class="btn-red" onclick="decisionDeclineSoda()">DECLINE</button>
-      </div>
-    </div>
-  </div>
-
   <!-- RESULTS SCREEN -->
   <div id="results-screen" class="overlay">
     <div style="width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:0;">
@@ -1796,7 +1780,7 @@ function itemMesh(type){
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
 function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
-function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false, sodaDeclinedUntil:0}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
 // ─── SKINS ───────────────────────────────────────────────────
@@ -2206,7 +2190,7 @@ const SHOP_DEFS = [
   {id:'xcounter',  label:'🍽️ Extra Counter',      desc:'More clean tray staging space',        cat:'Equipment', cost:()=>70+upg.extraCounters*50,max:()=>upg.extraCounters>=maxEquip()-1, unlockDay:3, action:()=>{ const id='counter'+(upg.extraCounters+2); const pos=freeSpot(); addStation(id,'counter',pos.x,pos.z,1.8,1.8); upg.extraCounters++; }},
   
   // Tier 3 (Day 5)
-  {id:'soda',      label:'🥤 Soda Fountain',      desc:'Unlock Combo Meals for higher profit!', cat:'Equipment', cost:()=>150 + upg.sodaCount*100, max:()=>upg.sodaCount>=maxEquip()-1, unlockDay:5, action:()=>{ const pos=freeSpot(); addStation('soda'+upg.sodaCount,'sodafountain',pos.x,pos.z,2,2); upg.sodaCount++; upg.sodaDeclined=false; }},
+  {id:'soda',      label:'🥤 Soda Fountain',      desc:'Unlock Combo Meals for higher profit!', cat:'Equipment', cost:()=>150 + upg.sodaCount*100, max:()=>upg.sodaCount>=maxEquip()-1, unlockDay:5, action:()=>{ const pos=freeSpot(); addStation('soda'+upg.sodaCount,'sodafountain',pos.x,pos.z,2,2); upg.sodaCount++; }},
   {id:'expand',    label:'🏗️ Expand Floorplan',  desc:'Push the walls out for more space',     cat:'Building',  cost:()=>200*(eco.floorLevel+1), max:()=>eco.floorLevel>=6,        unlockDay:5, action:()=>{ eco.floorLevel++; updateBoundsFromLevel(); rebuildAll(); }},
   {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=maxEquip()-1, unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=freeSpot(); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
   {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=maxEquip()-1,  unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=freeSpot(); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
@@ -3553,39 +3537,10 @@ function openNewStore(){
 window.showStores=showStores; window.closeStores=closeStores; window.switchToStore=switchToStore; window.openNewStore=openNewStore;
 
 function startNextDay(){
-  if(eco.day === 4 && upg.sodaCount === 0 && !upg.sodaDeclined) {
-      document.getElementById('decision-popup').style.display='flex';
-      document.getElementById('decision-buy-btn').disabled = (eco.cash < 150);
-      return;
-  }
+  // The Soda Fountain is no longer force-introduced mid-transition. It's a
+  // normal Shop purchase that unlocks once Day 5 is complete (see SHOP_DEFS),
+  // so you can buy and arrange it on the Day 6 prep screen before using it.
   executeDayStart();
-}
-
-function decisionBuySoda() {
-    if(eco.cash >= 150) {
-        if(!freeSpot()) {
-            const p = document.getElementById('alert-popup');
-            document.getElementById('alert-title').style.color = '#F44336';
-            document.getElementById('alert-title').textContent = 'NO SPACE!';
-            document.getElementById('alert-desc').innerHTML = "Your restaurant is too cluttered to install a Soda Fountain.<br>Move items or expand your shop first!";
-            p.style.display = 'flex';
-            playSound('error');
-            return;
-        }
-        eco.cash -= 150;
-        upg.sodaCount = 1;
-        const pos = freeSpot();
-        addStation('soda0','sodafountain',pos.x,pos.z,2,2);
-        document.getElementById('decision-popup').style.display='none';
-        executeDayStart();
-    }
-}
-
-function decisionDeclineSoda() {
-    upg.sodaDeclined = true;
-    upg.sodaDeclinedUntil = (eco.day || 0) + 4; // temporary dip, then recovers
-    document.getElementById('decision-popup').style.display='none';
-    executeDayStart();
 }
 
 function executeDayStart() {
@@ -3604,9 +3559,6 @@ function executeDayStart() {
   let multi = 1.0;
   if(rating >= 4.0) multi = 1.3;
   if(rating < 3.0) multi = 0.7;
-  // Declining the soda fountain is now a small, TEMPORARY traffic dip rather
-  // than a permanent penalty (the fountain is still buyable in the Shop).
-  if(upg.sodaDeclined && eco.day <= (upg.sodaDeclinedUntil||0)) multi *= 0.92;
 
   const baseGroups = eco.day + 1; 
   const groupCount = Math.max(1, Math.floor(baseGroups * multi));
