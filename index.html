@@ -817,10 +817,32 @@ canvas{display:block;width:100%;height:100%;}
         <button class="pbtn pbtn-sound" onclick="exportSave()">📤 Export Save</button>
         <button class="pbtn pbtn-sound" onclick="importSave()">📥 Import Save</button>
       </div>
-      <button class="btn-red" onclick="if(confirm('Reset ALL progress?')){localStorage.removeItem('burgerBoss_save');localStorage.removeItem('burgerBoss_tutorialSeen');location.reload();}" style="width:100%;">🗑️ Reset All Progress</button>
+      <button class="btn-red" onclick="showResetConfirm()" style="width:100%;">🗑️ Reset All Progress</button>
     </div>
     <button class="btn-green" onclick="closeSettings()" style="margin-top:18px;">BACK</button>
     <div style="margin-top:10px;color:rgba(255,255,255,.3);font-size:11px;">Burger Bar · v1.0</div>
+  </div>
+
+  <!-- RESET CONFIRMATION — type-to-confirm so it can't be triggered by accident -->
+  <div id="reset-confirm-screen" class="overlay" style="z-index:14;display:none;">
+    <div style="width:100%;max-width:360px;background:rgba(30,16,16,.96);border:2px solid #b71c1c;border-radius:18px;padding:22px 20px;text-align:center;">
+      <div style="font-size:40px;margin-bottom:6px;">⚠️</div>
+      <h2 style="font-size:20px;margin:0 0 8px;color:#ff5252;">Reset ALL Progress?</h2>
+      <p style="font-size:13px;line-height:1.5;color:rgba(255,255,255,.7);margin:0 0 16px;">
+        This permanently deletes your save — cash, day, upgrades, robots, skins,
+        achievements and records. <b style="color:#ff8a80;">This cannot be undone.</b>
+        Consider <b>Export Save</b> first.
+      </p>
+      <p style="font-size:12px;color:rgba(255,255,255,.55);margin:0 0 8px;">Type <b style="color:#fff;letter-spacing:1px;">RESET</b> to confirm:</p>
+      <input id="reset-confirm-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
+             placeholder="RESET"
+             oninput="validateResetInput()"
+             style="width:100%;box-sizing:border-box;text-align:center;font-family:inherit;font-weight:900;font-size:18px;letter-spacing:2px;padding:10px;border-radius:12px;border:2px solid #555;background:#1a1a1a;color:#fff;text-transform:uppercase;">
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button class="btn-green" style="flex:1;margin:0;" onclick="closeResetConfirm()">CANCEL</button>
+        <button id="reset-confirm-btn" class="btn-red" style="flex:1;margin:0;opacity:.45;pointer-events:none;" onclick="doReset()">DELETE</button>
+      </div>
+    </div>
   </div>
 
   <div id="edit-hud">
@@ -1798,6 +1820,12 @@ const SKIN_DEFS = [
 // activeStoreIdx = index into stores[]
 let stores = [];
 let activeStoreIdx = 0;
+
+// SINGLE-BAR MODE: while we master the first Burger Bar, the only playable map
+// is store 0. This one flag gates every path that could switch/launch another
+// map (preview swipe, swipe arrows, PLAY target, Stores screen). Flip to false
+// to re-enable the multi-store empire (see ARCHITECTURE.md → Single-bar mode).
+const SINGLE_BAR_MODE = true;
 
 function defStore(id, name, type='burger') {
   return {
@@ -2925,6 +2953,7 @@ function stopRestaurantAnim(){
 
 // ── Swipe between stores ──────────────────────────────────────
 function initRestaurantSwipe(){
+  if(SINGLE_BAR_MODE) return; // no map-switching while locked to the first bar
   const canvas = document.getElementById('home-restaurant-canvas');
   if(!canvas) return;
   let startX = null, moved = false;
@@ -2938,6 +2967,7 @@ function initRestaurantSwipe(){
 }
 
 function homeSwipeStore(dir){
+  if(SINGLE_BAR_MODE) return; // locked to the first bar — ignore arrows/swipe
   const totalSlots = STORE_COLORS.length;
   const newIdx = (rp.storeIdx + dir + totalSlots) % totalSlots;
   rp.storeIdx = newIdx;
@@ -3132,6 +3162,35 @@ function closeSettings(){
   if(gameState==='playing'){ document.getElementById('pause-screen').style.display = gamePaused?'flex':'none'; }
   else showStartMenu();
 }
+
+// ── Reset progress: type-to-confirm so it can never be a one-tap accident ──
+function showResetConfirm(){
+  const inp = document.getElementById('reset-confirm-input');
+  if(inp) inp.value = '';
+  validateResetInput();
+  document.getElementById('reset-confirm-screen').style.display='flex';
+  if(inp) setTimeout(()=>inp.focus(), 50);
+}
+function closeResetConfirm(){
+  document.getElementById('reset-confirm-screen').style.display='none';
+}
+function validateResetInput(){
+  const inp = document.getElementById('reset-confirm-input');
+  const btn = document.getElementById('reset-confirm-btn');
+  if(!inp || !btn) return;
+  const armed = inp.value.trim().toUpperCase() === 'RESET';
+  btn.style.opacity = armed ? '1' : '.45';
+  btn.style.pointerEvents = armed ? 'auto' : 'none';
+}
+function doReset(){
+  const inp = document.getElementById('reset-confirm-input');
+  if(!inp || inp.value.trim().toUpperCase() !== 'RESET') return; // guard
+  localStorage.removeItem('burgerBoss_save');
+  localStorage.removeItem('burgerBoss_tutorialSeen');
+  location.reload();
+}
+window.showResetConfirm=showResetConfirm; window.closeResetConfirm=closeResetConfirm;
+window.validateResetInput=validateResetInput; window.doReset=doReset;
 function setVolume(val){
   settings.volume = Math.max(0, Math.min(1, val/100));
   document.getElementById('set-vol-val').textContent = Math.round(settings.volume*100)+'%';
@@ -3372,6 +3431,7 @@ function calcPassiveIncome(store) {
 }
 
 function showStores(){
+  if(SINGLE_BAR_MODE){ showStartMenu(); return; } // empire disabled for now
   document.getElementById('home-screen').style.display='none';
   const list = document.getElementById('stores-list');
   list.innerHTML='';
@@ -3618,7 +3678,8 @@ function executeDayStart() {
 window.startNextDay = startNextDay;
 
 function homePlaySelected(){
-  const targetIdx = rp.storeIdx;
+  // SINGLE-BAR MODE always launches the first bar regardless of preview state.
+  const targetIdx = SINGLE_BAR_MODE ? 0 : rp.storeIdx;
   if(targetIdx >= stores.length) return; // shouldn't happen but guard
 
   if(targetIdx !== activeStoreIdx){
