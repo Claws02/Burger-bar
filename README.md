@@ -38,10 +38,16 @@ python3 -m http.server 8000
 5. Spend cash in the **Shop**; rearrange with **Edit Mode**.
 6. Hire **robots** (Chef / Waiter / Busser), open new **stores**, earn passive income.
 
+> **Single-bar focus:** the game currently runs in **single-bar mode** — only
+> **Burger Bar #1** is active so we can master one bar's cook/deliver loop first.
+> The Seafood Shack and franchise reskins are parked in
+> [`archive/`](archive/) and the multi-store empire is temporarily disabled. See
+> [`ARCHITECTURE.md`](ARCHITECTURE.md) for the complete first-bar design and how
+> to re-enable the other maps.
+
 ## Features
 
-- Two full cuisines: **Burger Bar** & **Seafood Shack**
-- Multi-store empire with passive income
+- The **Burger Bar** cook/serve line (fridge → grill → tray → counter → table)
 - 12 unlockable chef **skins**
 - **Achievements** with cash & skin rewards, plus lifetime **records**
 - **Settings**: volume, background music, colorblind-friendly bars,
@@ -54,6 +60,8 @@ python3 -m http.server 8000
 | File | Purpose |
 |------|---------|
 | `index.html` | The entire game (markup, styles, and code) |
+| `ARCHITECTURE.md` | Complete first-bar architecture: stations, cook/deliver recipes, economy, achievements |
+| `archive/` | Parked multi-map build + notes (see single-bar mode) |
 | `manifest.json` | PWA web app manifest |
 | `icon.svg` | App / favicon icon |
 | `PROPOSAL.md` | Design review, roadmap, and implementation status |
