@@ -3831,6 +3831,7 @@ function spawnGroup(){
      g.orders.push(orderType);
   }
   g.unservedOrders = [...g.orders];
+  g.servedMask = g.orders.map(()=>false); // per-seat served state (aligned to orders)
 
   for(let i=0;i<size;i++){
     const m=new THREE.Group();
@@ -3879,9 +3880,19 @@ function updateStationVisuals(){
       const p=itemMesh('tray'); p.position.set(s.x + 0.6, 3.1+i*.12, s.z - 0.6); scene.add(p); s.visuals.push(p);
     }
     if(s.type==='table'){
-      if(s.served>0) for(let i=0;i<s.served;i++){
-        const itemName = s.group && s.group.orders[i] ? s.group.orders[i] : (isSeafood()?'taco_in_basket':'burger_on_tray');
-        const m=itemMesh(itemName); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+      if(s.served>0){
+        // Show a plate for each SERVED seat (its actual order), so the food on
+        // the table matches who has been served — not just a left-to-right count.
+        const mask = s.group && s.group.servedMask;
+        let shown=0;
+        const seats = s.group ? s.group.orders.length : s.served;
+        for(let i=0;i<seats;i++){
+          const served = mask ? mask[i] : (i < s.served);
+          if(!served) continue;
+          const itemName = (s.group && s.group.orders[i]) ? s.group.orders[i] : (isSeafood()?'taco_in_basket':'burger_on_tray');
+          const m=itemMesh(itemName); m.position.set(s.x-.9+shown*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+          shown++;
+        }
       } else if(s.dirtyTrays>0) for(let i=0;i<s.dirtyTrays;i++){
         const m=itemMesh(isSeafood()?'dirty_basket':'dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
       }
@@ -3929,6 +3940,26 @@ function actionPromptFor(t){
   if(ty==='dumpster')      return h==='trash_bag'?'Dump bag':'';
   if(ty==='table')         return (h&&t.group&&t.group.state==='ordering')?'Serve!':((!h&&t.dirtyTrays>0)?'Clear table':'');
   return '';
+}
+
+// Serve one held item to a seated group, checking off the CORRECT customer:
+// the first not-yet-served seat whose order matches what's being delivered.
+// Keeps the per-seat servedMask, the unservedOrders list, and the table's
+// served count all in sync. Returns true if an order was actually fulfilled.
+// Used by the player and both (burger/seafood) robot-waiter paths so the seat
+// that gets the ✔️ is always the one whose order you delivered.
+function serveHeldToGroup(t, holding){
+  const g = t.group;
+  if(!g || g.state!=='ordering' || !holding) return false;
+  if(!g.servedMask || g.servedMask.length !== g.orders.length) g.servedMask = g.orders.map(()=>false);
+  let seat = -1;
+  for(let i=0;i<g.orders.length;i++){ if(!g.servedMask[i] && g.orders[i]===holding){ seat=i; break; } }
+  if(seat === -1) return false;            // nobody at this table ordered that
+  g.servedMask[seat] = true;
+  const ui = g.unservedOrders.indexOf(holding); if(ui !== -1) g.unservedOrders.splice(ui, 1);
+  t.served++;
+  if(g.unservedOrders.length === 0){ g.eatTimer = 200; g.state = 'eating'; }
+  return true;
 }
 
 function handleAction(){
@@ -4108,12 +4139,7 @@ function handleAction(){
       ? seafoodItems.includes(player.holding)
       : player.holding && (player.holding.includes('burger') || player.holding.includes('soda'));
     if(player.holding && heldIsFood && t.group && t.group.state==='ordering'){
-      const idx = t.group.unservedOrders.indexOf(player.holding);
-      if(idx !== -1) {
-         t.group.unservedOrders.splice(idx, 1);
-         player.holding=null; t.served++; ok=true;
-         if(t.group.unservedOrders.length === 0){ t.group.eatTimer=200; t.group.state='eating'; }
-      }
+      if(serveHeldToGroup(t, player.holding)){ player.holding=null; ok=true; }
     } else if(!player.holding && t.dirtyTrays>0){
       player.holding = isSeafood() ? 'dirty_basket' : 'dirty_tray';
       t.dirtyTrays--; ok=true;
@@ -4519,8 +4545,7 @@ function updateRobots(ds){
           else if(t.type==='basketrack'&&bot.holding&&bot.holding!=='basket'){ t.item=bot.holding;bot.holding=null;actionDone=true; }
           else if(t.type==='table'){
             if(t.group&&t.group.state==='ordering'&&bot.holding){
-              const idx=t.group.unservedOrders.indexOf(bot.holding);
-              if(idx!==-1){t.group.unservedOrders.splice(idx,1);t.served++;bot.holding=null;actionDone=true;if(t.group.unservedOrders.length===0){t.group.eatTimer=200;t.group.state='eating';}}
+              if(serveHeldToGroup(t, bot.holding)){ bot.holding=null; actionDone=true; }
             }
           }
           else if(t.type==='trash'&&bot.holding&&t.contents<4){ t.contents++;bot.holding=bot.holding.includes('basket')?'basket':null;actionDone=true; }
@@ -4594,12 +4619,7 @@ function updateRobots(ds){
           }
           else if(t.type === 'table') {
               if(t.group && t.group.state==='ordering' && bot.holding) {
-                  const idx = t.group.unservedOrders.indexOf(bot.holding);
-                  if(idx !== -1) {
-                      t.group.unservedOrders.splice(idx, 1);
-                      t.served++; bot.holding = null; actionDone = true;
-                      if(t.group.unservedOrders.length === 0){ t.group.eatTimer=200; t.group.state='eating'; }
-                  }
+                  if(serveHeldToGroup(t, bot.holding)){ bot.holding = null; actionDone = true; }
               }
           }
           else if(t.type === 'trash') {
@@ -4705,7 +4725,8 @@ function drawFloatUI(){
        const cp = scr(worldPos);
        if(cp.z < 1) {
           let icon = '';
-          if (i < t.served) {
+          const seatServed = t.group.servedMask ? t.group.servedMask[i] : (i < t.served);
+          if (seatServed) {
               icon = '✔️';
           } else {
               const order = t.group.orders[i];
@@ -5056,6 +5077,7 @@ function animate(){
                 }
                 g.orders = [orderType];
                 g.unservedOrders = [...g.orders];
+                g.servedMask = g.orders.map(()=>false);
             } else {
                 g.state='leave';
             }
