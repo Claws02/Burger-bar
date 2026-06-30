@@ -3694,9 +3694,10 @@ function endDay(){
     saveGame(); return;
   }
 
-  // Passive income from other stores
+  // Passive income from other stores. Disabled in single-bar mode so a dormant
+  // map left over in an old multi-map save can't keep paying out invisibly.
   let passiveTotal = 0;
-  stores.forEach((store, idx) => {
+  if(!SINGLE_BAR_MODE) stores.forEach((store, idx) => {
     if(idx !== activeStoreIdx && store.unlocked) {
       const inc = calcPassiveIncome(store);
       passiveTotal += inc;
@@ -4134,7 +4135,6 @@ function handleAction(){
   }
   else if(type==='table'){
     const seafoodItems=['taco_in_basket','chowder_in_basket','lemonade_in_basket','taco_chowder_basket','taco_lemonade_basket'];
-    const burgerItems=['burger','soda'];
     const heldIsFood = isSeafood()
       ? seafoodItems.includes(player.holding)
       : player.holding && (player.holding.includes('burger') || player.holding.includes('soda'));
