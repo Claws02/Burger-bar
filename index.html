@@ -890,6 +890,10 @@ canvas{display:block;width:100%;height:100%;}
           <span id="res-new-total" style="font-size:24px;font-weight:900;color:#fff;">$0.00</span>
         </div>
       </div>
+      <div id="res-goals-box" style="background:rgba(0,0,0,.4);border-radius:16px;padding:14px 20px;width:100%;margin-bottom:16px;opacity:0;transition:opacity .4s;display:none;">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">🎯 Daily Goals</div>
+        <div id="res-goals-list" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
       <button class="btn-green" id="res-next-btn" onclick="showStartMenu()" style="opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;pointer-events:none;">CONTINUE →</button>
     </div>
   </div>
@@ -901,6 +905,7 @@ canvas{display:block;width:100%;height:100%;}
       <div style="background:rgba(102,187,106,.18);border:2px solid #4CAF50;border-radius:14px;padding:7px 16px;font-size:20px;font-weight:900;">💰 <span id="shop-cash-display">$0.00</span></div>
     </div>
     <div class="shop-wrap">
+      <div id="shop-menu-panel" style="display:none;"></div>
       <div class="shop-tabs" id="shop-tabs"></div>
       <div id="shop-items"></div>
     </div>
@@ -1779,7 +1784,7 @@ function itemMesh(type){
 // ─────────────────────────────────────────────────────────────
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
-function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
+function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}}; }
 function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
@@ -1823,6 +1828,18 @@ function defStore(id, name, type='burger') {
 
 // Helper: is the active store a seafood restaurant?
 function isSeafood(){ return (stores[activeStoreIdx]?.type === 'seafood'); }
+
+// MENU: which optional item categories the player is currently serving. Combos
+// require owning the Soda Fountain AND leaving them switched on in the Menu, so
+// players can choose to keep the line simple (burgers only) even after buying
+// the fountain. Future menu items slot in here the same way.
+function menuComboActive(){ return upg.sodaCount > 0 && (eco.menu?.combos !== false); }
+function toggleMenuCombos(){
+  if(!eco.menu) eco.menu = {combos:true};
+  const currentlyOn = eco.menu.combos !== false;
+  eco.menu.combos = !currentlyOn;
+  saveGame(); renderMenuPanel(); playSound('coin');
+}
 
 // Skin/cosmetic state (global across stores)
 let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic' };
@@ -1880,7 +1897,7 @@ function saveGame(){
       }
       stores[activeStoreIdx].layout = layout;
     }
-    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records}));
+    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records, dailyGoals}));
   }catch(e){}
 }
 
@@ -1914,6 +1931,7 @@ function loadSave(){
     if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic'}, s.cosm);
     if(s.achievements) achievements = Object.assign({unlocked:[]}, s.achievements);
     if(s.records) records = Object.assign({bestDayCash:0, bestDayStars:0, totalServed:0}, s.records);
+    if(Array.isArray(s.dailyGoals)) dailyGoals = s.dailyGoals;
 
     loadActiveStore();
   }catch(e){ console.warn('Load failed',e); bootstrapNewSave(); }
@@ -2217,7 +2235,41 @@ const SHOP_DEFS = [
 function maxEquip(){ return 4; }
 
 let activeShopTab = 'Upgrades';
+// Your Menu: let the player choose which unlocked item categories to serve.
+// Burger is always on (the base of the restaurant); optional categories appear
+// here as they're unlocked, each with an on/off switch. Customers only order
+// from what's switched on, so players control what their bar actually serves.
+function renderMenuPanel(){
+  const panel = document.getElementById('shop-menu-panel');
+  if(!panel) return;
+  const rows = [];
+  // Base item — always served, shown as a locked-on entry for clarity.
+  rows.push(`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;">
+      <div style="font-size:13px;font-weight:800;">🍔 Burgers <span style="font-size:10px;color:rgba(255,255,255,.4);">· always on</span></div>
+      <div style="font-size:12px;font-weight:900;color:#66BB6A;">SERVING</div>
+    </div>`);
+  // Combos — unlocked by owning the Soda Fountain; toggleable.
+  if(upg.sodaCount > 0){
+    const on = menuComboActive();
+    rows.push(`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;border-top:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:13px;font-weight:800;">🥤 Soda &amp; Combos <span style="font-size:10px;color:rgba(255,255,255,.4);">· 🍔🥤 higher profit</span></div>
+        <button onclick="toggleMenuCombos()" style="cursor:pointer;font-family:inherit;font-weight:900;font-size:12px;border-radius:20px;border:2px solid ${on?'#66BB6A':'rgba(255,255,255,.25)'};background:${on?'rgba(102,187,106,.2)':'transparent'};color:${on?'#66BB6A':'rgba(255,255,255,.5)'};padding:4px 14px;">${on?'ON':'OFF'}</button>
+      </div>`);
+  }
+  // Only show the panel once there's an actual choice to make (combos owned).
+  if(upg.sodaCount > 0){
+    panel.innerHTML = `<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:1.5px;color:rgba(255,255,255,.5);font-weight:900;margin-bottom:4px;">📋 YOUR MENU</div>
+        ${rows.join('')}
+      </div>`;
+    panel.style.display='block';
+  } else {
+    panel.style.display='none';
+  }
+}
+
 function updateShop(){
+  renderMenuPanel();
   const cats = ['Upgrades', 'Building', 'Equipment', 'Automation'];
   if(!cats.includes(activeShopTab)) activeShopTab=cats[0];
 
@@ -2371,6 +2423,88 @@ function lockedAchvByAchievability(m, done){
     .map(o => o.a);
 }
 
+// ─────────────────────────────────────────────────────────────
+//  DAILY GOALS  (built on the same metric/goal engine as achievements)
+// ─────────────────────────────────────────────────────────────
+// Three light, per-day objectives that reset each morning and pay a small cash
+// bonus. They scale gently with the day number and only offer combo goals when
+// combos are actually on the menu, so a new player is never asked for content
+// they haven't unlocked. Persisted in the save so a mid-day reload is stable.
+let dailyGoals = [];
+
+// Today-scoped metrics (reset with `stats` each day).
+function dailyMetrics(){
+  const groups = stats.groupsServed || 0;
+  return {
+    groups,
+    cash:     stats.cashEarned || 0,
+    stars:    groups > 0 ? stats.totalStars / groups : 0,
+    combos:   stats.combosServed || 0,
+    walkouts: stats.walkouts || 0,
+  };
+}
+
+// The candidate pool. `mode:'reach'` means cur>=goal; `'atMost'` means cur<=goal
+// (evaluated at day's end). Each returns a concrete goal for the given day.
+function dailyGoalPool(day){
+  const pool = [
+    {id:'serve', icon:'🍽️', metric:'groups', goal:Math.max(3, day+2),        mode:'reach',  reward:30+day*3, label:g=>`Serve ${g} groups`},
+    {id:'earn',  icon:'💵', metric:'cash',   goal:40 + day*14,               mode:'reach',  reward:40+day*4, label:g=>`Earn $${g} today`},
+    {id:'stars', icon:'⭐', metric:'stars',  goal:4,                         mode:'reach',  reward:60,       label:g=>`Finish at ${g}★ or better`},
+    {id:'nowalk',icon:'🏃', metric:'walkouts',goal:0,                        mode:'atMost', reward:50,       label:()=>`No customers walk out`},
+  ];
+  if(menuComboActive())
+    pool.push({id:'combo', icon:'🥤', metric:'combos', goal:Math.max(2, Math.ceil(day/2)), mode:'reach', reward:55, label:g=>`Serve ${g} combo meals`});
+  return pool;
+}
+
+// Deterministic per-day shuffle (mulberry32) so the same day always yields the
+// same 3 goals — a reload can't reroll them for a better set.
+function seededPick(arr, n, seed){
+  let s = seed >>> 0; const rnd = ()=>{ s|=0; s=s+0x6D2B79F5|0; let t=Math.imul(s^s>>>15,1|s); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a.slice(0, n);
+}
+
+function rollDailyGoals(day){
+  const picks = seededPick(dailyGoalPool(day), 3, day*2654435761);
+  dailyGoals = picks.map(p => ({
+    id:p.id, icon:p.icon, metric:p.metric, goal:p.goal, mode:p.mode,
+    reward:p.reward, desc:p.label(p.goal), done:false
+  }));
+}
+
+function dailyGoalDone(dg, m){
+  const cur = m[dg.metric] || 0;
+  return dg.mode==='atMost' ? cur <= dg.goal : cur >= dg.goal;
+}
+function dailyGoalFrac(dg, m){
+  const cur = m[dg.metric] || 0;
+  if(dg.mode==='atMost') return dailyGoalDone(dg, m) ? 1 : 0;
+  return Math.max(0, Math.min(1, cur / dg.goal));
+}
+function dailyGoalText(dg, m){
+  const cur = m[dg.metric] || 0;
+  if(dg.metric==='cash')     return `$${Math.floor(Math.min(cur,dg.goal))} / $${dg.goal}`;
+  if(dg.metric==='stars')    return `${cur.toFixed(1)} / ${dg.goal}★`;
+  if(dg.metric==='walkouts') return cur===0 ? 'none so far' : `${cur} walked out`;
+  return `${Math.min(Math.floor(cur),dg.goal)} / ${dg.goal}`;
+}
+
+// Award any newly-completed goals; called once at day end. Returns cash earned.
+function checkDailyGoals(){
+  const m = dailyMetrics();
+  let earned = 0;
+  for(const dg of dailyGoals){
+    if(dg.done) continue;
+    if(dailyGoalDone(dg, m)){ dg.done = true; earned += dg.reward; }
+  }
+  if(earned > 0){ eco.cash += earned; }
+  stats._dailyEarned = earned;
+  return earned;
+}
+
 // Achievements unlocked since the last toast flush. When a day ends we award
 // the cash immediately (so the results screen math is right) but hold the
 // celebratory toast until the player is back on the Home Screen.
@@ -2424,6 +2558,30 @@ function showAchievements(){
     <div><div style="font-size:18px;font-weight:900;color:#ffca28;">${(records.bestDayStars||0).toFixed(1)}★</div><div style="font-size:10px;color:rgba(255,255,255,.5);">BEST RATING</div></div>
     <div><div style="font-size:18px;font-weight:900;color:#90caf9;">${records.totalServed||0}</div><div style="font-size:10px;color:rgba(255,255,255,.5);">SERVED</div></div>`;
   list.appendChild(rec);
+
+  // Today's Goals — live progress mid-day, or a clean preview between days.
+  if(dailyGoals && dailyGoals.length){
+    const preview = gameState !== 'playing';
+    const dm = preview ? {groups:0,cash:0,stars:0,combos:0,walkouts:0} : dailyMetrics();
+    const title = preview ? "NEXT DAY'S GOALS" : "TODAY'S GOALS";
+    const gwrap = document.createElement('div');
+    gwrap.style.cssText='background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.25);border-radius:12px;padding:12px;margin-bottom:12px;';
+    gwrap.innerHTML = `<div style="font-size:11px;letter-spacing:1.5px;color:#ffca28;font-weight:900;margin-bottom:8px;">🎯 ${title}</div>` +
+      dailyGoals.map(dg=>{
+        const done = !preview && (dg.done || dailyGoalDone(dg, dm));
+        const frac = preview ? 0 : dailyGoalFrac(dg, dm);
+        return `<div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;">
+            <span style="color:${done?'#66BB6A':'#fff'};">${done?'✅':dg.icon} ${dg.desc}</span>
+            <span style="color:${done?'#66BB6A':'#ffc107'};flex-shrink:0;">${done?'✓ +$'+dg.reward:'+$'+dg.reward}</span>
+          </div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;">${dailyGoalText(dg, dm)}</div>
+          <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:3px;overflow:hidden;"><div style="height:100%;width:${(frac*100).toFixed(0)}%;background:linear-gradient(90deg,#FBC02D,#F57F17);border-radius:3px;"></div></div>
+        </div>`;
+      }).join('');
+    list.appendChild(gwrap);
+  }
+
   const done = achievements.unlocked || [];
   const m    = achvMetrics();
   // Organized by how achievable they are: still-locked goals first, ordered
@@ -3086,6 +3244,9 @@ function showStartMenu(){
   const storeBtn = document.getElementById('home-stores-btn');
   if(storeBtn) storeBtn.style.display = 'none';
 
+  // Preview the goals for the day you're about to play (deterministic per day,
+  // so these are the exact goals that go live when you press PLAY).
+  rollDailyGoals(eco.day + 1);
   renderHomeAchievements();
 
   document.getElementById('home-screen').style.display='flex';
@@ -3569,8 +3730,9 @@ function executeDayStart() {
   // First spawn: give player 8 seconds to get ready (longer on early days)
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
   stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
-         spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups};
+         spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups, combosServed:0, walkouts:0};
   serveStreak = 0; streakTimer = 0;
+  rollDailyGoals(eco.day); // fresh objectives for the day about to start
 
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
@@ -3716,6 +3878,7 @@ function endDay(){
   if(stats.cashEarned > records.bestDayCash){ records.bestDayCash = stats.cashEarned; stats._newRecord = true; }
   if(todayStarsAvg > records.bestDayStars) records.bestDayStars = todayStarsAvg;
 
+  checkDailyGoals();       // award daily-goal bonuses before the results math
   checkAchievements(true); // award now; celebrate on the Home Screen
   gameState='results'; saveGame(); playSound('daycomplete'); showResults();
 }
@@ -3737,7 +3900,7 @@ function showResults(){
   const cum=getCumRating();
   // eco.cash already includes today's serving cash + passive + achievement
   // bonuses, so back all of them out to get the true starting balance.
-  const cashBefore=eco.cash-stats.cashEarned-(stats._passiveEarned||0)-(stats._achvEarned||0);
+  const cashBefore=eco.cash-stats.cashEarned-(stats._passiveEarned||0)-(stats._achvEarned||0)-(stats._dailyEarned||0);
 
   const el=id=>document.getElementById(id);
   el('res-day-lbl').style.opacity='0'; el('res-title').style.opacity='0'; el('res-title').style.transform='scale(.75)';
@@ -3764,10 +3927,12 @@ function showResults(){
     // Show passive + achievement income if any
     const passiveEarned = stats._passiveEarned || 0;
     const achvEarned = stats._achvEarned || 0;
-    const totalEarned = stats.cashEarned + passiveEarned + achvEarned;
+    const dailyEarned = stats._dailyEarned || 0;
+    const totalEarned = stats.cashEarned + passiveEarned + achvEarned + dailyEarned;
     el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+totalEarned.toFixed(2);
     let extra = '';
     if(passiveEarned > 0) extra += ` (+$${passiveEarned.toFixed(2)} passive 🤖)`;
+    if(dailyEarned > 0)   extra += ` (+$${dailyEarned.toFixed(2)} 🎯)`;
     if(achvEarned > 0)    extra += ` (+$${achvEarned.toFixed(2)} 🏆)`;
     if(extra) el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}${extra}`;
     el('res-total-row').style.opacity='1';
@@ -3779,6 +3944,26 @@ function showResults(){
       if(t<1) requestAnimationFrame(tick); else totalEl.style.animation='totalPop .4s ease forwards';
     })(performance.now());
   }, 2100);
+  // Daily goals recap (completed vs missed, with earned bonus).
+  const gbox = el('res-goals-box'), glist = el('res-goals-list');
+  if(gbox && glist){
+    if(dailyGoals && dailyGoals.length){
+      glist.innerHTML = dailyGoals.map(dg=>{
+        const ok = dg.done;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+            <span style="font-size:16px;">${ok?'✅':'⬜'}</span>
+            <span style="font-size:12px;font-weight:800;color:${ok?'#fff':'rgba(255,255,255,.55)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dg.desc}</span>
+          </div>
+          <span style="font-size:12px;font-weight:900;color:${ok?'#66BB6A':'rgba(255,255,255,.3)'};flex-shrink:0;">${ok?'+$'+dg.reward:'+$'+dg.reward}</span>
+        </div>`;
+      }).join('');
+      gbox.style.display='block';
+      setTimeout(()=>{ gbox.style.opacity='1'; }, 2450);
+    } else {
+      gbox.style.display='none';
+    }
+  }
   setTimeout(()=>{ el('res-next-btn').style.opacity='1'; el('res-next-btn').style.transform='translateY(0)'; el('res-next-btn').style.pointerEvents='auto'; }, 3100);
 }
 
@@ -3823,7 +4008,7 @@ function spawnGroup(){
        else              orderType = 'taco_lemonade_basket';
      } else {
        orderType = 'burger_on_tray';
-       if(upg.sodaCount > 0) {
+       if(menuComboActive()) {
          const r = Math.random();
          if(r < 0.25) orderType = 'soda_on_tray';
          else if(r < 0.70) orderType = 'burger_soda_on_tray';
@@ -3959,6 +4144,9 @@ function serveHeldToGroup(t, holding){
   g.servedMask[seat] = true;
   const ui = g.unservedOrders.indexOf(holding); if(ui !== -1) g.unservedOrders.splice(ui, 1);
   t.served++;
+  // Track combo meals served today (for daily goals).
+  if(holding==='burger_soda_on_tray' || holding==='taco_chowder_basket' || holding==='taco_lemonade_basket')
+    stats.combosServed = (stats.combosServed||0) + 1;
   if(g.unservedOrders.length === 0){ g.eatTimer = 200; g.state = 'eating'; }
   return true;
 }
@@ -4990,7 +5178,7 @@ function animate(){
           moveToTarget(g,ds); 
           g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
           
-          if(g.waitPatience<=0){ g.state='leave'; stats.groupsServed++; }
+          if(g.waitPatience<=0){ g.state='leave'; stats.groupsServed++; stats.walkouts=(stats.walkouts||0)+1; }
           else if(qi===0){
             let tgt=null;
             for(const k in stations){ const s=stations[k]; if(s.type==='table'&&!s.group&&s.dirtyTrays===0){tgt=s;break;} }
@@ -5010,7 +5198,7 @@ function animate(){
         }
         else if(g.state==='ordering'){
           g.foodPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
-          if(g.foodPatience<=0){ g.state='leave'; stats.groupsServed++; g.tbl.group=null; g.tbl.served=0; }
+          if(g.foodPatience<=0){ g.state='leave'; stats.groupsServed++; stats.walkouts=(stats.walkouts||0)+1; g.tbl.group=null; g.tbl.served=0; }
         }
         else if(g.state==='eating'){
           g.eatTimer-=ds;
@@ -5073,7 +5261,7 @@ function animate(){
                   orderType=r<0.5?'taco_in_basket':r<0.75?'chowder_in_basket':'lemonade_in_basket';
                 } else {
                   orderType='burger_on_tray';
-                  if(upg.sodaCount>0){const r=Math.random();if(r<0.25)orderType='soda_on_tray';else if(r<0.70)orderType='burger_soda_on_tray';}
+                  if(menuComboActive()){const r=Math.random();if(r<0.25)orderType='soda_on_tray';else if(r<0.70)orderType='burger_soda_on_tray';}
                 }
                 g.orders = [orderType];
                 g.unservedOrders = [...g.orders];

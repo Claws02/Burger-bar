@@ -73,10 +73,14 @@
 
 ## D. Content & depth — how it can be upgraded
 
-- 🟢 **Endless / goal framing.** The day loop currently just escalates group
-  counts. Layer the achievement metric/goal engine into **daily goals** ("serve
-  8 combos", "5★ day", "no walkouts") with small cash rewards — strong retention
-  with code you already have (`achvMetrics`/`achvProgress`).
+- ✅ **Daily goals** (done) — three per-day objectives on the achievement
+  engine (`dailyGoalPool`/`rollDailyGoals`/`checkDailyGoals`), with cash
+  rewards, a Results recap, and a live/preview list on the Achievements screen.
+- ✅ **Menu customization v1** (done) — `eco.menu` + a 📋 Your Menu panel in the
+  Shop; customers order only from switched-on categories (combos toggle). The
+  framework future menu items slot into.
+- 🟢 **Endless framing.** The day loop still just escalates group counts;
+  consider a rolling/endless mode on top of the daily-goal cadence.
 - 🟢 **More menu items on the one bar.** The recipe state machine (see
   ARCHITECTURE §6) generalizes cleanly: add e.g. **fries** (a second cook
   station with its own timer) or a **milkshake** (hold-to-fill like the sink).
