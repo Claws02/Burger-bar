@@ -121,6 +121,8 @@ A station is the nearest interactable to the player; `getClosest()` picks it and
 | `fries`                | Cooked fries (off the fryer)         |
 | `burnt_fries`          | Over-fried → trash only              |
 | `fries_on_tray`        | Plated fries (needs Fry Station)     |
+| `shake`                | A blended milkshake (hold-to-fill)   |
+| `shake_on_tray`        | Plated milkshake (needs Shake Machine) |
 | `dirty_tray`           | Used tray left after a group eats   |
 | `trash_bag`            | Full trash, carried to the dumpster |
 
@@ -161,11 +163,13 @@ order generator (`spawnGroup`, ~L3799) and the table-serve match (~L4023).
 
 ### Order types generated (`spawnGroup`)
 Orders are drawn only from the **active menu** (`menuComboActive` /
-`menuFriesActive` — owned **and** switched on in the Shop's Your Menu panel):
-- Base: **`burger_on_tray`**.
-- Fries on the menu: ~22 % **`fries_on_tray`**.
+`menuFriesActive` / `menuShakeActive` — owned **and** switched on in the Shop's
+Your Menu panel), checked in this order:
+- Milkshakes on the menu: ~15 % **`shake_on_tray`**.
+- Fries on the menu: ~22 % of the rest **`fries_on_tray`**.
 - Combos on the menu: of the rest, 25 % `soda_on_tray`, 45 %
-  `burger_soda_on_tray`, else `burger_on_tray`.
+  `burger_soda_on_tray`.
+- Otherwise: **`burger_on_tray`**.
 
 ### A. Plain burger → `burger_on_tray`
 | # | At station | Hold before → Hold after | Notes |
@@ -188,6 +192,13 @@ Orders are drawn only from the **active menu** (`menuComboActive` /
 | 2 | `fryer`    | (empty) → `fries`        | Pick up when done, before it burns |
 | 3 | `trayrack` | `fries` → `fries_on_tray` | Auto-plates onto a clean tray |
 | 4 | `table`    | `fries_on_tray` → (empty) | Serve the customer who ordered 🍟 |
+
+### A3. Milkshake → `shake_on_tray`  *(requires Shake Machine, Day 15)*
+| # | At station | Hold before → Hold after | Notes |
+|---|------------|--------------------------|-------|
+| 1 | `shakemachine` | (empty) → `shake`    | **Hold** ACT ~2.2 s to blend (shared hold system with the sink) |
+| 2 | `trayrack` | `shake` → `shake_on_tray` | Auto-plates onto a clean tray |
+| 3 | `table`    | `shake_on_tray` → (empty) | Serve the customer who ordered 🥛 |
 
 ### B. Soda only → `soda_on_tray`  *(requires Soda Fountain)*
 | # | At station     | Hold before → Hold after |
@@ -289,6 +300,7 @@ Tiered by unlock day; all relevant to the single bar:
 | 3 | 🪑 Add Table, 🌸 Fancy Decor (patience), 🍽️ Extra Counter |
 | 5 | 🥤 Soda Fountain (unlocks combos), 🏗️ Expand Floorplan, 🍳 Extra Grill, 🚿 Extra Sink, 🤖 Hire Robot |
 | 11 | 🍟 Fry Station (unlocks fries as a menu item) |
+| 15 | 🥛 Shake Machine (unlocks milkshakes — hold to blend) |
 
 `unlockDay:N` means an item becomes buyable **after Day N is complete** (locked
 while `eco.day < N`). So the **Soda Fountain** (`unlockDay:5`) first appears in
@@ -376,8 +388,8 @@ each is learned before the next:
 | 1  | 🍔 Burger (grill) | the core line | ✅ shipped |
 | 6  | 🥤 Soda / combos (fountain) | assembling two parts onto one tray | ✅ shipped |
 | 11 | 🍟 Fries (fryer, timed like the grill) | a second timed cook to juggle | ✅ shipped |
-| ~15 | 🥤 Milkshake (hold-to-fill, like the sink) | a hold action | next |
-| ~20 | 🍔 Deluxe/topping (extra assembly step) | multi-step assembly | future |
+| 15 | 🥛 Milkshake (shake machine, hold-to-blend) | a hold action | ✅ shipped |
+| ~20 | 🍔 Deluxe/topping (extra assembly step) | multi-step assembly | next |
 
 Each lands as a Shop unlock + a Menu toggle, so growth is opt-in and the bar
 stays as simple or as rich as the player wants.
@@ -386,6 +398,25 @@ stays as simple or as rich as the player wants.
 hands-on item, so enabling fries is a deliberate "I'll work the fryer myself"
 choice. Waiters will still carry fries you've plated. Teaching robots the fryer
 is a clean future add (mirror the grill branch in `updateRobots`).
+
+---
+
+## 11c. Stability & saves
+
+- **GPU memory / late-day crash fix.** `itemMesh` builds fresh geometries
+  (`GBox`/`GSph`/`GCyl` → `new …Geometry` each call), and `updateStationVisuals`
+  / `updateHolding` rebuild throwaway meshes on **every serve and pickup**.
+  Three.js does **not** free vertex buffers on `scene.remove()`, so the old code
+  leaked geometry continuously — long/busy days (10+) eventually exhausted GPU
+  memory and lost the WebGL context (a black-screen "crash"). `freeVisual`
+  (and the held-mesh / group-despawn paths) now `.dispose()` geometry when
+  clearing visuals. Shared materials are left intact (safe: itemMesh geometries
+  are never shared).
+- **Autosave.** The run autosaves every ~20 s during play (`autoSaveTimer` in the
+  frame loop) and again from the frame-error handler, so a crash/refresh resumes
+  from the last checkpoint (cash, upgrades, day) instead of losing the run. The
+  frame loop is wrapped in try/catch with a friendly "Something glitched · Reload"
+  toast so one bad frame never blanks the screen permanently.
 
 ---
 

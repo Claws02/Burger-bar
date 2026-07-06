@@ -1490,6 +1490,16 @@ function buildGrill(){
   for(let i=-1.2;i<=1.2;i+=.4) addMesh(g, GBox(3.0,.08,.08), M('#333'), i,3.1,.2, 0,Math.PI/2,0, false);
   return g;
 }
+function buildShakeMachine(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(2,2.8,2), M('#cfd8dc'), 0,1.4,0);            // body
+  addMesh(g, GBox(2.2,.18,2.2), M('#eeeeee'), 0,2.89,0);       // counter top
+  addMesh(g, GBox(0.9,1.5,0.9), matSilver, 0,3.65,-0.35);      // blender housing
+  addMesh(g, GCyl(0.32,1.0,12), M('#f6d9e8'), 0,3.45,0.35);    // cup of shake
+  addMesh(g, GBox(1.1,0.22,0.7), matSilver, 0,3.0,0.15);       // spout base
+  addMesh(g, GCyl(0.06,0.28,8), matSilver, 0,3.35,0.45);       // spout
+  return g;
+}
 function buildFryer(){
   const g=new THREE.Group();
   addMesh(g, GBox(3.2,3,2.5), matDark, 0,1.5,0);
@@ -1621,6 +1631,7 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='trayrack') mesh=buildTrayRack(w,d);
   if(type==='grill')   mesh=buildGrill();
   if(type==='fryer')   mesh=buildFryer();
+  if(type==='shakemachine') mesh=buildShakeMachine();
   if(type==='sodafountain') mesh=buildSodaFountain();
   if(type==='counter') mesh=buildCounter(w,d);
   if(type==='trash')   mesh=buildTrash();
@@ -1745,6 +1756,16 @@ function itemMesh(type){
     g.add(itemMesh('tray'));
     const fm=itemMesh('fries'); fm.position.set(0, 0.04, 0); fm.scale.set(0.85,0.85,0.85); g.add(fm);
 
+  // ── MILKSHAKE ITEMS ─────────────────────────────────────────
+  } else if(type==='shake'){
+    addMesh(g, GCyl(0.2,0.5,12), M('#f6d9e8'), 0,0.3,0);      // cup of pink shake
+    addMesh(g, GCyl(0.21,0.06,12), M('#ffffff'), 0,0.56,0);   // dome lid
+    addMesh(g, GCyl(0.025,0.3,6), M('#e91e63'), 0.05,0.72,0); // straw
+    addMesh(g, GSph(0.08,6), M('#ff5a8a'), 0,0.63,0);         // cherry
+  } else if(type==='shake_on_tray'){
+    g.add(itemMesh('tray'));
+    const sm=itemMesh('shake'); sm.position.set(0, 0.04, 0); g.add(sm);
+
   // ── SEAFOOD ITEMS ──────────────────────────────────────────
   } else if(type==='raw_fish'){
     // Raw fish fillet — orange slab
@@ -1813,7 +1834,7 @@ function itemMesh(type){
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
 function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}}; }
-function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, fryerCount:0}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, fryerCount:0, shakeCount:0}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
 // ─── SKINS ───────────────────────────────────────────────────
@@ -1863,6 +1884,7 @@ function isSeafood(){ return (stores[activeStoreIdx]?.type === 'seafood'); }
 // the fountain. Future menu items slot in here the same way.
 function menuComboActive(){ return upg.sodaCount > 0 && (eco.menu?.combos !== false); }
 function menuFriesActive(){ return (upg.fryerCount||0) > 0 && (eco.menu?.fries !== false); }
+function menuShakeActive(){ return (upg.shakeCount||0) > 0 && (eco.menu?.shake !== false); }
 function toggleMenuCombos(){
   if(!eco.menu) eco.menu = {combos:true};
   const currentlyOn = eco.menu.combos !== false;
@@ -1873,6 +1895,12 @@ function toggleMenuFries(){
   if(!eco.menu) eco.menu = {};
   const currentlyOn = eco.menu.fries !== false;
   eco.menu.fries = !currentlyOn;
+  saveGame(); renderMenuPanel(); playSound('coin');
+}
+function toggleMenuShake(){
+  if(!eco.menu) eco.menu = {};
+  const currentlyOn = eco.menu.shake !== false;
+  eco.menu.shake = !currentlyOn;
   saveGame(); renderMenuPanel(); playSound('coin');
 }
 
@@ -1898,6 +1926,9 @@ let floaters = [];
 
 // Serve-streak: serving groups in quick succession builds a tip multiplier.
 let serveStreak = 0, streakTimer = 0;
+// Periodic in-day autosave so a crash/refresh doesn't lose the run's progress
+// (cash, upgrades, day). Counts down in frames; ~20s at 60fps.
+let autoSaveTimer = 1200;
 function spawnFloater(pos, txt, color='#66BB6A'){
   floaters.push({pos:pos.clone().add(new THREE.Vector3(0,2,0)), text:txt, color:color, life:1.5});
 }
@@ -2023,7 +2054,7 @@ function applyCrown(){
 
 let heldMesh=null;
 function updateHolding(){
-  if(heldMesh){ pMesh.remove(heldMesh); heldMesh=null; }
+  if(heldMesh){ pMesh.remove(heldMesh); heldMesh.traverse(o=>{ if(o.geometry && o.geometry.dispose) o.geometry.dispose(); }); heldMesh=null; }
   if(player.holding){ heldMesh=itemMesh(player.holding); heldMesh.position.set(0,1.5,1.1); pMesh.add(heldMesh); }
 }
 
@@ -2248,6 +2279,7 @@ const SHOP_DEFS = [
   {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=maxEquip()-1, unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=freeSpot(); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
   {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=maxEquip()-1,  unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=freeSpot(); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
   {id:'fryer',     label:'🍟 Fry Station',         desc:'Add fries to your menu — a new item!',  cat:'Equipment', cost:()=>170,                    max:()=>(upg.fryerCount||0)>=1,        unlockDay:11, action:()=>{ const pos=freeSpot(); addStation('fryer0','fryer',pos.x,pos.z,3.2,2); upg.fryerCount=1; if(!eco.menu)eco.menu={}; eco.menu.fries=true; }},
+  {id:'shake',     label:'🥛 Shake Machine',       desc:'Add milkshakes — hold to blend!',       cat:'Equipment', cost:()=>230,                    max:()=>(upg.shakeCount||0)>=1,        unlockDay:15, action:()=>{ const pos=freeSpot(); addStation('shake0','shakemachine',pos.x,pos.z,2,2); upg.shakeCount=1; if(!eco.menu)eco.menu={}; eco.menu.shake=true; }},
   {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>200+upg.robotCount*120, max:()=>upg.robotCount>=10, unlockDay:5, action:()=>{ 
       const rData = {role:'busser', hiredDay:eco.day};
       upg.robots.push(rData);
@@ -2300,8 +2332,16 @@ function renderMenuPanel(){
         <button onclick="toggleMenuFries()" style="cursor:pointer;font-family:inherit;font-weight:900;font-size:12px;border-radius:20px;border:2px solid ${on?'#66BB6A':'rgba(255,255,255,.25)'};background:${on?'rgba(102,187,106,.2)':'transparent'};color:${on?'#66BB6A':'rgba(255,255,255,.5)'};padding:4px 14px;">${on?'ON':'OFF'}</button>
       </div>`);
   }
+  // Milkshakes — unlocked by owning the Shake Machine; toggleable.
+  if((upg.shakeCount||0) > 0){
+    const on = menuShakeActive();
+    rows.push(`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;border-top:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:13px;font-weight:800;">🥛 Milkshakes <span style="font-size:10px;color:rgba(255,255,255,.4);">· hold to blend</span></div>
+        <button onclick="toggleMenuShake()" style="cursor:pointer;font-family:inherit;font-weight:900;font-size:12px;border-radius:20px;border:2px solid ${on?'#66BB6A':'rgba(255,255,255,.25)'};background:${on?'rgba(102,187,106,.2)':'transparent'};color:${on?'#66BB6A':'rgba(255,255,255,.5)'};padding:4px 14px;">${on?'ON':'OFF'}</button>
+      </div>`);
+  }
   // Only show the panel once there's an actual choice to make.
-  const hasMenuChoice = upg.sodaCount > 0 || (upg.fryerCount||0) > 0;
+  const hasMenuChoice = upg.sodaCount > 0 || (upg.fryerCount||0) > 0 || (upg.shakeCount||0) > 0;
   if(hasMenuChoice){
     panel.innerHTML = `<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;margin-bottom:12px;">
         <div style="font-size:11px;letter-spacing:1.5px;color:rgba(255,255,255,.5);font-weight:900;margin-bottom:4px;">📋 YOUR MENU</div>
@@ -2356,7 +2396,7 @@ function doBuy(id){
   const cost=def.cost();
   if(eco.cash<cost||def.max()||eco.day<def.unlockDay) return;
 
-  if(['table','xcounter','xgrill','xsink','robot','soda','fryer'].includes(id)) {
+  if(['table','xcounter','xgrill','xsink','robot','soda','fryer','shake'].includes(id)) {
      if(!freeSpot()) {
         const p = document.getElementById('alert-popup');
         document.getElementById('alert-title').style.color = '#F44336';
@@ -3779,7 +3819,7 @@ function executeDayStart() {
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
   stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
          spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups, combosServed:0, walkouts:0};
-  serveStreak = 0; streakTimer = 0;
+  serveStreak = 0; streakTimer = 0; autoSaveTimer = 1200;
   rollDailyGoals(eco.day); // fresh objectives for the day about to start
 
   document.getElementById('home-screen').style.display='none';
@@ -4084,7 +4124,9 @@ function spawnGroup(){
        else              orderType = 'taco_lemonade_basket';
      } else {
        orderType = 'burger_on_tray';
-       if(menuFriesActive() && Math.random() < 0.22) {
+       if(menuShakeActive() && Math.random() < 0.15) {
+         orderType = 'shake_on_tray';
+       } else if(menuFriesActive() && Math.random() < 0.22) {
          orderType = 'fries_on_tray';
        } else if(menuComboActive()) {
          const r = Math.random();
@@ -4125,10 +4167,22 @@ function moveToTarget(g,scale){
 // ─────────────────────────────────────────────────────────────
 //  STATION VISUALS
 // ─────────────────────────────────────────────────────────────
+// Remove a throwaway visual from the scene AND free its GPU geometry. Three.js
+// does NOT release vertex buffers when you just scene.remove() — without this,
+// every serve/pickup leaks geometry and long/late days (10+) eventually exhaust
+// GPU memory and lose the WebGL context (the "crash"). Geometries here are all
+// freshly built by itemMesh (GBox/GSph/GCyl → new each call), so disposing them
+// is safe; shared materials are left intact.
+function freeVisual(v){
+  if(!v) return;
+  scene.remove(v);
+  v.traverse(o=>{ if(o.geometry && o.geometry.dispose) o.geometry.dispose(); });
+}
+
 function updateStationVisuals(){
   for(const k in stations){
     const s=stations[k];
-    s.visuals.forEach(v=>scene.remove(v)); s.visuals=[];
+    s.visuals.forEach(freeVisual); s.visuals=[];
     const gY=3.1, cY=3.0, tY=2.2;
     if(s.type==='grill'&&s.slots) s.slots.forEach((sl,i)=>{
       if(!sl) return;
@@ -4206,7 +4260,8 @@ function actionPromptFor(t){
     if(!h){ const hasDone=t.slots&&t.slots.some(s=>s&&(s.state==='fries'||s.state==='burnt_fries')); return hasDone?'Take fries':'Drop fries'; }
     return '';
   }
-  if(ty==='trayrack')      return h==='tray'?'Return tray':((!h&&t.cleanTrays>0)?'Take tray':(h==='cooked'?'Plate burger':(h==='fries'?'Plate fries':'')));
+  if(ty==='shakemachine')  return !h?'Hold: blend shake':'';
+  if(ty==='trayrack')      return h==='tray'?'Return tray':((!h&&t.cleanTrays>0)?'Take tray':(h==='cooked'?'Plate burger':(h==='fries'?'Plate fries':(h==='shake'?'Plate shake':''))));
   if(ty==='sodafountain')  return (h==='tray'||h==='burger_on_tray')?'Add soda':'';
   if(ty==='counter')       return (!t.item&&h)?'Place down':((t.item&&!h)?'Pick up':'Combine');
   if(ty==='trash')         return (t.contents>=4&&!h)?'Bag trash':(h?'Toss':'');
@@ -4353,6 +4408,10 @@ function handleAction(){
     else if(!player.holding && t.cleanTrays > 0){ player.holding='tray'; t.cleanTrays--; ok=true; }
     else if(player.holding==='cooked' && t.cleanTrays > 0){ player.holding='burger_on_tray'; t.cleanTrays--; ok=true; }
     else if(player.holding==='fries' && t.cleanTrays > 0){ player.holding='fries_on_tray'; t.cleanTrays--; ok=true; }
+    else if(player.holding==='shake' && t.cleanTrays > 0){ player.holding='shake_on_tray'; t.cleanTrays--; ok=true; }
+  }
+  else if(type==='shakemachine'){
+    if(!player.holding){ startShakeHold(t); return; } // hold to blend a milkshake
   }
   else if(type==='fryer'){
     if(!player.holding){
@@ -4398,7 +4457,7 @@ function handleAction(){
   else if(type==='trash'){
     if(t.contents >= 4 && !player.holding) {
        player.holding = 'trash_bag'; t.contents = 0; ok=true;
-    } else if (player.holding==='raw'||player.holding==='cooked'||player.holding==='charred'||player.holding==='burger_on_tray'||player.holding==='burger_soda_on_tray'||player.holding==='soda_on_tray'||player.holding==='raw_fries'||player.holding==='fries'||player.holding==='burnt_fries'||player.holding==='fries_on_tray'){
+    } else if (player.holding==='raw'||player.holding==='cooked'||player.holding==='charred'||player.holding==='burger_on_tray'||player.holding==='burger_soda_on_tray'||player.holding==='soda_on_tray'||player.holding==='raw_fries'||player.holding==='fries'||player.holding==='burnt_fries'||player.holding==='fries_on_tray'||player.holding==='shake'||player.holding==='shake_on_tray'){
        if(t.contents < 4) {
           player.holding = (player.holding.includes('tray') ? 'tray' : null);
           t.contents++; ok=true; playSound('error');
@@ -4427,12 +4486,16 @@ function handleAction(){
     // Fries onto a tray
     else if(t.item==='tray' && player.holding==='fries'){ t.item=null; player.holding='fries_on_tray'; ok=true; }
     else if(t.item==='fries' && player.holding==='tray'){ t.item=null; player.holding='fries_on_tray'; ok=true; }
+
+    // Milkshake onto a tray
+    else if(t.item==='tray' && player.holding==='shake'){ t.item=null; player.holding='shake_on_tray'; ok=true; }
+    else if(t.item==='shake' && player.holding==='tray'){ t.item=null; player.holding='shake_on_tray'; ok=true; }
   }
   else if(type==='table'){
     const seafoodItems=['taco_in_basket','chowder_in_basket','lemonade_in_basket','taco_chowder_basket','taco_lemonade_basket'];
     const heldIsFood = isSeafood()
       ? seafoodItems.includes(player.holding)
-      : player.holding && (player.holding.includes('burger') || player.holding.includes('soda') || player.holding.includes('fries'));
+      : player.holding && (player.holding.includes('burger') || player.holding.includes('soda') || player.holding.includes('fries') || player.holding.includes('shake'));
     if(player.holding && heldIsFood && t.group && t.group.state==='ordering'){
       if(serveHeldToGroup(t, player.holding)){ player.holding=null; ok=true; }
     } else if(!player.holding && t.dirtyTrays>0){
@@ -4445,45 +4508,44 @@ function handleAction(){
 }
 
 // ─────────────────────────────────────────────────────────────
-//  SINK HOLD-TO-WASH (3 seconds)
+//  HOLD-TO-ACT  (sink wash = 3s · shake blend = 2.2s)
 // ─────────────────────────────────────────────────────────────
-let sinkHoldTarget=null, sinkHoldProgress=0, sinkHoldActive=false;
-const SINK_HOLD_TIME = 3.0; // seconds
+// One shared hold mechanic drives the sink (hold-to-wash) and the shake
+// machine (hold-to-blend). cancelSinkHold/updateSinkHold keep their names so
+// the existing input handlers and the frame loop don't need to change.
+let holdTarget=null, holdProgress=0, holdActive=false, holdKind=null;
+const SINK_HOLD_TIME = 3.0;  // seconds
+const SHAKE_HOLD_TIME = 2.2; // seconds
 
-function startSinkHold(t){
-  sinkHoldTarget = t;
-  sinkHoldProgress = 0;
-  sinkHoldActive = true;
+function startHold(t, kind, label){
+  holdTarget = t; holdProgress = 0; holdActive = true; holdKind = kind;
+  const l=document.getElementById('sink-hold-label'); if(l) l.textContent = label;
   document.getElementById('sink-hold-ui').style.display='flex';
   document.getElementById('sink-hold-fill').style.width='0%';
 }
+function startSinkHold(t){ startHold(t, 'wash', 'Hold to wash…'); }
+function startShakeHold(t){ startHold(t, 'shake', 'Hold to blend…'); }
 
 function cancelSinkHold(){
-  sinkHoldActive = false;
-  sinkHoldTarget = null;
-  sinkHoldProgress = 0;
+  holdActive = false; holdTarget = null; holdProgress = 0; holdKind = null;
   document.getElementById('sink-hold-ui').style.display='none';
   document.getElementById('sink-hold-fill').style.width='0%';
 }
 
 function updateSinkHold(ds){
-  if(!sinkHoldActive) return;
-  // Check player is still at the sink
+  if(!holdActive) return;
   const t = getClosest();
-  if(!t || t !== sinkHoldTarget || (player.holding !== 'dirty_tray' && player.holding !== 'dirty_basket')){
-    cancelSinkHold(); return;
-  }
-  sinkHoldProgress += ds / 60; // ds is in frames; TARGET=1/60
-  const pct = Math.min(1, sinkHoldProgress / SINK_HOLD_TIME);
+  let valid = false;
+  if(holdKind==='wash')  valid = (t===holdTarget) && (player.holding==='dirty_tray' || player.holding==='dirty_basket');
+  else if(holdKind==='shake') valid = (t===holdTarget) && !player.holding;
+  if(!t || !valid){ cancelSinkHold(); return; }
+  holdProgress += ds / 60; // ds is in frames; TARGET=1/60
+  const pct = Math.min(1, holdProgress / (holdKind==='shake' ? SHAKE_HOLD_TIME : SINK_HOLD_TIME));
   document.getElementById('sink-hold-fill').style.width=(pct*100)+'%';
   if(pct >= 1){
-    if(player.holding==='dirty_basket'){
-      player.holding='basket';
-      showToast('🧺 Basket cleaned!', 1200);
-    } else {
-      player.holding='tray';
-      showToast('🍽️ Tray washed!', 1200);
-    }
+    if(holdKind==='shake'){ player.holding='shake'; showToast('🥛 Milkshake ready!', 1200); }
+    else if(player.holding==='dirty_basket'){ player.holding='basket'; showToast('🧺 Basket cleaned!', 1200); }
+    else { player.holding='tray'; showToast('🍽️ Tray washed!', 1200); }
     playSound('sizzle');
     updateHolding(); updateStationVisuals();
     cancelSinkHold();
@@ -5036,6 +5098,7 @@ function drawFloatUI(){
                 if (order === 'burger_soda_on_tray') icon = '🍔🥤';
                 else if (order === 'soda_on_tray') icon = '🥤';
                 else if (order === 'fries_on_tray') icon = '🍟';
+                else if (order === 'shake_on_tray') icon = '🥛';
                 else icon = '🍔';
               }
           }
@@ -5227,6 +5290,11 @@ function animate(){
       updateRobots(ds);
       updateSinkHold(ds);
 
+      // Periodic autosave (cheap: not every frame). Persists live cash/upgrades
+      // so a crash mid-day resumes from here instead of losing the run.
+      autoSaveTimer -= ds;
+      if(autoSaveTimer <= 0){ autoSaveTimer = 1200; try{ saveGame(); }catch(e){} }
+
       let needVis=false;
       for(const k in stations){ const s=stations[k];
         if(s.type!=='grill' && s.type!=='beachgrill' && s.type!=='fryer') continue;
@@ -5330,6 +5398,8 @@ function animate(){
               rawCash += sodaCount * 7 * (stars/5);
               const friesCount = g.orders.filter(o => o==='fries_on_tray').length;
               rawCash += friesCount * 5 * (stars/5);
+              const shakeCount = g.orders.filter(o => o==='shake_on_tray').length;
+              rawCash += shakeCount * 6 * (stars/5);
             }
 
             // Mastery tip: a small bonus for 4-5 star service rewards getting good.
@@ -5374,7 +5444,8 @@ function animate(){
                   orderType=r<0.5?'taco_in_basket':r<0.75?'chowder_in_basket':'lemonade_in_basket';
                 } else {
                   orderType='burger_on_tray';
-                  if(menuFriesActive() && Math.random()<0.22){orderType='fries_on_tray';}
+                  if(menuShakeActive() && Math.random()<0.15){orderType='shake_on_tray';}
+                  else if(menuFriesActive() && Math.random()<0.22){orderType='fries_on_tray';}
                   else if(menuComboActive()){const r=Math.random();if(r<0.25)orderType='soda_on_tray';else if(r<0.70)orderType='burger_soda_on_tray';}
                 }
                 g.orders = [orderType];
@@ -5397,7 +5468,7 @@ function animate(){
         }
         else if(g.state==='leaving'){
           g.target.set(doorX()+(g.id%1-.5)*6, 0, bounds.b+18);
-          if(moveToTarget(g,ds)){ scene.remove(g.mesh); groups.splice(i,1); }
+          if(moveToTarget(g,ds)){ freeVisual(g.mesh); groups.splice(i,1); }
         }
       }
     }
@@ -5408,6 +5479,8 @@ function animate(){
     // A per-frame error shouldn't blank the screen forever. Log it and, once,
     // tell the player how to recover instead of leaving a frozen black canvas.
     console.error('Frame error:', err);
+    // Preserve the run: persist current progress so a reload resumes from here.
+    try{ saveGame(); }catch(e){}
     if(!window._frameErrShown){
       window._frameErrShown = true;
       const d=document.createElement('div');

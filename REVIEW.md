@@ -81,9 +81,11 @@
   framework future menu items slot into.
 - 🟢 **Endless framing.** The day loop still just escalates group counts;
   consider a rolling/endless mode on top of the daily-goal cadence.
-- ✅ **Fries** (done) — a Fry Station unlocks on Day 11 and adds `fries_on_tray`
-  as a toggleable menu item (a second timed cook to juggle). Next item:
-  milkshake (~Day 15). Robots don't cook fries yet (documented).
+- ✅ **Fries** (done) — Fry Station (Day 11), `fries_on_tray`, a second timed
+  cook. Robots don't cook fries yet (documented).
+- ✅ **Milkshake** (done) — Shake Machine (Day 15), `shake_on_tray`, a
+  hold-to-blend action (shares the sink's hold system). Next item: deluxe /
+  toppings (~Day 20, a multi-step assembly).
 - 🟢 **More menu items on the one bar.** The recipe state machine (see
   ARCHITECTURE §6) generalizes cleanly — each item = station + recipe + order +
   menu toggle. Keep the ~4–5 day cadence so each is learned before the next.
@@ -99,6 +101,12 @@
 
 ## E. Technical / performance / robustness
 
+- ✅ **GPU geometry leak → late-day crash** (fixed) — `updateStationVisuals` /
+  `updateHolding` rebuilt throwaway meshes every serve/pickup without ever
+  disposing geometry, so GPU memory grew until the WebGL context was lost
+  (black-screen crash around the busy Day 10/11 stretch). `freeVisual` now
+  disposes geometry on clear; plus ~20 s autosave + save-on-error so a crash
+  no longer loses the run.
 - 🟠 **`floatUI.innerHTML` is rebuilt from a string every frame** (~L4750) —
   all bars, bubbles, checkmarks re-parsed each tick. Fine on desktop; on low-end
   mobile this is the most likely jank source. Consider diffing or throttling the
