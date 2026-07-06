@@ -869,22 +869,6 @@ canvas{display:block;width:100%;height:100%;}
     <button class="btn-green" onclick="document.getElementById('alert-popup').style.display='none'">GOT IT</button>
   </div>
 
-  <!-- DECISION POPUP (DAY 5) -->
-  <div id="decision-popup" class="overlay" style="z-index: 30; background:rgba(0,0,0,0.9);">
-    <div style="background:rgba(20,25,30,1); border: 3px solid #ffc107; border-radius: 16px; padding: 24px; max-width: 480px; text-align:center;">
-      <h1 style="font-size:30px;margin:0;color:#ffc107;">BUSINESS DECISION</h1>
-      <p style="font-size:15px;line-height:1.5;margin-top:16px;color:#fff;">
-        Your customers are thirsty. Should we expand the menu and install a <b>Soda Fountain</b>?<br><br>
-        <span style="color:#66BB6A;"><b>ACCEPT ($150):</b> Unlock Combo Meals (🍔🥤) for higher profits.</span><br><br>
-        <span style="color:#EF5350;"><b>DECLINE:</b> Refuse to innovate. Takes a permanent -15% penalty to daily customer traffic.</span>
-      </p>
-      <div style="display:flex; justify-content:center; gap:16px; margin-top:20px;">
-        <button class="btn-green" id="decision-buy-btn" onclick="decisionBuySoda()">BUY ($150)</button>
-        <button class="btn-red" onclick="decisionDeclineSoda()">DECLINE</button>
-      </div>
-    </div>
-  </div>
-
   <!-- RESULTS SCREEN -->
   <div id="results-screen" class="overlay">
     <div style="width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:0;">
@@ -906,6 +890,10 @@ canvas{display:block;width:100%;height:100%;}
           <span id="res-new-total" style="font-size:24px;font-weight:900;color:#fff;">$0.00</span>
         </div>
       </div>
+      <div id="res-goals-box" style="background:rgba(0,0,0,.4);border-radius:16px;padding:14px 20px;width:100%;margin-bottom:16px;opacity:0;transition:opacity .4s;display:none;">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">🎯 Daily Goals</div>
+        <div id="res-goals-list" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
       <button class="btn-green" id="res-next-btn" onclick="showStartMenu()" style="opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;pointer-events:none;">CONTINUE →</button>
     </div>
   </div>
@@ -917,6 +905,7 @@ canvas{display:block;width:100%;height:100%;}
       <div style="background:rgba(102,187,106,.18);border:2px solid #4CAF50;border-radius:14px;padding:7px 16px;font-size:20px;font-weight:900;">💰 <span id="shop-cash-display">$0.00</span></div>
     </div>
     <div class="shop-wrap">
+      <div id="shop-menu-panel" style="display:none;"></div>
       <div class="shop-tabs" id="shop-tabs"></div>
       <div id="shop-items"></div>
     </div>
@@ -1501,6 +1490,16 @@ function buildGrill(){
   for(let i=-1.2;i<=1.2;i+=.4) addMesh(g, GBox(3.0,.08,.08), M('#333'), i,3.1,.2, 0,Math.PI/2,0, false);
   return g;
 }
+function buildFryer(){
+  const g=new THREE.Group();
+  addMesh(g, GBox(3.2,3,2.5), matDark, 0,1.5,0);
+  addMesh(g, GBox(2.8,.4,1.8), matSilver, 0,2.85,.1);                 // oil vat rim
+  addMesh(g, GBox(2.6,.2,1.6), M('#d7a13a'), 0,3.04,.1, 0,0,0,false); // golden oil surface
+  addMesh(g, GBox(3.3,2,.4), matDark, 0,3.9,-1.05);                   // back panel
+  addMesh(g, GBox(.5,.5,.3), matBlack, -1.0,3.4,-.95);               // control box
+  addMesh(g, GCyl(.1,2.2,8), matSilver, 1.2,3.9,-.6, 0,0,-Math.PI/3); // basket handle
+  return g;
+}
 function buildSodaFountain(){
   const g=new THREE.Group();
   addMesh(g, GBox(2,2.8,2), M('#8d6e63'), 0,1.4,0);
@@ -1621,6 +1620,7 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='sink')    mesh=buildSink();
   if(type==='trayrack') mesh=buildTrayRack(w,d);
   if(type==='grill')   mesh=buildGrill();
+  if(type==='fryer')   mesh=buildFryer();
   if(type==='sodafountain') mesh=buildSodaFountain();
   if(type==='counter') mesh=buildCounter(w,d);
   if(type==='trash')   mesh=buildTrash();
@@ -1638,6 +1638,7 @@ function addStation(id,type,x,z,w,d,opts={}){
   stGrp.add(mesh);
   const s={id,type,x,z,w,d,mesh,visuals:[],...opts};
   if(type==='grill')   s.slots=[null,null];
+  if(type==='fryer')   s.slots=[null,null];
   if(type==='counter') s.item=null;
   if(type==='sink')    s.cleanTrays=0; 
   if(type==='trayrack') s.cleanTrays=0; 
@@ -1728,6 +1729,22 @@ function itemMesh(type){
     addMesh(g, GSph(0.6, 12), matTrashBag, 0, 0.5, 0);
     addMesh(g, GCyl(0.1, 0.2, 8), matTrashBag, 0, 1.1, 0);
 
+  // ── FRIES ITEMS ─────────────────────────────────────────────
+  } else if(type==='raw_fries'){
+    // Pale cut potatoes, not yet fried.
+    addMesh(g, GBox(0.5,0.28,0.5), M('#d9c48a'), 0,0.14,0, 0,0,0,false);
+    [[-.12,-.08],[.1,.1],[0,-.12]].forEach(([fx,fz])=> addMesh(g, GBox(0.07,0.32,0.07), M('#e5d9a8'), fx,0.3,fz, 0,0,0, false));
+  } else if(type==='fries'){
+    // Golden fries in a red carton.
+    addMesh(g, GBox(0.42,0.5,0.42), M('#e53935'), 0,0.25,0, 0,0,0,false);
+    [[-.12,-.1],[.1,-.12],[0,.08],[-.08,.1],[.12,.06]].forEach(([fx,fz])=> addMesh(g, GBox(0.06,0.5,0.06), M('#f1c453'), fx,0.55,fz, 0,0,0, false));
+  } else if(type==='burnt_fries'){
+    addMesh(g, GBox(0.42,0.5,0.42), M('#7a2f2a'), 0,0.25,0, 0,0,0,false);
+    [[-.12,-.1],[.1,-.12],[0,.08],[-.08,.1],[.12,.06]].forEach(([fx,fz])=> addMesh(g, GBox(0.06,0.5,0.06), M('#3a2a1a'), fx,0.55,fz, 0,0,0, false));
+  } else if(type==='fries_on_tray'){
+    g.add(itemMesh('tray'));
+    const fm=itemMesh('fries'); fm.position.set(0, 0.04, 0); fm.scale.set(0.85,0.85,0.85); g.add(fm);
+
   // ── SEAFOOD ITEMS ──────────────────────────────────────────
   } else if(type==='raw_fish'){
     // Raw fish fillet — orange slab
@@ -1795,8 +1812,8 @@ function itemMesh(type){
 // ─────────────────────────────────────────────────────────────
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
-function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4}; }
-function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, sodaDeclined:false, sodaDeclinedUntil:0}; }
+function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, fryerCount:0}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
 // ─── SKINS ───────────────────────────────────────────────────
@@ -1839,6 +1856,25 @@ function defStore(id, name, type='burger') {
 
 // Helper: is the active store a seafood restaurant?
 function isSeafood(){ return (stores[activeStoreIdx]?.type === 'seafood'); }
+
+// MENU: which optional item categories the player is currently serving. Combos
+// require owning the Soda Fountain AND leaving them switched on in the Menu, so
+// players can choose to keep the line simple (burgers only) even after buying
+// the fountain. Future menu items slot in here the same way.
+function menuComboActive(){ return upg.sodaCount > 0 && (eco.menu?.combos !== false); }
+function menuFriesActive(){ return (upg.fryerCount||0) > 0 && (eco.menu?.fries !== false); }
+function toggleMenuCombos(){
+  if(!eco.menu) eco.menu = {combos:true};
+  const currentlyOn = eco.menu.combos !== false;
+  eco.menu.combos = !currentlyOn;
+  saveGame(); renderMenuPanel(); playSound('coin');
+}
+function toggleMenuFries(){
+  if(!eco.menu) eco.menu = {};
+  const currentlyOn = eco.menu.fries !== false;
+  eco.menu.fries = !currentlyOn;
+  saveGame(); renderMenuPanel(); playSound('coin');
+}
 
 // Skin/cosmetic state (global across stores)
 let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic' };
@@ -1896,7 +1932,7 @@ function saveGame(){
       }
       stores[activeStoreIdx].layout = layout;
     }
-    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records}));
+    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records, dailyGoals}));
   }catch(e){}
 }
 
@@ -1930,6 +1966,7 @@ function loadSave(){
     if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic'}, s.cosm);
     if(s.achievements) achievements = Object.assign({unlocked:[]}, s.achievements);
     if(s.records) records = Object.assign({bestDayCash:0, bestDayStars:0, totalServed:0}, s.records);
+    if(Array.isArray(s.dailyGoals)) dailyGoals = s.dailyGoals;
 
     loadActiveStore();
   }catch(e){ console.warn('Load failed',e); bootstrapNewSave(); }
@@ -2206,10 +2243,11 @@ const SHOP_DEFS = [
   {id:'xcounter',  label:'🍽️ Extra Counter',      desc:'More clean tray staging space',        cat:'Equipment', cost:()=>70+upg.extraCounters*50,max:()=>upg.extraCounters>=maxEquip()-1, unlockDay:3, action:()=>{ const id='counter'+(upg.extraCounters+2); const pos=freeSpot(); addStation(id,'counter',pos.x,pos.z,1.8,1.8); upg.extraCounters++; }},
   
   // Tier 3 (Day 5)
-  {id:'soda',      label:'🥤 Soda Fountain',      desc:'Unlock Combo Meals for higher profit!', cat:'Equipment', cost:()=>150 + upg.sodaCount*100, max:()=>upg.sodaCount>=maxEquip()-1, unlockDay:5, action:()=>{ const pos=freeSpot(); addStation('soda'+upg.sodaCount,'sodafountain',pos.x,pos.z,2,2); upg.sodaCount++; upg.sodaDeclined=false; }},
+  {id:'soda',      label:'🥤 Soda Fountain',      desc:'Unlock Combo Meals for higher profit!', cat:'Equipment', cost:()=>150 + upg.sodaCount*100, max:()=>upg.sodaCount>=maxEquip()-1, unlockDay:5, action:()=>{ const pos=freeSpot(); addStation('soda'+upg.sodaCount,'sodafountain',pos.x,pos.z,2,2); upg.sodaCount++; }},
   {id:'expand',    label:'🏗️ Expand Floorplan',  desc:'Push the walls out for more space',     cat:'Building',  cost:()=>200*(eco.floorLevel+1), max:()=>eco.floorLevel>=6,        unlockDay:5, action:()=>{ eco.floorLevel++; updateBoundsFromLevel(); rebuildAll(); }},
   {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=maxEquip()-1, unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=freeSpot(); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
   {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=maxEquip()-1,  unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=freeSpot(); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
+  {id:'fryer',     label:'🍟 Fry Station',         desc:'Add fries to your menu — a new item!',  cat:'Equipment', cost:()=>170,                    max:()=>(upg.fryerCount||0)>=1,        unlockDay:11, action:()=>{ const pos=freeSpot(); addStation('fryer0','fryer',pos.x,pos.z,3.2,2); upg.fryerCount=1; if(!eco.menu)eco.menu={}; eco.menu.fries=true; }},
   {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>200+upg.robotCount*120, max:()=>upg.robotCount>=10, unlockDay:5, action:()=>{ 
       const rData = {role:'busser', hiredDay:eco.day};
       upg.robots.push(rData);
@@ -2233,7 +2271,50 @@ const SHOP_DEFS = [
 function maxEquip(){ return 4; }
 
 let activeShopTab = 'Upgrades';
+// Your Menu: let the player choose which unlocked item categories to serve.
+// Burger is always on (the base of the restaurant); optional categories appear
+// here as they're unlocked, each with an on/off switch. Customers only order
+// from what's switched on, so players control what their bar actually serves.
+function renderMenuPanel(){
+  const panel = document.getElementById('shop-menu-panel');
+  if(!panel) return;
+  const rows = [];
+  // Base item — always served, shown as a locked-on entry for clarity.
+  rows.push(`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;">
+      <div style="font-size:13px;font-weight:800;">🍔 Burgers <span style="font-size:10px;color:rgba(255,255,255,.4);">· always on</span></div>
+      <div style="font-size:12px;font-weight:900;color:#66BB6A;">SERVING</div>
+    </div>`);
+  // Combos — unlocked by owning the Soda Fountain; toggleable.
+  if(upg.sodaCount > 0){
+    const on = menuComboActive();
+    rows.push(`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;border-top:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:13px;font-weight:800;">🥤 Soda &amp; Combos <span style="font-size:10px;color:rgba(255,255,255,.4);">· 🍔🥤 higher profit</span></div>
+        <button onclick="toggleMenuCombos()" style="cursor:pointer;font-family:inherit;font-weight:900;font-size:12px;border-radius:20px;border:2px solid ${on?'#66BB6A':'rgba(255,255,255,.25)'};background:${on?'rgba(102,187,106,.2)':'transparent'};color:${on?'#66BB6A':'rgba(255,255,255,.5)'};padding:4px 14px;">${on?'ON':'OFF'}</button>
+      </div>`);
+  }
+  // Fries — unlocked by owning the Fry Station; toggleable.
+  if((upg.fryerCount||0) > 0){
+    const on = menuFriesActive();
+    rows.push(`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;border-top:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:13px;font-weight:800;">🍟 Fries <span style="font-size:10px;color:rgba(255,255,255,.4);">· cook at the fryer</span></div>
+        <button onclick="toggleMenuFries()" style="cursor:pointer;font-family:inherit;font-weight:900;font-size:12px;border-radius:20px;border:2px solid ${on?'#66BB6A':'rgba(255,255,255,.25)'};background:${on?'rgba(102,187,106,.2)':'transparent'};color:${on?'#66BB6A':'rgba(255,255,255,.5)'};padding:4px 14px;">${on?'ON':'OFF'}</button>
+      </div>`);
+  }
+  // Only show the panel once there's an actual choice to make.
+  const hasMenuChoice = upg.sodaCount > 0 || (upg.fryerCount||0) > 0;
+  if(hasMenuChoice){
+    panel.innerHTML = `<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:1.5px;color:rgba(255,255,255,.5);font-weight:900;margin-bottom:4px;">📋 YOUR MENU</div>
+        ${rows.join('')}
+      </div>`;
+    panel.style.display='block';
+  } else {
+    panel.style.display='none';
+  }
+}
+
 function updateShop(){
+  renderMenuPanel();
   const cats = ['Upgrades', 'Building', 'Equipment', 'Automation'];
   if(!cats.includes(activeShopTab)) activeShopTab=cats[0];
 
@@ -2275,7 +2356,7 @@ function doBuy(id){
   const cost=def.cost();
   if(eco.cash<cost||def.max()||eco.day<def.unlockDay) return;
 
-  if(['table','xcounter','xgrill','xsink','robot','soda'].includes(id)) {
+  if(['table','xcounter','xgrill','xsink','robot','soda','fryer'].includes(id)) {
      if(!freeSpot()) {
         const p = document.getElementById('alert-popup');
         document.getElementById('alert-title').style.color = '#F44336';
@@ -2387,6 +2468,88 @@ function lockedAchvByAchievability(m, done){
     .map(o => o.a);
 }
 
+// ─────────────────────────────────────────────────────────────
+//  DAILY GOALS  (built on the same metric/goal engine as achievements)
+// ─────────────────────────────────────────────────────────────
+// Three light, per-day objectives that reset each morning and pay a small cash
+// bonus. They scale gently with the day number and only offer combo goals when
+// combos are actually on the menu, so a new player is never asked for content
+// they haven't unlocked. Persisted in the save so a mid-day reload is stable.
+let dailyGoals = [];
+
+// Today-scoped metrics (reset with `stats` each day).
+function dailyMetrics(){
+  const groups = stats.groupsServed || 0;
+  return {
+    groups,
+    cash:     stats.cashEarned || 0,
+    stars:    groups > 0 ? stats.totalStars / groups : 0,
+    combos:   stats.combosServed || 0,
+    walkouts: stats.walkouts || 0,
+  };
+}
+
+// The candidate pool. `mode:'reach'` means cur>=goal; `'atMost'` means cur<=goal
+// (evaluated at day's end). Each returns a concrete goal for the given day.
+function dailyGoalPool(day){
+  const pool = [
+    {id:'serve', icon:'🍽️', metric:'groups', goal:Math.max(3, day+2),        mode:'reach',  reward:30+day*3, label:g=>`Serve ${g} groups`},
+    {id:'earn',  icon:'💵', metric:'cash',   goal:40 + day*14,               mode:'reach',  reward:40+day*4, label:g=>`Earn $${g} today`},
+    {id:'stars', icon:'⭐', metric:'stars',  goal:4,                         mode:'reach',  reward:60,       label:g=>`Finish at ${g}★ or better`},
+    {id:'nowalk',icon:'🏃', metric:'walkouts',goal:0,                        mode:'atMost', reward:50,       label:()=>`No customers walk out`},
+  ];
+  if(menuComboActive())
+    pool.push({id:'combo', icon:'🥤', metric:'combos', goal:Math.max(2, Math.ceil(day/2)), mode:'reach', reward:55, label:g=>`Serve ${g} combo meals`});
+  return pool;
+}
+
+// Deterministic per-day shuffle (mulberry32) so the same day always yields the
+// same 3 goals — a reload can't reroll them for a better set.
+function seededPick(arr, n, seed){
+  let s = seed >>> 0; const rnd = ()=>{ s|=0; s=s+0x6D2B79F5|0; let t=Math.imul(s^s>>>15,1|s); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a.slice(0, n);
+}
+
+function rollDailyGoals(day){
+  const picks = seededPick(dailyGoalPool(day), 3, day*2654435761);
+  dailyGoals = picks.map(p => ({
+    id:p.id, icon:p.icon, metric:p.metric, goal:p.goal, mode:p.mode,
+    reward:p.reward, desc:p.label(p.goal), done:false
+  }));
+}
+
+function dailyGoalDone(dg, m){
+  const cur = m[dg.metric] || 0;
+  return dg.mode==='atMost' ? cur <= dg.goal : cur >= dg.goal;
+}
+function dailyGoalFrac(dg, m){
+  const cur = m[dg.metric] || 0;
+  if(dg.mode==='atMost') return dailyGoalDone(dg, m) ? 1 : 0;
+  return Math.max(0, Math.min(1, cur / dg.goal));
+}
+function dailyGoalText(dg, m){
+  const cur = m[dg.metric] || 0;
+  if(dg.metric==='cash')     return `$${Math.floor(Math.min(cur,dg.goal))} / $${dg.goal}`;
+  if(dg.metric==='stars')    return `${cur.toFixed(1)} / ${dg.goal}★`;
+  if(dg.metric==='walkouts') return cur===0 ? 'none so far' : `${cur} walked out`;
+  return `${Math.min(Math.floor(cur),dg.goal)} / ${dg.goal}`;
+}
+
+// Award any newly-completed goals; called once at day end. Returns cash earned.
+function checkDailyGoals(){
+  const m = dailyMetrics();
+  let earned = 0;
+  for(const dg of dailyGoals){
+    if(dg.done) continue;
+    if(dailyGoalDone(dg, m)){ dg.done = true; earned += dg.reward; }
+  }
+  if(earned > 0){ eco.cash += earned; }
+  stats._dailyEarned = earned;
+  return earned;
+}
+
 // Achievements unlocked since the last toast flush. When a day ends we award
 // the cash immediately (so the results screen math is right) but hold the
 // celebratory toast until the player is back on the Home Screen.
@@ -2440,6 +2603,30 @@ function showAchievements(){
     <div><div style="font-size:18px;font-weight:900;color:#ffca28;">${(records.bestDayStars||0).toFixed(1)}★</div><div style="font-size:10px;color:rgba(255,255,255,.5);">BEST RATING</div></div>
     <div><div style="font-size:18px;font-weight:900;color:#90caf9;">${records.totalServed||0}</div><div style="font-size:10px;color:rgba(255,255,255,.5);">SERVED</div></div>`;
   list.appendChild(rec);
+
+  // Today's Goals — live progress mid-day, or a clean preview between days.
+  if(dailyGoals && dailyGoals.length){
+    const preview = gameState !== 'playing';
+    const dm = preview ? {groups:0,cash:0,stars:0,combos:0,walkouts:0} : dailyMetrics();
+    const title = preview ? "NEXT DAY'S GOALS" : "TODAY'S GOALS";
+    const gwrap = document.createElement('div');
+    gwrap.style.cssText='background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.25);border-radius:12px;padding:12px;margin-bottom:12px;';
+    gwrap.innerHTML = `<div style="font-size:11px;letter-spacing:1.5px;color:#ffca28;font-weight:900;margin-bottom:8px;">🎯 ${title}</div>` +
+      dailyGoals.map(dg=>{
+        const done = !preview && (dg.done || dailyGoalDone(dg, dm));
+        const frac = preview ? 0 : dailyGoalFrac(dg, dm);
+        return `<div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;">
+            <span style="color:${done?'#66BB6A':'#fff'};">${done?'✅':dg.icon} ${dg.desc}</span>
+            <span style="color:${done?'#66BB6A':'#ffc107'};flex-shrink:0;">${done?'✓ +$'+dg.reward:'+$'+dg.reward}</span>
+          </div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;">${dailyGoalText(dg, dm)}</div>
+          <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:3px;overflow:hidden;"><div style="height:100%;width:${(frac*100).toFixed(0)}%;background:linear-gradient(90deg,#FBC02D,#F57F17);border-radius:3px;"></div></div>
+        </div>`;
+      }).join('');
+    list.appendChild(gwrap);
+  }
+
   const done = achievements.unlocked || [];
   const m    = achvMetrics();
   // Organized by how achievable they are: still-locked goals first, ordered
@@ -3102,12 +3289,18 @@ function showStartMenu(){
   const storeBtn = document.getElementById('home-stores-btn');
   if(storeBtn) storeBtn.style.display = 'none';
 
+  // Preview the goals for the day you're about to play (deterministic per day,
+  // so these are the exact goals that go live when you press PLAY).
+  rollDailyGoals(eco.day + 1);
   renderHomeAchievements();
 
   document.getElementById('home-screen').style.display='flex';
 
   // Celebrate any achievements unlocked during the day just completed.
   flushAchvToasts();
+  // Heads-up about tomorrow (milestones / new shop items) while there's still
+  // time to prepare. Slight delay so it lands after the home screen settles.
+  setTimeout(flushDayHeadsUp, 400);
 
   // Init 3D home chef renderer (once) then start anim
   stopHomeAnim();
@@ -3553,39 +3746,10 @@ function openNewStore(){
 window.showStores=showStores; window.closeStores=closeStores; window.switchToStore=switchToStore; window.openNewStore=openNewStore;
 
 function startNextDay(){
-  if(eco.day === 4 && upg.sodaCount === 0 && !upg.sodaDeclined) {
-      document.getElementById('decision-popup').style.display='flex';
-      document.getElementById('decision-buy-btn').disabled = (eco.cash < 150);
-      return;
-  }
+  // The Soda Fountain is no longer force-introduced mid-transition. It's a
+  // normal Shop purchase that unlocks once Day 5 is complete (see SHOP_DEFS),
+  // so you can buy and arrange it on the Day 6 prep screen before using it.
   executeDayStart();
-}
-
-function decisionBuySoda() {
-    if(eco.cash >= 150) {
-        if(!freeSpot()) {
-            const p = document.getElementById('alert-popup');
-            document.getElementById('alert-title').style.color = '#F44336';
-            document.getElementById('alert-title').textContent = 'NO SPACE!';
-            document.getElementById('alert-desc').innerHTML = "Your restaurant is too cluttered to install a Soda Fountain.<br>Move items or expand your shop first!";
-            p.style.display = 'flex';
-            playSound('error');
-            return;
-        }
-        eco.cash -= 150;
-        upg.sodaCount = 1;
-        const pos = freeSpot();
-        addStation('soda0','sodafountain',pos.x,pos.z,2,2);
-        document.getElementById('decision-popup').style.display='none';
-        executeDayStart();
-    }
-}
-
-function decisionDeclineSoda() {
-    upg.sodaDeclined = true;
-    upg.sodaDeclinedUntil = (eco.day || 0) + 4; // temporary dip, then recovers
-    document.getElementById('decision-popup').style.display='none';
-    executeDayStart();
 }
 
 function executeDayStart() {
@@ -3604,9 +3768,6 @@ function executeDayStart() {
   let multi = 1.0;
   if(rating >= 4.0) multi = 1.3;
   if(rating < 3.0) multi = 0.7;
-  // Declining the soda fountain is now a small, TEMPORARY traffic dip rather
-  // than a permanent penalty (the fountain is still buyable in the Shop).
-  if(upg.sodaDeclined && eco.day <= (upg.sodaDeclinedUntil||0)) multi *= 0.92;
 
   const baseGroups = eco.day + 1; 
   const groupCount = Math.max(1, Math.floor(baseGroups * multi));
@@ -3617,8 +3778,9 @@ function executeDayStart() {
   // First spawn: give player 8 seconds to get ready (longer on early days)
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
   stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
-         spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups};
+         spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups, combosServed:0, walkouts:0};
   serveStreak = 0; streakTimer = 0;
+  rollDailyGoals(eco.day); // fresh objectives for the day about to start
 
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
@@ -3636,6 +3798,7 @@ function executeDayStart() {
   for(const k in stations){
     const s=stations[k];
     if(s.type==='grill') s.slots=[null,null];
+    if(s.type==='fryer') s.slots=[null,null];
     if(s.type==='counter') s.item=null;
     if(s.type==='sink')    s.cleanTrays=0;
     if(s.type==='trayrack') { s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; traysAssigned = true; }
@@ -3659,21 +3822,9 @@ function executeDayStart() {
   gameState='playing'; gamePaused=false;
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
   saveGame();
-
-  if(eco.day === 10) {
-     const p = document.getElementById('alert-popup');
-     document.getElementById('alert-title').style.color = '#F44336';
-     document.getElementById('alert-title').textContent = 'BUSY HOURS!';
-     document.getElementById('alert-desc').innerHTML = "You're getting popular! Multiple groups can now arrive at once.<br><br><b>THE VIP</b> is also now visiting — keep wait times low! 💢 They pay 3× but are very impatient.";
-     p.style.display = 'flex';
-  }
-  if(eco.day === 30) {
-     const p = document.getElementById('alert-popup');
-     document.getElementById('alert-title').style.color = '#ab47bc';
-     document.getElementById('alert-title').textContent = '🏪 EXPAND!';
-     document.getElementById('alert-desc').innerHTML = "You've been running for <b>30 days!</b><br><br>You can now <b>Open a New Store Location</b> from the Stores menu for <b>$3,000</b>.<br><br>Your robots will automatically earn passive income at idle stores!";
-     p.style.display = 'flex';
-  }
+  // NOTE: day-milestone heads-ups (Busy Hours/VIP, new unlocks, etc.) are no
+  // longer shown here at the START of a day — they're queued at the END of the
+  // previous day (see queueNextDayHeadsUp) so the player can prepare first.
 }
 window.startNextDay = startNextDay;
 
@@ -3742,9 +3893,10 @@ function endDay(){
     saveGame(); return;
   }
 
-  // Passive income from other stores
+  // Passive income from other stores. Disabled in single-bar mode so a dormant
+  // map left over in an old multi-map save can't keep paying out invisibly.
   let passiveTotal = 0;
-  stores.forEach((store, idx) => {
+  if(!SINGLE_BAR_MODE) stores.forEach((store, idx) => {
     if(idx !== activeStoreIdx && store.unlocked) {
       const inc = calcPassiveIncome(store);
       passiveTotal += inc;
@@ -3763,8 +3915,48 @@ function endDay(){
   if(stats.cashEarned > records.bestDayCash){ records.bestDayCash = stats.cashEarned; stats._newRecord = true; }
   if(todayStarsAvg > records.bestDayStars) records.bestDayStars = todayStarsAvg;
 
+  queueNextDayHeadsUp();   // heads-up about tomorrow, shown on the Home Screen
+  checkDailyGoals();       // award daily-goal bonuses before the results math
   checkAchievements(true); // award now; celebrate on the Home Screen
   gameState='results'; saveGame(); playSound('daycomplete'); showResults();
+}
+
+// Day-milestone alerts + newly-unlocked shop items are queued at the END of a
+// day and shown on the Home Screen, so the player learns what's coming while
+// they still have time to buy gear and arrange the bar before pressing PLAY.
+let pendingDayHeadsUp = null;
+function queueNextDayHeadsUp(){
+  const completed = eco.day;        // the day just finished
+  const upcoming  = completed + 1;  // the day about to be played
+  const parts = [];
+  let color = '#4CAF50', title = `📣 HEADS UP · DAY ${upcoming}`;
+
+  if(upcoming === 10){
+    color = '#F44336'; title = '📣 TOMORROW: BUSY HOURS';
+    parts.push("Day 10 gets busy — <b>multiple groups</b> can arrive at once, and impatient <b>VIPs</b> (💢, 3× pay) start visiting. Stock up and keep wait times low!");
+  }
+  if(!SINGLE_BAR_MODE && upcoming === 30){
+    color = '#ab47bc'; title = '🏪 TOMORROW: EXPAND';
+    parts.push("After Day 30 you can <b>Open a New Store</b> ($3,000) from the Stores menu for passive income.");
+  }
+
+  // Items whose unlock day is exactly today have just become buyable.
+  const newlyUnlocked = SHOP_DEFS.filter(d => d.unlockDay === completed && !d.max());
+  if(newlyUnlocked.length){
+    parts.push(`<b>🆕 New in the Shop:</b><br>${newlyUnlocked.map(d=>d.label).join('<br>')}<br><span style="font-size:13px;opacity:.65;">Buy &amp; arrange them before you play.</span>`);
+  }
+
+  pendingDayHeadsUp = parts.length ? {color, title, html: parts.join('<br><br>')} : null;
+}
+function flushDayHeadsUp(){
+  if(!pendingDayHeadsUp) return;
+  const ev = pendingDayHeadsUp; pendingDayHeadsUp = null;
+  const p = document.getElementById('alert-popup');
+  if(!p) return;
+  document.getElementById('alert-title').style.color = ev.color;
+  document.getElementById('alert-title').textContent = ev.title;
+  document.getElementById('alert-desc').innerHTML = ev.html;
+  p.style.display = 'flex';
 }
 
 function showResults(){
@@ -3784,7 +3976,7 @@ function showResults(){
   const cum=getCumRating();
   // eco.cash already includes today's serving cash + passive + achievement
   // bonuses, so back all of them out to get the true starting balance.
-  const cashBefore=eco.cash-stats.cashEarned-(stats._passiveEarned||0)-(stats._achvEarned||0);
+  const cashBefore=eco.cash-stats.cashEarned-(stats._passiveEarned||0)-(stats._achvEarned||0)-(stats._dailyEarned||0);
 
   const el=id=>document.getElementById(id);
   el('res-day-lbl').style.opacity='0'; el('res-title').style.opacity='0'; el('res-title').style.transform='scale(.75)';
@@ -3811,10 +4003,12 @@ function showResults(){
     // Show passive + achievement income if any
     const passiveEarned = stats._passiveEarned || 0;
     const achvEarned = stats._achvEarned || 0;
-    const totalEarned = stats.cashEarned + passiveEarned + achvEarned;
+    const dailyEarned = stats._dailyEarned || 0;
+    const totalEarned = stats.cashEarned + passiveEarned + achvEarned + dailyEarned;
     el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+totalEarned.toFixed(2);
     let extra = '';
     if(passiveEarned > 0) extra += ` (+$${passiveEarned.toFixed(2)} passive 🤖)`;
+    if(dailyEarned > 0)   extra += ` (+$${dailyEarned.toFixed(2)} 🎯)`;
     if(achvEarned > 0)    extra += ` (+$${achvEarned.toFixed(2)} 🏆)`;
     if(extra) el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}${extra}`;
     el('res-total-row').style.opacity='1';
@@ -3826,6 +4020,26 @@ function showResults(){
       if(t<1) requestAnimationFrame(tick); else totalEl.style.animation='totalPop .4s ease forwards';
     })(performance.now());
   }, 2100);
+  // Daily goals recap (completed vs missed, with earned bonus).
+  const gbox = el('res-goals-box'), glist = el('res-goals-list');
+  if(gbox && glist){
+    if(dailyGoals && dailyGoals.length){
+      glist.innerHTML = dailyGoals.map(dg=>{
+        const ok = dg.done;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+            <span style="font-size:16px;">${ok?'✅':'⬜'}</span>
+            <span style="font-size:12px;font-weight:800;color:${ok?'#fff':'rgba(255,255,255,.55)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dg.desc}</span>
+          </div>
+          <span style="font-size:12px;font-weight:900;color:${ok?'#66BB6A':'rgba(255,255,255,.3)'};flex-shrink:0;">${ok?'+$'+dg.reward:'+$'+dg.reward}</span>
+        </div>`;
+      }).join('');
+      gbox.style.display='block';
+      setTimeout(()=>{ gbox.style.opacity='1'; }, 2450);
+    } else {
+      gbox.style.display='none';
+    }
+  }
   setTimeout(()=>{ el('res-next-btn').style.opacity='1'; el('res-next-btn').style.transform='translateY(0)'; el('res-next-btn').style.pointerEvents='auto'; }, 3100);
 }
 
@@ -3870,7 +4084,9 @@ function spawnGroup(){
        else              orderType = 'taco_lemonade_basket';
      } else {
        orderType = 'burger_on_tray';
-       if(upg.sodaCount > 0) {
+       if(menuFriesActive() && Math.random() < 0.22) {
+         orderType = 'fries_on_tray';
+       } else if(menuComboActive()) {
          const r = Math.random();
          if(r < 0.25) orderType = 'soda_on_tray';
          else if(r < 0.70) orderType = 'burger_soda_on_tray';
@@ -3879,6 +4095,7 @@ function spawnGroup(){
      g.orders.push(orderType);
   }
   g.unservedOrders = [...g.orders];
+  g.servedMask = g.orders.map(()=>false); // per-seat served state (aligned to orders)
 
   for(let i=0;i<size;i++){
     const m=new THREE.Group();
@@ -3917,6 +4134,10 @@ function updateStationVisuals(){
       if(!sl) return;
       const m=itemMesh(sl.state); m.position.set(s.x-0.8+i*1.6, gY, s.z + 0.2); scene.add(m); s.visuals.push(m);
     });
+    if(s.type==='fryer'&&s.slots) s.slots.forEach((sl,i)=>{
+      if(!sl) return;
+      const m=itemMesh(sl.state); m.position.set(s.x-0.8+i*1.6, gY, s.z + 0.2); scene.add(m); s.visuals.push(m);
+    });
     if(s.type==='counter' && s.item) {
       const m=itemMesh(s.item); m.position.set(s.x, cY, s.z); scene.add(m); s.visuals.push(m);
     }
@@ -3927,9 +4148,19 @@ function updateStationVisuals(){
       const p=itemMesh('tray'); p.position.set(s.x + 0.6, 3.1+i*.12, s.z - 0.6); scene.add(p); s.visuals.push(p);
     }
     if(s.type==='table'){
-      if(s.served>0) for(let i=0;i<s.served;i++){
-        const itemName = s.group && s.group.orders[i] ? s.group.orders[i] : (isSeafood()?'taco_in_basket':'burger_on_tray');
-        const m=itemMesh(itemName); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+      if(s.served>0){
+        // Show a plate for each SERVED seat (its actual order), so the food on
+        // the table matches who has been served — not just a left-to-right count.
+        const mask = s.group && s.group.servedMask;
+        let shown=0;
+        const seats = s.group ? s.group.orders.length : s.served;
+        for(let i=0;i<seats;i++){
+          const served = mask ? mask[i] : (i < s.served);
+          if(!served) continue;
+          const itemName = (s.group && s.group.orders[i]) ? s.group.orders[i] : (isSeafood()?'taco_in_basket':'burger_on_tray');
+          const m=itemMesh(itemName); m.position.set(s.x-.9+shown*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+          shown++;
+        }
       } else if(s.dirtyTrays>0) for(let i=0;i<s.dirtyTrays;i++){
         const m=itemMesh(isSeafood()?'dirty_basket':'dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
       }
@@ -3970,13 +4201,41 @@ function actionPromptFor(t){
   }
   if(ty==='fridge')        return !h?'Grab patty':'';
   if(ty==='grill')         return h==='raw'?'Place on grill':(!h?'Take burger':((h==='tray'||h==='soda_on_tray')?'Plate burger':''));
-  if(ty==='trayrack')      return h==='tray'?'Return tray':((!h&&t.cleanTrays>0)?'Take tray':(h==='cooked'?'Plate burger':''));
+  if(ty==='fryer'){
+    if(h==='tray') return 'Plate fries';
+    if(!h){ const hasDone=t.slots&&t.slots.some(s=>s&&(s.state==='fries'||s.state==='burnt_fries')); return hasDone?'Take fries':'Drop fries'; }
+    return '';
+  }
+  if(ty==='trayrack')      return h==='tray'?'Return tray':((!h&&t.cleanTrays>0)?'Take tray':(h==='cooked'?'Plate burger':(h==='fries'?'Plate fries':'')));
   if(ty==='sodafountain')  return (h==='tray'||h==='burger_on_tray')?'Add soda':'';
   if(ty==='counter')       return (!t.item&&h)?'Place down':((t.item&&!h)?'Pick up':'Combine');
   if(ty==='trash')         return (t.contents>=4&&!h)?'Bag trash':(h?'Toss':'');
   if(ty==='dumpster')      return h==='trash_bag'?'Dump bag':'';
   if(ty==='table')         return (h&&t.group&&t.group.state==='ordering')?'Serve!':((!h&&t.dirtyTrays>0)?'Clear table':'');
   return '';
+}
+
+// Serve one held item to a seated group, checking off the CORRECT customer:
+// the first not-yet-served seat whose order matches what's being delivered.
+// Keeps the per-seat servedMask, the unservedOrders list, and the table's
+// served count all in sync. Returns true if an order was actually fulfilled.
+// Used by the player and both (burger/seafood) robot-waiter paths so the seat
+// that gets the ✔️ is always the one whose order you delivered.
+function serveHeldToGroup(t, holding){
+  const g = t.group;
+  if(!g || g.state!=='ordering' || !holding) return false;
+  if(!g.servedMask || g.servedMask.length !== g.orders.length) g.servedMask = g.orders.map(()=>false);
+  let seat = -1;
+  for(let i=0;i<g.orders.length;i++){ if(!g.servedMask[i] && g.orders[i]===holding){ seat=i; break; } }
+  if(seat === -1) return false;            // nobody at this table ordered that
+  g.servedMask[seat] = true;
+  const ui = g.unservedOrders.indexOf(holding); if(ui !== -1) g.unservedOrders.splice(ui, 1);
+  t.served++;
+  // Track combo meals served today (for daily goals).
+  if(holding==='burger_soda_on_tray' || holding==='taco_chowder_basket' || holding==='taco_lemonade_basket')
+    stats.combosServed = (stats.combosServed||0) + 1;
+  if(g.unservedOrders.length === 0){ g.eatTimer = 200; g.state = 'eating'; }
+  return true;
 }
 
 function handleAction(){
@@ -4093,6 +4352,22 @@ function handleAction(){
     if(player.holding==='tray'){ player.holding=null; t.cleanTrays++; ok=true; }
     else if(!player.holding && t.cleanTrays > 0){ player.holding='tray'; t.cleanTrays--; ok=true; }
     else if(player.holding==='cooked' && t.cleanTrays > 0){ player.holding='burger_on_tray'; t.cleanTrays--; ok=true; }
+    else if(player.holding==='fries' && t.cleanTrays > 0){ player.holding='fries_on_tray'; t.cleanTrays--; ok=true; }
+  }
+  else if(type==='fryer'){
+    if(!player.holding){
+      const bi=t.slots.findIndex(s=>s&&s.state==='burnt_fries');
+      if(bi!==-1){ player.holding='burnt_fries'; t.slots[bi]=null; ok=true; }
+      else {
+        const ci=t.slots.findIndex(s=>s&&s.state==='fries');
+        if(ci!==-1){ player.holding='fries'; t.slots[ci]=null; ok=true; }
+        else { const fi=t.slots.indexOf(null); if(fi!==-1){ t.slots[fi]={state:'raw_fries',progress:0,burnTimer:0}; ok=true; playSound('sizzle'); } }
+      }
+    }
+    else if(player.holding==='tray'){
+      const ci=t.slots.findIndex(s=>s&&s.state==='fries');
+      if(ci!==-1){ player.holding='fries_on_tray'; t.slots[ci]=null; ok=true; }
+    }
   }
   else if(type==='sodafountain'){
     if(player.holding==='tray'){ player.holding='soda_on_tray'; ok=true; playSound('sizzle'); }
@@ -4123,10 +4398,10 @@ function handleAction(){
   else if(type==='trash'){
     if(t.contents >= 4 && !player.holding) {
        player.holding = 'trash_bag'; t.contents = 0; ok=true;
-    } else if (player.holding==='raw'||player.holding==='cooked'||player.holding==='charred'||player.holding==='burger_on_tray'||player.holding==='burger_soda_on_tray'||player.holding==='soda_on_tray'){ 
+    } else if (player.holding==='raw'||player.holding==='cooked'||player.holding==='charred'||player.holding==='burger_on_tray'||player.holding==='burger_soda_on_tray'||player.holding==='soda_on_tray'||player.holding==='raw_fries'||player.holding==='fries'||player.holding==='burnt_fries'||player.holding==='fries_on_tray'){
        if(t.contents < 4) {
           player.holding = (player.holding.includes('tray') ? 'tray' : null);
-          t.contents++; ok=true; playSound('error'); 
+          t.contents++; ok=true; playSound('error');
        } else {
           playSound('error'); 
        }
@@ -4148,20 +4423,18 @@ function handleAction(){
     
     else if(t.item==='soda_on_tray' && player.holding==='cooked'){ t.item=null; player.holding='burger_soda_on_tray'; ok=true; }
     else if(t.item==='cooked' && player.holding==='soda_on_tray'){ t.item=null; player.holding='burger_soda_on_tray'; ok=true; }
+
+    // Fries onto a tray
+    else if(t.item==='tray' && player.holding==='fries'){ t.item=null; player.holding='fries_on_tray'; ok=true; }
+    else if(t.item==='fries' && player.holding==='tray'){ t.item=null; player.holding='fries_on_tray'; ok=true; }
   }
   else if(type==='table'){
     const seafoodItems=['taco_in_basket','chowder_in_basket','lemonade_in_basket','taco_chowder_basket','taco_lemonade_basket'];
-    const burgerItems=['burger','soda'];
     const heldIsFood = isSeafood()
       ? seafoodItems.includes(player.holding)
-      : player.holding && (player.holding.includes('burger') || player.holding.includes('soda'));
+      : player.holding && (player.holding.includes('burger') || player.holding.includes('soda') || player.holding.includes('fries'));
     if(player.holding && heldIsFood && t.group && t.group.state==='ordering'){
-      const idx = t.group.unservedOrders.indexOf(player.holding);
-      if(idx !== -1) {
-         t.group.unservedOrders.splice(idx, 1);
-         player.holding=null; t.served++; ok=true;
-         if(t.group.unservedOrders.length === 0){ t.group.eatTimer=200; t.group.state='eating'; }
-      }
+      if(serveHeldToGroup(t, player.holding)){ player.holding=null; ok=true; }
     } else if(!player.holding && t.dirtyTrays>0){
       player.holding = isSeafood() ? 'dirty_basket' : 'dirty_tray';
       t.dirtyTrays--; ok=true;
@@ -4567,8 +4840,7 @@ function updateRobots(ds){
           else if(t.type==='basketrack'&&bot.holding&&bot.holding!=='basket'){ t.item=bot.holding;bot.holding=null;actionDone=true; }
           else if(t.type==='table'){
             if(t.group&&t.group.state==='ordering'&&bot.holding){
-              const idx=t.group.unservedOrders.indexOf(bot.holding);
-              if(idx!==-1){t.group.unservedOrders.splice(idx,1);t.served++;bot.holding=null;actionDone=true;if(t.group.unservedOrders.length===0){t.group.eatTimer=200;t.group.state='eating';}}
+              if(serveHeldToGroup(t, bot.holding)){ bot.holding=null; actionDone=true; }
             }
           }
           else if(t.type==='trash'&&bot.holding&&t.contents<4){ t.contents++;bot.holding=bot.holding.includes('basket')?'basket':null;actionDone=true; }
@@ -4642,12 +4914,7 @@ function updateRobots(ds){
           }
           else if(t.type === 'table') {
               if(t.group && t.group.state==='ordering' && bot.holding) {
-                  const idx = t.group.unservedOrders.indexOf(bot.holding);
-                  if(idx !== -1) {
-                      t.group.unservedOrders.splice(idx, 1);
-                      t.served++; bot.holding = null; actionDone = true;
-                      if(t.group.unservedOrders.length === 0){ t.group.eatTimer=200; t.group.state='eating'; }
-                  }
+                  if(serveHeldToGroup(t, bot.holding)){ bot.holding = null; actionDone = true; }
               }
           }
           else if(t.type === 'trash') {
@@ -4705,10 +4972,10 @@ function drawFloatUI(){
   let stinkPenalty = false;
   for(const k in stations){ 
     const s=stations[k]; 
-    if(s.type==='grill' || s.type==='beachgrill') {
+    if(s.type==='grill' || s.type==='beachgrill' || s.type==='fryer') {
       s.slots.forEach((sl,i)=>{ if(!sl) return;
         const p=scr(new THREE.Vector3(s.x-0.6+i*1.2,5,s.z)); if(p.z>=1) return;
-        const isCooked = sl.state==='cooked'||sl.state==='cooked_fish';
+        const isCooked = sl.state==='cooked'||sl.state==='cooked_fish'||sl.state==='fries';
         let col = isCooked ? '#FF9800' : '#4CAF50';
         let pct = isCooked ? ((sl.burnTimer||0)/300*100) : (sl.progress/200*100);
         html+=`<div class="fbar" style="left:${p.x}px;top:${p.y}px"><div class="fbar-fill" style="width:${pct}%;background:${col}"></div></div>`;
@@ -4753,7 +5020,8 @@ function drawFloatUI(){
        const cp = scr(worldPos);
        if(cp.z < 1) {
           let icon = '';
-          if (i < t.served) {
+          const seatServed = t.group.servedMask ? t.group.servedMask[i] : (i < t.served);
+          if (seatServed) {
               icon = '✔️';
           } else {
               const order = t.group.orders[i];
@@ -4767,6 +5035,7 @@ function drawFloatUI(){
               } else {
                 if (order === 'burger_soda_on_tray') icon = '🍔🥤';
                 else if (order === 'soda_on_tray') icon = '🥤';
+                else if (order === 'fries_on_tray') icon = '🍟';
                 else icon = '🍔';
               }
           }
@@ -4959,22 +5228,25 @@ function animate(){
       updateSinkHold(ds);
 
       let needVis=false;
-      for(const k in stations){ const s=stations[k]; 
-        if(s.type!=='grill' && s.type!=='beachgrill') continue;
-        s.slots.forEach(sl=>{ 
+      for(const k in stations){ const s=stations[k];
+        if(s.type!=='grill' && s.type!=='beachgrill' && s.type!=='fryer') continue;
+        // Fries cook at a fixed rate (no grill upgrade); grill/beachgrill use the
+        // Turbo Grill multiplier.
+        const cookRate = s.type==='fryer' ? 0.6 : upg.grillMult;
+        s.slots.forEach(sl=>{
           if(!sl) return;
-          if(sl.state === 'raw' || sl.state === 'raw_fish') {
-            sl.progress += upg.grillMult*ds; 
+          if(sl.state === 'raw' || sl.state === 'raw_fish' || sl.state === 'raw_fries') {
+            sl.progress += cookRate*ds;
             if(sl.progress >= 200){
-              sl.state = (s.type==='beachgrill') ? 'cooked_fish' : 'cooked';
+              sl.state = s.type==='beachgrill' ? 'cooked_fish' : s.type==='fryer' ? 'fries' : 'cooked';
               sl.burnTimer=0; needVis=true; playSound('sizzle');
             }
-          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish') {
-            // Burn window is fixed (independent of grill speed) so upgrading the
+          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish' || sl.state === 'fries') {
+            // Burn window is fixed (independent of cook speed) so upgrading the
             // grill makes cooking faster WITHOUT making food burn faster.
             sl.burnTimer += ds;
             if(sl.burnTimer >= 300) {
-              sl.state = (s.type==='beachgrill') ? 'charred_fish' : 'charred';
+              sl.state = s.type==='beachgrill' ? 'charred_fish' : s.type==='fryer' ? 'burnt_fries' : 'charred';
               needVis=true; playSound('error');
             }
           }
@@ -5017,7 +5289,7 @@ function animate(){
           moveToTarget(g,ds); 
           g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
           
-          if(g.waitPatience<=0){ g.state='leave'; stats.groupsServed++; }
+          if(g.waitPatience<=0){ g.state='leave'; stats.groupsServed++; stats.walkouts=(stats.walkouts||0)+1; }
           else if(qi===0){
             let tgt=null;
             for(const k in stations){ const s=stations[k]; if(s.type==='table'&&!s.group&&s.dirtyTrays===0){tgt=s;break;} }
@@ -5037,7 +5309,7 @@ function animate(){
         }
         else if(g.state==='ordering'){
           g.foodPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
-          if(g.foodPatience<=0){ g.state='leave'; stats.groupsServed++; g.tbl.group=null; g.tbl.served=0; }
+          if(g.foodPatience<=0){ g.state='leave'; stats.groupsServed++; stats.walkouts=(stats.walkouts||0)+1; g.tbl.group=null; g.tbl.served=0; }
         }
         else if(g.state==='eating'){
           g.eatTimer-=ds;
@@ -5056,6 +5328,8 @@ function animate(){
               rawCash = g.size * 16 * (stars/5);
               const sodaCount = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
               rawCash += sodaCount * 7 * (stars/5);
+              const friesCount = g.orders.filter(o => o==='fries_on_tray').length;
+              rawCash += friesCount * 5 * (stars/5);
             }
 
             // Mastery tip: a small bonus for 4-5 star service rewards getting good.
@@ -5100,10 +5374,12 @@ function animate(){
                   orderType=r<0.5?'taco_in_basket':r<0.75?'chowder_in_basket':'lemonade_in_basket';
                 } else {
                   orderType='burger_on_tray';
-                  if(upg.sodaCount>0){const r=Math.random();if(r<0.25)orderType='soda_on_tray';else if(r<0.70)orderType='burger_soda_on_tray';}
+                  if(menuFriesActive() && Math.random()<0.22){orderType='fries_on_tray';}
+                  else if(menuComboActive()){const r=Math.random();if(r<0.25)orderType='soda_on_tray';else if(r<0.70)orderType='burger_soda_on_tray';}
                 }
                 g.orders = [orderType];
                 g.unservedOrders = [...g.orders];
+                g.servedMask = g.orders.map(()=>false);
             } else {
                 g.state='leave';
             }

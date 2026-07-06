@@ -117,8 +117,18 @@ A station is the nearest interactable to the player; `getClosest()` picks it and
 | `burger_on_tray`       | Plated burger                       |
 | `soda_on_tray`         | Soda on a tray (needs Soda Fountain) |
 | `burger_soda_on_tray`  | Combo meal                          |
+| `raw_fries`            | Basket of fries cooking in the fryer |
+| `fries`                | Cooked fries (off the fryer)         |
+| `burnt_fries`          | Over-fried → trash only              |
+| `fries_on_tray`        | Plated fries (needs Fry Station)     |
 | `dirty_tray`           | Used tray left after a group eats   |
 | `trash_bag`            | Full trash, carried to the dumpster |
+
+The **fryer** works exactly like the grill (2 slots, `raw_fries → fries →
+burnt_fries` via `progress`/`burnTimer`) but has **no ingredient fetch** — an
+empty-handed ACT drops a fresh basket in (fries are always stocked) — and cooks
+at a **fixed** rate (no Turbo Grill bonus). Plate `fries` + `tray` →
+`fries_on_tray` at the Tray Rack or a Counter.
 
 ### Grill cooking (per-slot), update loop ~L4900
 
@@ -150,9 +160,12 @@ order generator (`spawnGroup`, ~L3799) and the table-serve match (~L4023).
 > plate in your hand must equal the order bubble over the customer's head.
 
 ### Order types generated (`spawnGroup`)
-- Without a Soda Fountain: always **`burger_on_tray`**.
-- With a Soda Fountain (`upg.sodaCount>0`): 30 % `burger_on_tray`,
-  25 % `soda_on_tray`, 45 % `burger_soda_on_tray`.
+Orders are drawn only from the **active menu** (`menuComboActive` /
+`menuFriesActive` — owned **and** switched on in the Shop's Your Menu panel):
+- Base: **`burger_on_tray`**.
+- Fries on the menu: ~22 % **`fries_on_tray`**.
+- Combos on the menu: of the rest, 25 % `soda_on_tray`, 45 %
+  `burger_soda_on_tray`, else `burger_on_tray`.
 
 ### A. Plain burger → `burger_on_tray`
 | # | At station | Hold before → Hold after | Notes |
@@ -167,6 +180,14 @@ order generator (`spawnGroup`, ~L3799) and the table-serve match (~L4023).
 - `trayrack` (empty)→`tray`, then `counter` place `tray`, place `cooked` on the
   same counter → auto-combines to `burger_on_tray` (~L4008–4009); **or**
 - `grill` while holding `tray` → `burger_on_tray` directly (~L3979).
+
+### A2. Fries → `fries_on_tray`  *(requires Fry Station, Day 11)*
+| # | At station | Hold before → Hold after | Notes |
+|---|------------|--------------------------|-------|
+| 1 | `fryer`    | (empty) → (empty)        | ACT drops a basket cooking (no ingredient) |
+| 2 | `fryer`    | (empty) → `fries`        | Pick up when done, before it burns |
+| 3 | `trayrack` | `fries` → `fries_on_tray` | Auto-plates onto a clean tray |
+| 4 | `table`    | `fries_on_tray` → (empty) | Serve the customer who ordered 🍟 |
 
 ### B. Soda only → `soda_on_tray`  *(requires Soda Fountain)*
 | # | At station     | Hold before → Hold after |
@@ -267,6 +288,13 @@ Tiered by unlock day; all relevant to the single bar:
 | 1 | 🍱 Trays (+4), ⚡ Roller Skates (move speed ×5), 🔥 Turbo Grill (cook speed) |
 | 3 | 🪑 Add Table, 🌸 Fancy Decor (patience), 🍽️ Extra Counter |
 | 5 | 🥤 Soda Fountain (unlocks combos), 🏗️ Expand Floorplan, 🍳 Extra Grill, 🚿 Extra Sink, 🤖 Hire Robot |
+| 11 | 🍟 Fry Station (unlocks fries as a menu item) |
+
+`unlockDay:N` means an item becomes buyable **after Day N is complete** (locked
+while `eco.day < N`). So the **Soda Fountain** (`unlockDay:5`) first appears in
+the Shop on the **Day 6** prep screen — you buy it and arrange it in Edit Mode
+before Day 6 starts. (There is intentionally no earlier mid-transition "Business
+Decision" popup; the fountain is a normal purchase.)
 
 Building/equipment items call `addStation(...)` so upgrades physically appear on
 the floor; the camera zooms out as `floorLevel` grows (`rebuildAll`).
@@ -293,6 +321,71 @@ used to order them by *how achievable* they are.
 17 achievements span the whole first-bar journey (first day → serve 1,000 →
 Day 100), with cash and three skin unlocks (gold / fire / alien). The old
 multi-store "Empire" achievement was removed for single-bar mode.
+
+---
+
+## 11a. Daily Goals
+
+Three light, per-day objectives on the **same metric/goal engine** as
+achievements, reset each morning, each paying a small cash bonus.
+
+- **Pool** (`dailyGoalPool(day)`): serve N groups, earn $N, finish at 4★+, no
+  walkouts, and — **only when combos are on the menu** — serve N combos. Targets
+  scale gently with the day. `mode:'reach'` (cur≥goal) or `'atMost'` (walkouts).
+- **Selection** (`rollDailyGoals`): a **deterministic** per-day shuffle
+  (`seededPick`, mulberry32 seeded by day) picks 3, so a reload can't reroll for
+  an easier set. Rolled for the day being played in `executeDayStart`, and
+  previewed for the upcoming day in `showStartMenu`. Persisted in the save.
+- **Today-scoped metrics** (`dailyMetrics`): read from `stats`
+  (`groupsServed`, `cashEarned`, today-stars, `combosServed`, `walkouts` — the
+  last two added to `stats` and incremented in `serveHeldToGroup` / the walkout
+  branches).
+- **Award** (`checkDailyGoals`, called in `endDay` before the results math):
+  credits `dg.reward` for each newly-completed goal, tracked as
+  `stats._dailyEarned` (🎯 line on the Results screen).
+- **Surfaces:** live/preview list at the top of the Achievements screen; a
+  completed/missed recap on the Results screen.
+
+**Day-boundary heads-ups.** Milestone alerts (Day 10 Busy Hours/VIP) and
+newly-unlocked shop items are **queued at the END of the day**
+(`queueNextDayHeadsUp` in `endDay`) and shown on the Home Screen
+(`flushDayHeadsUp`), not at the start of the next day — so the player learns
+what's coming while they still have time to buy gear and arrange the bar before
+pressing PLAY.
+
+## 11b. Menu & item growth (roadmap)
+
+The **menu** is which optional item categories the player is currently serving.
+Customers only order what's switched on, so the player controls their line.
+
+- **State:** `eco.menu` (e.g. `{combos:true}`). `menuComboActive()` =
+  owns the Soda Fountain **and** combos left on. Order generation
+  (`spawnGroup`, heavy re-order) reads this instead of `upg.sodaCount` directly.
+- **UI:** a **📋 Your Menu** panel at the top of the Shop (`renderMenuPanel`):
+  Burgers are always-on; each unlocked optional category gets an ON/OFF switch
+  (`toggleMenuCombos`). The panel only appears once there's a real choice.
+
+**How to add the next item (spaced so players aren't overwhelmed).** Each new
+item = a station + item meshes + a `handleAction` recipe + an order-generator
+entry + a serve match + a payout + a `menu` toggle, following the recipe pattern
+in §6. Suggested cadence — introduce **one** new item roughly every ~4–5 days so
+each is learned before the next:
+
+| ~Day | Item | New verb it teaches | Status |
+|------|------|---------------------|--------|
+| 1  | 🍔 Burger (grill) | the core line | ✅ shipped |
+| 6  | 🥤 Soda / combos (fountain) | assembling two parts onto one tray | ✅ shipped |
+| 11 | 🍟 Fries (fryer, timed like the grill) | a second timed cook to juggle | ✅ shipped |
+| ~15 | 🥤 Milkshake (hold-to-fill, like the sink) | a hold action | next |
+| ~20 | 🍔 Deluxe/topping (extra assembly step) | multi-step assembly | future |
+
+Each lands as a Shop unlock + a Menu toggle, so growth is opt-in and the bar
+stays as simple or as rich as the player wants.
+
+**Robots & fries:** robot chefs currently cook **burgers only** — fries are a
+hands-on item, so enabling fries is a deliberate "I'll work the fryer myself"
+choice. Waiters will still carry fries you've plated. Teaching robots the fryer
+is a clean future add (mirror the grill branch in `updateRobots`).
 
 ---
 
