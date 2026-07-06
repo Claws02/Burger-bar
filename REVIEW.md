@@ -81,10 +81,12 @@
   framework future menu items slot into.
 - 🟢 **Endless framing.** The day loop still just escalates group counts;
   consider a rolling/endless mode on top of the daily-goal cadence.
+- ✅ **Fries** (done) — a Fry Station unlocks on Day 11 and adds `fries_on_tray`
+  as a toggleable menu item (a second timed cook to juggle). Next item:
+  milkshake (~Day 15). Robots don't cook fries yet (documented).
 - 🟢 **More menu items on the one bar.** The recipe state machine (see
-  ARCHITECTURE §6) generalizes cleanly: add e.g. **fries** (a second cook
-  station with its own timer) or a **milkshake** (hold-to-fill like the sink).
-  More item types = more interesting order-matching, all within the first bar.
+  ARCHITECTURE §6) generalizes cleanly — each item = station + recipe + order +
+  menu toggle. Keep the ~4–5 day cadence so each is learned before the next.
 - 🟢 **Rush / lunch-hour events.** A timed wave where groups arrive fast for
   90s with bonus pay — uses the existing spawn system, adds a skill peak.
 - 🟢 **Robot depth.** Robots level by days only; add a visible competence stat
