@@ -99,6 +99,13 @@
 
 ## E. Technical / performance / robustness
 
+- ✅ **GPU memory leak → "crash around day 11" (fixed).** `scene.remove()` only
+  detaches meshes; their geometries/materials were never `.dispose()`d, so GPU
+  memory climbed every cook/serve/pickup until the WebGL context was lost and the
+  tab crashed (~15–20 min in). Now every removal goes through
+  `removeAndDispose()` → `disposeObject3D()` (disposes geometry always; materials
+  except boot-time shared ones tagged `_keep`). See ARCHITECTURE §12a and the
+  `renderer.info.memory.geometries` regression harness in QA.md §6.
 - 🟠 **`floatUI.innerHTML` is rebuilt from a string every frame** (~L4750) —
   all bars, bubbles, checkmarks re-parsed each tick. Fine on desktop; on low-end
   mobile this is the most likely jank source. Consider diffing or throttling the

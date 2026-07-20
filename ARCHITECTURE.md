@@ -405,6 +405,42 @@ Skins/Shop with the next goal on top.
 
 ---
 
+## 12a. GPU resource lifecycle (memory-leak guard)
+
+Three.js `scene.remove()` / `parent.remove()` only **detach** a mesh — the
+geometry's GPU buffers (and any non-shared material) stay resident until you
+call `.dispose()`. The game rebuilds meshes constantly (every cook transition,
+serve, pickup, customer despawn, and — for trail skins — ~20×/sec while moving),
+so without disposal the WebGL heap climbs for the whole session until the context
+is lost and the tab crashes. This was the **"crash around day 11"**: ~15–20 min
+of play was simply how long a session survived, and the Day-11 fryer's extra
+per-frame visual churn brought the tipping point closer.
+
+**The guard** (~L1223): every removal now goes through
+`removeAndDispose(parent, obj)` → `disposeObject3D(obj)`, which traverses the
+object and:
+
+- **Geometry** — always `.dispose()`d. Item/visual geometries are *always*
+  freshly allocated per mesh (`GBox`/`GCyl`/`GSph`/`new THREE.*Geometry`), so
+  disposing on removal is always safe.
+- **Material** — `.dispose()`d **unless** tagged `_keep`. All boot-time shared
+  materials (the `matGrass`…`custColors` block, created while
+  `_matInitPhase === true`) are tagged `_keep` and never disposed, because many
+  live meshes reuse them. Per-mesh materials made later (fries colors, dirty-tray
+  pebbles, trail particles, previews) are disposable.
+
+Call sites wired to `removeAndDispose`: `updateStationVisuals`,
+`updateHolding`, the movement trail, customer despawn, `removeStation`, robot
+re-role rebuild, `buildWorld`/`buildRoom` rebuilds, the reset/cleanup paths, and
+the two home-screen preview renderers (`buildHomeChef`, `buildRestaurantScene`).
+
+**Regression test:** `renderer.info.memory.geometries` is Three's live-geometry
+count; under heavy churn it must stay **flat**. See
+[`QA.md` §6](QA.md#6-performance--the-day-11-crash-class) for the headless
+Chromium harness that proves it.
+
+---
+
 ## 13. Adapting toward a continuously-played game
 
 The single bar is the unit to perfect first. Natural next levers, all local to

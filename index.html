@@ -1139,8 +1139,12 @@ fillLight.position.set(-15,20,-10); scene.add(fillLight);
 // ─────────────────────────────────────────────────────────────
 //  MATERIALS
 // ─────────────────────────────────────────────────────────────
-const M = (c,o)=>{ const m=new THREE.MeshLambertMaterial({color:c}); if(o!==undefined){m.transparent=true;m.opacity=o;} return m; };
-const MB = c => new THREE.MeshBasicMaterial({color:c});
+// Materials created during boot are shared across many long-lived meshes and
+// must NEVER be disposed (disposeObject3D skips anything tagged _keep). Every
+// per-mesh / per-frame material created later is disposable.
+let _matInitPhase = true;
+const M = (c,o)=>{ const m=new THREE.MeshLambertMaterial({color:c}); if(o!==undefined){m.transparent=true;m.opacity=o;} if(_matInitPhase)m._keep=true; return m; };
+const MB = c => { const m=new THREE.MeshBasicMaterial({color:c}); if(_matInitPhase)m._keep=true; return m; };
 
 const matGrass      = M('#66cc44'); 
 const matSidewalk   = M('#aab5b8');
@@ -1173,6 +1177,9 @@ const matWood       = M('#8a6045');
 const matTrashBag   = M('#4CAF50');
 
 const custColors = ['#e91e63','#ff9800','#00bcd4','#4caf50','#9c27b0', '#111111'].map(c=>M(c));
+// All boot-time shared materials now exist; anything created from here on is a
+// per-mesh material that disposeObject3D is allowed to free.
+_matInitPhase = false;
 
 const GBox = (w,h,d)=>new THREE.BoxGeometry(w,h,d);
 const GCyl = (r,h,s=12)=>new THREE.CylinderGeometry(r,r,h,s);
@@ -1220,11 +1227,36 @@ function addMesh(parent, geo, mat, x,y,z, rx=0,ry=0,rz=0, castShadow=true){
   parent.add(m); return m;
 }
 
+// ── GPU resource cleanup ─────────────────────────────────────
+// scene.remove()/parent.remove() only DETACHES a mesh — the geometry's GPU
+// buffers (and any non-shared materials) stay resident until .dispose() is
+// called. Every item/visual/customer mesh is rebuilt constantly (cooking,
+// serving, moving), so without this the WebGL heap grows every frame until the
+// context is lost and the tab crashes — the "crash around day 11" was simply
+// how long a session survived before running out of GPU memory.
+//
+// Geometries here are ALWAYS freshly allocated per mesh (GBox/GCyl/GSph/new
+// THREE.*Geometry), so disposing them on removal is always safe. Shared
+// materials are tagged _keep=true at boot and are never disposed.
+function disposeObject3D(obj){
+  if(!obj) return;
+  obj.traverse(node=>{
+    if(node.geometry && node.geometry.dispose) node.geometry.dispose();
+    const mat = node.material;
+    if(mat){
+      if(Array.isArray(mat)){ mat.forEach(m=>{ if(m && !m._keep && m.dispose) m.dispose(); }); }
+      else if(!mat._keep && mat.dispose){ mat.dispose(); }
+    }
+  });
+}
+// Detach a child from its parent AND free its GPU resources in one call.
+function removeAndDispose(parent, obj){ if(!obj) return; if(parent) parent.remove(obj); disposeObject3D(obj); }
+
 // ─────────────────────────────────────────────────────────────
 //  BUILD WORLD
 // ─────────────────────────────────────────────────────────────
 function buildWorld(){
-  while(worldGrp.children.length) worldGrp.remove(worldGrp.children[0]);
+  while(worldGrp.children.length){ const c=worldGrp.children[0]; removeAndDispose(worldGrp, c); }
   const b = bounds;
   const rW = b.r-b.l, rD = b.b-b.t;
   const cx = (b.r+b.l)/2, cz = (b.b+b.t)/2;
@@ -1389,7 +1421,7 @@ function buildArchway(parent, cx, cz, wH, dir){
 //  BUILD ROOM
 // ─────────────────────────────────────────────────────────────
 function buildRoom(){
-  while(roomGrp.children.length) roomGrp.remove(roomGrp.children[0]);
+  while(roomGrp.children.length){ const c=roomGrp.children[0]; removeAndDispose(roomGrp, c); }
   collEdges = [];
   
   const b = bounds;
@@ -1656,7 +1688,8 @@ function addStation(id,type,x,z,w,d,opts={}){
 }
 function removeStation(id){
   if(!stations[id]) return;
-  stGrp.remove(stations[id].mesh);
+  removeAndDispose(stGrp, stations[id].mesh);
+  if(stations[id].visuals) stations[id].visuals.forEach(v=>removeAndDispose(scene,v));
   delete stations[id];
 }
 
@@ -2023,7 +2056,7 @@ function applyCrown(){
 
 let heldMesh=null;
 function updateHolding(){
-  if(heldMesh){ pMesh.remove(heldMesh); heldMesh=null; }
+  if(heldMesh){ removeAndDispose(pMesh, heldMesh); heldMesh=null; }
   if(player.holding){ heldMesh=itemMesh(player.holding); heldMesh.position.set(0,1.5,1.1); pMesh.add(heldMesh); }
 }
 
@@ -2740,7 +2773,7 @@ function initHomeRenderer(){
 
 function buildHomeChef(){
   if(!hc.scene) return;
-  if(hc.mesh){ hc.scene.remove(hc.mesh); hc.mesh = null; }
+  if(hc.mesh){ removeAndDispose(hc.scene, hc.mesh); hc.mesh = null; }
 
   const sk = getActiveSkin();
   const g = new THREE.Group();
@@ -2897,7 +2930,7 @@ const RESTAURANT_UNLOCK_DAYS = [0, 0, 30, 30, 30];
 
 function buildRestaurantScene(storeIndex){
   if(!rp.scene) return;
-  while(rp.scene.children.length) rp.scene.remove(rp.scene.children[0]);
+  while(rp.scene.children.length){ const c=rp.scene.children[0]; removeAndDispose(rp.scene, c); }
 
   const col = STORE_COLORS[storeIndex % STORE_COLORS.length];
   if(col.type === 'seafood') { buildBeachRestaurantScene(); return; }
@@ -3258,7 +3291,7 @@ function updateTrail(ds, moving){
     p.life -= p.decay * ds;
     p.mesh.material.opacity = p.life * 0.85;
     p.mesh.scale.setScalar(p.life);
-    if(p.life <= 0){ scene.remove(p.mesh); trailParticles.splice(i,1); }
+    if(p.life <= 0){ removeAndDispose(scene, p.mesh); trailParticles.splice(i,1); }
   }
 }
 
@@ -3469,7 +3502,7 @@ function quitToMenu(){
   }
 
   // Clean up any customers/groups that were spawned
-  groups.forEach(g => scene.remove(g.mesh));
+  groups.forEach(g => removeAndDispose(scene, g.mesh));
   groups = [];
 
   updateCashUI();
@@ -3683,16 +3716,16 @@ let wings_obj=[];
 
 function cleanupGameScene(){
   // Remove all customers from scene
-  groups.forEach(g => scene.remove(g.mesh));
+  groups.forEach(g => removeAndDispose(scene, g.mesh));
   groups = [];
   // Remove all station visuals
   for(const k in stations){
-    if(stations[k].visuals) stations[k].visuals.forEach(v => scene.remove(v));
-    stGrp.remove(stations[k].mesh);
+    if(stations[k].visuals) stations[k].visuals.forEach(v => removeAndDispose(scene, v));
+    removeAndDispose(stGrp, stations[k].mesh);
     delete stations[k];
   }
   // Remove all wings geometry
-  wings_obj.forEach(w=>{ scene.remove(w.obj||w); });
+  wings_obj.forEach(w=>{ removeAndDispose(scene, w.obj||w); });
   wings_obj = [];
   // Clear any held item
   player.holding = null;
@@ -3813,7 +3846,7 @@ function executeDayStart() {
   }
 
   player.holding=null; updateHolding();
-  groups.forEach(g=>scene.remove(g.mesh)); groups=[];
+  groups.forEach(g=>removeAndDispose(scene, g.mesh)); groups=[];
 
   for(const k in stations) if(stations[k].type==='robot') { stations[k].state='idle'; stations[k].holding=null; }
 
@@ -4128,7 +4161,7 @@ function moveToTarget(g,scale){
 function updateStationVisuals(){
   for(const k in stations){
     const s=stations[k];
-    s.visuals.forEach(v=>scene.remove(v)); s.visuals=[];
+    s.visuals.forEach(v=>removeAndDispose(scene,v)); s.visuals=[];
     const gY=3.1, cY=3.0, tY=2.2;
     if(s.type==='grill'&&s.slots) s.slots.forEach((sl,i)=>{
       if(!sl) return;
@@ -4260,7 +4293,7 @@ function handleAction(){
               if(upg.robots && upg.robots[rIdx]) upg.robots[rIdx].role = t.role;
               saveGame();
 
-              stGrp.remove(t.mesh); t.mesh=buildRobot(t.role); t.mesh.position.set(t.pos.x,0,t.pos.z); stGrp.add(t.mesh);
+              removeAndDispose(stGrp, t.mesh); t.mesh=buildRobot(t.role); t.mesh.position.set(t.pos.x,0,t.pos.z); stGrp.add(t.mesh);
               const tt=document.getElementById('role-tooltip');
               tt.textContent=`${t.role==='chef'?'👨‍🍳':t.role==='waiter'?'🛎️':'🧹'} Robot set to ${t.role.toUpperCase()}`;
               tt.style.display='block'; setTimeout(()=>tt.style.display='none', 1800);
@@ -5397,7 +5430,7 @@ function animate(){
         }
         else if(g.state==='leaving'){
           g.target.set(doorX()+(g.id%1-.5)*6, 0, bounds.b+18);
-          if(moveToTarget(g,ds)){ scene.remove(g.mesh); groups.splice(i,1); }
+          if(moveToTarget(g,ds)){ removeAndDispose(scene, g.mesh); groups.splice(i,1); }
         }
       }
     }

@@ -61,6 +61,7 @@ python3 -m http.server 8000
 |------|---------|
 | `index.html` | The entire game (markup, styles, and code) |
 | `ARCHITECTURE.md` | Complete first-bar architecture: stations, cook/deliver recipes, economy, achievements |
+| `QA.md` | Scene-by-scene QA test plan + the memory-leak regression harness |
 | `archive/` | Parked multi-map build + notes (see single-bar mode) |
 | `manifest.json` | PWA web app manifest |
 | `icon.svg` | App / favicon icon |
