@@ -65,14 +65,30 @@ python3 -m http.server 8000
 | `manifest.json` | PWA web app manifest |
 | `icon.svg` | App / favicon icon |
 | `PROPOSAL.md` | Design review, roadmap, and implementation status |
+| `AUDIT.md` | Full technical & design audit: bugs, the crash root-cause, architecture |
+| `tests/` | Headless test suite (`node tests/run.js`) — no build step, no network |
 
 ## Development notes
 
 - All gameplay lives in one inert `<script type="text/gamejs">` block that the
   in-page loader executes once Three.js and the DOM are ready.
-- Validate changes without a browser via a syntax check:
+- **Run the test suite** (no install, no network, no browser needed):
   ```
-  # extract and check the game script
-  node --check <(sed -n '/text\/gamejs/,/<\/script>/p' index.html)
+  node tests/run.js
   ```
-  (Or copy the script body to a `.js` file and run `node --check`.)
+  It boots the *real* game script from `index.html` in a Node `vm` against a
+  stubbed Three.js + DOM (`tests/harness.js`), then drives simulated days frame
+  by frame. The Three.js stub counts every geometry and material created vs.
+  disposed, which is what turns "does it leak GPU memory" into a number.
+
+  Covers: GPU-resource disposal, an exhaustive robot state-machine sweep
+  (every role × every held item), the tray economy, day pacing, and the
+  player-feedback layer. A full staffed day is driven end to end.
+
+  To A/B against another revision:
+  ```
+  git show <rev>:index.html > /tmp/old.html
+  BURGERBAR_INDEX=/tmp/old.html node tests/run.js
+  ```
+
+- See [`AUDIT.md`](AUDIT.md) for the full technical and design audit.
