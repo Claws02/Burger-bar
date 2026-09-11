@@ -1139,8 +1139,59 @@ fillLight.position.set(-15,20,-10); scene.add(fillLight);
 // ─────────────────────────────────────────────────────────────
 //  MATERIALS
 // ─────────────────────────────────────────────────────────────
-const M = (c,o)=>{ const m=new THREE.MeshLambertMaterial({color:c}); if(o!==undefined){m.transparent=true;m.opacity=o;} return m; };
-const MB = c => new THREE.MeshBasicMaterial({color:c});
+// ── Shared GPU resources ─────────────────────────────────────────────────────
+// Three.js does NOT free GPU buffers when a mesh leaves the scene graph -- only
+// an explicit .dispose() does. Rebuilding item/station visuals therefore used to
+// allocate a fresh geometry+material set on every call and never release the old
+// one, leaking ~183 geometries and ~42 materials per updateStationVisuals() and
+// crashing long late-game sessions.
+//
+// The fix is to make those resources SHARED and immutable: identical colours and
+// identical shapes hand back the same object, so throwing away a mesh costs
+// nothing and there is nothing to dispose. Anything tagged `_shared` is owned by
+// these caches and must never be disposed by disposeObj().
+const _matCache = new Map();
+const M = (c,o)=>{
+  const key = c + '|' + (o===undefined?'':o);
+  let m = _matCache.get(key);
+  if(!m){
+    m = new THREE.MeshLambertMaterial({color:c});
+    if(o!==undefined){ m.transparent=true; m.opacity=o; }
+    m._shared = true; _matCache.set(key, m);
+  }
+  return m;
+};
+const MB = c => {
+  const key = 'B|' + c;
+  let m = _matCache.get(key);
+  if(!m){ m = new THREE.MeshBasicMaterial({color:c}); m._shared = true; _matCache.set(key, m); }
+  return m;
+};
+// A deliberately UNIQUE material, for the few meshes whose colour/opacity is
+// mutated in place (the placement ghost, trail particles). Callers own these and
+// are responsible for disposing them.
+const MU = (c,o)=>{ const m=new THREE.MeshLambertMaterial({color:c});
+  if(o!==undefined){ m.transparent=true; m.opacity=o; } return m; };
+
+const _geoCache = new Map();
+function cachedGeo(key, make){
+  let g = _geoCache.get(key);
+  if(!g){ g = make(); g._shared = true; _geoCache.set(key, g); }
+  return g;
+}
+// Free the GPU buffers behind a display object. Skips anything owned by the
+// shared caches above -- disposing those would blank every other mesh using them.
+function disposeObj(o){
+  if(!o) return;
+  o.traverse(n=>{
+    const g = n.geometry;
+    if(g && !g._shared && g.dispose) g.dispose();
+    const m = n.material;
+    if(m) (Array.isArray(m)?m:[m]).forEach(x=>{ if(x && !x._shared && x.dispose) x.dispose(); });
+  });
+}
+// Detach from the scene graph AND release anything not shared.
+function discard(parent, o){ if(!o) return; if(parent) parent.remove(o); disposeObj(o); }
 
 const matGrass      = M('#66cc44'); 
 const matSidewalk   = M('#aab5b8');
@@ -1174,9 +1225,17 @@ const matTrashBag   = M('#4CAF50');
 
 const custColors = ['#e91e63','#ff9800','#00bcd4','#4caf50','#9c27b0', '#111111'].map(c=>M(c));
 
-const GBox = (w,h,d)=>new THREE.BoxGeometry(w,h,d);
-const GCyl = (r,h,s=12)=>new THREE.CylinderGeometry(r,r,h,s);
-const GSph = (r,s=12)=>new THREE.SphereGeometry(r,s,s);
+// Geometry is immutable here, so identical shapes share one buffer.
+const GBox  = (w,h,d)=>cachedGeo('b|'+w+'|'+h+'|'+d, ()=>new THREE.BoxGeometry(w,h,d));
+const GCyl  = (r,h,s=12)=>cachedGeo('c|'+r+'|'+h+'|'+s, ()=>new THREE.CylinderGeometry(r,r,h,s));
+const GSph  = (r,s=12)=>cachedGeo('s|'+r+'|'+s, ()=>new THREE.SphereGeometry(r,s,s));
+// Tapered cylinder (top radius != bottom radius) and explicitly-segmented sphere.
+const GCylT = (rt,rb,h,s=12)=>cachedGeo('ct|'+rt+'|'+rb+'|'+h+'|'+s, ()=>new THREE.CylinderGeometry(rt,rb,h,s));
+const GSphS = (r,ws,hs)=>cachedGeo('ss|'+r+'|'+ws+'|'+hs, ()=>new THREE.SphereGeometry(r,ws,hs));
+const GCone = (r,h,s=8)=>cachedGeo('co|'+r+'|'+h+'|'+s, ()=>new THREE.ConeGeometry(r,h,s));
+// Crumbs on a dirty tray: three fixed sizes rather than a random radius per
+// crumb, so the geometry cache stays bounded.
+const crumbGeo = i => GSphS([0.05,0.07,0.09][i%3], 4, 4);
 
 // ─────────────────────────────────────────────────────────────
 //  WORLD GROUPS
@@ -1224,7 +1283,7 @@ function addMesh(parent, geo, mat, x,y,z, rx=0,ry=0,rz=0, castShadow=true){
 //  BUILD WORLD
 // ─────────────────────────────────────────────────────────────
 function buildWorld(){
-  while(worldGrp.children.length) worldGrp.remove(worldGrp.children[0]);
+  while(worldGrp.children.length) discard(worldGrp, worldGrp.children[0]);
   const b = bounds;
   const rW = b.r-b.l, rD = b.b-b.t;
   const cx = (b.r+b.l)/2, cz = (b.b+b.t)/2;
@@ -1278,7 +1337,7 @@ function buildWorld(){
     // Beach umbrella tables outside
     for(const px of [dcx-9, dcx+9]){
       addMesh(worldGrp, GCyl(.08,.08,3,6), M('#9e9e9e'), px,1.5,b.b+4);
-      addMesh(worldGrp, new THREE.ConeGeometry(2,.5,8), M('#e53935'), px,3.3,b.b+4);
+      addMesh(worldGrp, GCone(2,.5,8), M('#e53935'), px,3.3,b.b+4);
       addMesh(worldGrp, GCyl(1.1,.12,16), M('#eeeeee'), px,.5,b.b+4);
       // Lounge chairs
       addMesh(worldGrp, GBox(1.2,.2,2), M('#f9e4b7'), px,.15,b.b+5.5, 0.25,0,0);
@@ -1360,7 +1419,7 @@ function buildWorld(){
     for(let c=0;c<8;c++){
       const cg=new THREE.Group();
       for(let p=0;p<4;p++){
-        const cp=new THREE.Mesh(new THREE.SphereGeometry(2.4+Math.random()*1.8,8,6), M('#ffffff',.8));
+        const cp=new THREE.Mesh(GSphS(2.4+Math.round(Math.random()*3)*0.6,8,6), M('#ffffff',.8));
         cp.position.set((Math.random()-.5)*5,Math.random()*2,(Math.random()-.5)*3);
         cg.add(cp);
       }
@@ -1389,7 +1448,7 @@ function buildArchway(parent, cx, cz, wH, dir){
 //  BUILD ROOM
 // ─────────────────────────────────────────────────────────────
 function buildRoom(){
-  while(roomGrp.children.length) roomGrp.remove(roomGrp.children[0]);
+  while(roomGrp.children.length) discard(roomGrp, roomGrp.children[0]);
   collEdges = [];
   
   const b = bounds;
@@ -1655,8 +1714,10 @@ function addStation(id,type,x,z,w,d,opts={}){
   stations[id]=s; return s;
 }
 function removeStation(id){
-  if(!stations[id]) return;
-  stGrp.remove(stations[id].mesh);
+  const s = stations[id];
+  if(!s) return;
+  if(s.visuals) s.visuals.forEach(v => discard(scene, v));
+  discard(stGrp, s.mesh);
   delete stations[id];
 }
 
@@ -1692,15 +1753,15 @@ function initStations(){
 function itemMesh(type){
   const g=new THREE.Group();
   if(type==='raw'){
-    addMesh(g, new THREE.CylinderGeometry(.3,.3,.18,12), matRaw, 0,.09,0, 0,0,0,false);
+    addMesh(g, GCyl(.3,.18,12), matRaw, 0,.09,0, 0,0,0,false);
   } else if(type==='cooked'){
-    addMesh(g, new THREE.SphereGeometry(.55,8,6), matBun, 0,.1,0).scale.set(.95,.3,.95);
-    addMesh(g, new THREE.CylinderGeometry(.28,.28,.18,12), matMeat, 0,.3,0);
+    addMesh(g, GSphS(.55,8,6), matBun, 0,.1,0).scale.set(.95,.3,.95);
+    addMesh(g, GCyl(.28,.18,12), matMeat, 0,.3,0);
     addMesh(g, GBox(.9,.05,.9), matCheese, 0,.45,0);
-    addMesh(g, new THREE.CylinderGeometry(.28,.28,.06,12), matTomato, 0,.55,0);
-    addMesh(g, new THREE.SphereGeometry(.55,8,6), matBun, 0,.75,0).scale.set(.95,.34,.95);
+    addMesh(g, GCyl(.28,.06,12), matTomato, 0,.55,0);
+    addMesh(g, GSphS(.55,8,6), matBun, 0,.75,0).scale.set(.95,.34,.95);
   } else if(type==='charred'){
-    addMesh(g, new THREE.CylinderGeometry(.3,.3,.18,12), matCharred, 0,.09,0, 0,0,0,false);
+    addMesh(g, GCyl(.3,.18,12), matCharred, 0,.09,0, 0,0,0,false);
   } else if(type==='soda'){
     addMesh(g, GCyl(0.18, 0.4, 12), matCup, 0, 0.28, 0); 
     addMesh(g, GCyl(0.19, 0.05, 12), matSilver, 0, 0.5, 0); 
@@ -1712,7 +1773,7 @@ function itemMesh(type){
     addMesh(g, GBox(1.6, 0.08, 1.1), matTray, 0,.04,0, 0,0,0,false); 
     const pc=[M('#8a6045'),M('#a88b73'),M('#556b2f')];
     for(let i=0;i<6;i++){
-      const pm=new THREE.Mesh(new THREE.SphereGeometry(.05+Math.random()*.04,4,4), pc[i%3]);
+      const pm=new THREE.Mesh(crumbGeo(i), pc[i%3]);
       pm.position.set((Math.random()-.5)*1.3,.1,(Math.random()-.5)*.8); g.add(pm);
     }
   } else if(type==='soda_on_tray'){
@@ -1758,14 +1819,14 @@ function itemMesh(type){
     addMesh(g, GBox(0.8,0.18,0.5), M('#3e2723'), 0,0.09,0, 0,0,0,false);
   } else if(type==='fish_taco'){
     // Taco shell (U-shape) + fish filling
-    addMesh(g, new THREE.CylinderGeometry(0.35,0.35,0.55,16,1,true,0,Math.PI), M('#ffd54f'), 0,0.1,0, 0,0,0,false);
+    addMesh(g, cachedGeo('taco', ()=>new THREE.CylinderGeometry(0.35,0.35,0.55,16,1,true,0,Math.PI)), M('#ffd54f'), 0,0.1,0, 0,0,0,false);
     addMesh(g, GBox(0.5,0.2,0.25), M('#ffb300'), 0,0.22,0, 0,0,0,false);
     addMesh(g, GBox(0.4,0.08,0.18), M('#aed581'), 0,0.32,0, 0,0,0,false); // lettuce
     addMesh(g, GBox(0.3,0.06,0.14), M('#ef5350'), 0,0.38,0, 0,0,0,false); // salsa
   } else if(type==='chowder'){
     // Bowl with creamy soup
-    addMesh(g, new THREE.CylinderGeometry(0.38,0.28,0.32,16), M('#8d6e63'), 0,0.16,0);
-    addMesh(g, new THREE.CylinderGeometry(0.34,0.34,0.04,16), M('#fff8e1'), 0,0.32,0, 0,0,0,false);
+    addMesh(g, GCylT(0.38,0.28,0.32,16), M('#8d6e63'), 0,0.16,0);
+    addMesh(g, GCyl(0.34,0.04,16), M('#fff8e1'), 0,0.32,0, 0,0,0,false);
     addMesh(g, GSph(0.1,6), M('#ff8f00'), -0.12,0.36,0);
     addMesh(g, GSph(0.08,6), M('#e91e63'), 0.1,0.35,0.08);
   } else if(type==='lemonade'){
@@ -1785,7 +1846,7 @@ function itemMesh(type){
     addMesh(g, GBox(1.5,0.14,1.0), M('#5d4037'), 0,0.07,0, 0,0,0,false);
     const pc=[M('#8a6045'),M('#556b2f'),M('#3e2723')];
     for(let i=0;i<5;i++){
-      const pm=new THREE.Mesh(new THREE.SphereGeometry(.05+Math.random()*.04,4,4),pc[i%3]);
+      const pm=new THREE.Mesh(crumbGeo(i), pc[i%3]);
       pm.position.set((Math.random()-.5)*1.3,.15,(Math.random()-.5)*.8); g.add(pm);
     }
   } else if(type==='taco_in_basket'){
@@ -2238,7 +2299,7 @@ const SHOP_DEFS = [
   {id:'grillspd',  label:'🔥 Turbo Grill',        desc:'Cook burgers faster',                   cat:'Upgrades',  cost:()=>55+Math.floor(upg.grillMult*25), max:()=>upg.grillMult>=3, unlockDay:1, action:()=>{ upg.grillMult=Math.min(3,upg.grillMult+.35); }},
   
   // Tier 2 (Day 3)
-  {id:'table',     label:'🪑 Add Table',         desc:'Serve more customers at once',          cat:'Building',  cost:()=>80*(upg.tableCount+1),  max:()=>upg.tableCount>=8, unlockDay:3, action:()=>{ addStation('table'+upg.tableCount,'table', baseBounds.r-3, baseBounds.t+4,5,5); upg.tableCount++; }},
+  {id:'table',     label:'🪑 Add Table',         desc:'Serve more customers at once',          cat:'Building',  cost:()=>80*(upg.tableCount+1),  max:()=>upg.tableCount>=8, unlockDay:3, action:()=>{ const pos=freeSpot()||{x:baseBounds.r-3,z:baseBounds.t+4}; addStation('table'+upg.tableCount,'table', pos.x, pos.z, 5,5); upg.tableCount++; }},
   {id:'decor',     label:'🌸 Fancy Decor',        desc:'Customers wait longer',                 cat:'Upgrades',  cost:()=>45+Math.floor(upg.patienceMult*20), max:()=>upg.patienceMult>=3, unlockDay:3, action:()=>{ upg.patienceMult=Math.min(3,upg.patienceMult+.35); }},
   {id:'xcounter',  label:'🍽️ Extra Counter',      desc:'More clean tray staging space',        cat:'Equipment', cost:()=>70+upg.extraCounters*50,max:()=>upg.extraCounters>=maxEquip()-1, unlockDay:3, action:()=>{ const id='counter'+(upg.extraCounters+2); const pos=freeSpot(); addStation(id,'counter',pos.x,pos.z,1.8,1.8); upg.extraCounters++; }},
   
@@ -3242,7 +3303,8 @@ let trailTimer = 0;
 function spawnTrailParticle(){
   const sk = getActiveSkin();
   if(!sk.trailColor) return;
-  const geo = new THREE.SphereGeometry(0.18, 6, 6);
+  const geo = GSphS(0.18, 6, 6);
+  // Unique because updateTrail() fades opacity per particle; disposed on death.
   const mat = new THREE.MeshBasicMaterial({color:sk.trailColor, transparent:true, opacity:0.85});
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.copy(pMesh.position);
@@ -3258,7 +3320,7 @@ function updateTrail(ds, moving){
     p.life -= p.decay * ds;
     p.mesh.material.opacity = p.life * 0.85;
     p.mesh.scale.setScalar(p.life);
-    if(p.life <= 0){ scene.remove(p.mesh); trailParticles.splice(i,1); }
+    if(p.life <= 0){ scene.remove(p.mesh); disposeObj(p.mesh); trailParticles.splice(i,1); }
   }
 }
 
@@ -3683,16 +3745,16 @@ let wings_obj=[];
 
 function cleanupGameScene(){
   // Remove all customers from scene
-  groups.forEach(g => scene.remove(g.mesh));
+  groups.forEach(g => discard(scene, g.mesh));
   groups = [];
   // Remove all station visuals
   for(const k in stations){
-    if(stations[k].visuals) stations[k].visuals.forEach(v => scene.remove(v));
-    stGrp.remove(stations[k].mesh);
+    if(stations[k].visuals) stations[k].visuals.forEach(v => discard(scene, v));
+    discard(stGrp, stations[k].mesh);
     delete stations[k];
   }
   // Remove all wings geometry
-  wings_obj.forEach(w=>{ scene.remove(w.obj||w); });
+  wings_obj.forEach(w=>{ discard(scene, w.obj||w); });
   wings_obj = [];
   // Clear any held item
   player.holding = null;
@@ -3769,11 +3831,19 @@ function executeDayStart() {
   if(rating >= 4.0) multi = 1.3;
   if(rating < 3.0) multi = 0.7;
 
-  const baseGroups = eco.day + 1; 
-  const groupCount = Math.max(1, Math.floor(baseGroups * multi));
-  
-  // After day 10, multiple groups can spawn simultaneously (up to # of tables)
-  const maxSimultaneousGroups = eco.day >= 10 ? Math.min(upg.tableCount, 3) : 1;
+  // Day length is CAPPED. It used to be `eco.day + 1` forever, so a Day-100
+  // shift was 100+ groups of identical work -- fatigue, not difficulty. Past the
+  // cap the day stops getting longer and starts getting harder instead (more
+  // simultaneous arrivals, tighter patience -- see spawnGroup).
+  const DAY_LENGTH_CAP = 28;
+  const baseGroups = Math.min(eco.day + 1, DAY_LENGTH_CAP);
+  const groupCount = Math.max(1, Math.min(DAY_LENGTH_CAP, Math.floor(baseGroups * multi)));
+
+  // Simultaneous arrivals ramp with the day (and with how many tables you own),
+  // which is what makes late days demanding now that they're length-capped.
+  const maxSimultaneousGroups = eco.day >= 10
+    ? Math.max(1, Math.min(upg.tableCount, 2 + Math.floor((eco.day - 10) / 12), 5))
+    : 1;
   
   // First spawn: give player 8 seconds to get ready (longer on early days)
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
@@ -3813,7 +3883,7 @@ function executeDayStart() {
   }
 
   player.holding=null; updateHolding();
-  groups.forEach(g=>scene.remove(g.mesh)); groups=[];
+  groups.forEach(g=>discard(scene, g.mesh)); groups=[];
 
   for(const k in stations) if(stations[k].type==='robot') { stations[k].state='idle'; stations[k].holding=null; }
 
@@ -3879,9 +3949,18 @@ function endDay(){
   // average causing an unrecoverable death spiral. Lifetime rating is still
   // shown everywhere via getCumRating().
   if(!gStats.recentDays) gStats.recentDays = [];
-  if(stats.groupsServed > 0){
-    gStats.recentDays.push(stats.totalStars / stats.groupsServed);
-    if(gStats.recentDays.length > 3) gStats.recentDays.shift();
+  {
+    // Walkouts are no longer booked as 0-star serves (they were inflating
+    // groupsServed and every achievement keyed off it). They still cost
+    // reputation, but at half weight and as a 1-star customer rather than a
+    // zero -- a lost sale is its own punishment.
+    const served = stats.groupsServed, walked = stats.walkouts || 0;
+    const WALKOUT_WEIGHT = 0.5, WALKOUT_STARS = 1.0;
+    const denom = served + walked * WALKOUT_WEIGHT;
+    if(denom > 0){
+      gStats.recentDays.push((stats.totalStars + walked * WALKOUT_WEIGHT * WALKOUT_STARS) / denom);
+      if(gStats.recentDays.length > 3) gStats.recentDays.shift();
+    }
   }
   const rollAvg = gStats.recentDays.length
     ? gStats.recentDays.reduce((a,b)=>a+b,0) / gStats.recentDays.length
@@ -4050,17 +4129,23 @@ function showResults(){
 function doorX(){ return (baseBounds.l+baseBounds.r)/2; }
 
 function spawnGroup(){
+  // Staggered so each new customer type is learned on its own. VIPs and heavy
+  // groups both used to appear on Day 10, the same day simultaneous arrivals
+  // began -- three new mechanics in a single shift.
   let type = 'normal';
-  if(eco.day >= 10) {
-     const r = Math.random();
-     if(r < 0.15) type = 'vip';
-     else if(r < 0.30) type = 'heavy';
+  {
+    const r = Math.random();
+    if(eco.day >= 8 && r < 0.15) type = 'vip';
+    else if(eco.day >= 12 && r >= 0.15 && r < 0.30) type = 'heavy';
   }
 
   const size = type === 'heavy' ? 1 : (Math.random()>.55?2:1);
   const sx = doorX()+(Math.random()-.5)*2, sz = bounds.b+12;
   
-  const dpm = diffPatienceMult();
+  // Past the day-length cap, customers get gradually less forgiving. This is
+  // what replaces "more groups" as the late-game difficulty lever (floor 0.7x).
+  const lateSqueeze = Math.max(0.7, 1 - Math.max(0, eco.day - 28) * 0.005);
+  const dpm = diffPatienceMult() * lateSqueeze;
   const g = {
     id:Math.random(), size, type, state:'approach_door', stoodUp: false,
     waitPatience: 1800 * upg.patienceMult * dpm * (type==='vip'?0.5:1.0),
@@ -4100,7 +4185,7 @@ function spawnGroup(){
   for(let i=0;i<size;i++){
     const m=new THREE.Group();
     const c = type === 'vip' ? custColors[5] : custColors[Math.floor(Math.random()*(custColors.length-1))];
-    addMesh(m, new THREE.CylinderGeometry(.55,.55,1.35,12), c, 0,.68,0);
+    addMesh(m, GCyl(.55,1.35,12), c, 0,.68,0);
     addMesh(m, GSph(.48,10), matSkin, 0,1.55,0);
     if(type === 'heavy') m.scale.set(1.4, 1.0, 1.4);
     m.position.set(i*1.7-(size>1?.85:0),0,i*.4); g.mesh.add(m);
@@ -4128,7 +4213,7 @@ function moveToTarget(g,scale){
 function updateStationVisuals(){
   for(const k in stations){
     const s=stations[k];
-    s.visuals.forEach(v=>scene.remove(v)); s.visuals=[];
+    s.visuals.forEach(v=>discard(scene, v)); s.visuals=[];
     const gY=3.1, cY=3.0, tY=2.2;
     if(s.type==='grill'&&s.slots) s.slots.forEach((sl,i)=>{
       if(!sl) return;
@@ -4787,6 +4872,41 @@ function updateRobots(ds){
       }
     }
 
+    // ── Universal fallback plan ───────────────────────────────────────────
+    // Every (role x held item) combination must have somewhere to go. Without
+    // this, a robot holding an item its role had no plan for -- or ANY robot
+    // once the trash bin filled, since every role's bin branch required
+    // contents<4 -- parked itself permanently and never worked again.
+    // Enumerated by tests/run.js -> "no robot role/holding combination is a
+    // permanent dead end".
+    if(bot.state === 'idle' && !(bot._actionCooldown > 0)){
+      const pick = fn => Object.values(stations).find(fn);
+      if(bot.holding === 'trash_bag'){
+        const d = pick(s => s.type === 'dumpster');
+        if(d){ bot.target = d; bot.state = 'moving'; }
+      } else if(bot.holding){
+        const ec = pick(s => s.type === 'counter' && !s.item);
+        if(ec){ bot.target = ec; bot.state = 'moving'; }
+        else {
+          const tr = pick(s => s.type === 'trash' && s.contents < 4);
+          if(tr){ bot.target = tr; bot.state = 'moving'; }
+        }
+      } else {
+        // Empty-handed and a bin is full: haul it out. Robots can now clear the
+        // trash themselves, so a full bin no longer bricks the whole staff.
+        const full = pick(s => s.type === 'trash' && s.contents >= 4);
+        if(full){ bot.target = full; bot.state = 'moving'; }
+      }
+
+      // Absolute last resort. If a robot has been holding something with
+      // nowhere to put it for ~5s (every counter occupied AND every bin full),
+      // it bins the item by hand rather than freezing for the rest of the day.
+      if(bot.state === 'idle' && bot.holding){
+        bot._stuck = (bot._stuck || 0) + 1;
+        if(bot._stuck > 300){ bot.holding = null; bot._stuck = 0; updateHolding(); }
+      } else bot._stuck = 0;
+    }
+
     if(bot.state==='idle') continue;
 
     // Safety: if somehow target is gone, reset
@@ -4804,8 +4924,19 @@ function updateRobots(ds){
         let dx = dx_direct / dist;
         let dz = dz_direct / dist;
 
-        bot.pos.x += dx * botSpeed * ds;
-        bot.pos.z += dz * botSpeed * ds;
+        // Robots used to walk straight through walls, counters and tables.
+        // They slide along obstacles like the player does -- but because there
+        // is no pathfinding, a robot boxed in on both axes is allowed through
+        // after ~1s rather than freezing for the rest of the day.
+        const stepX = dx * botSpeed * ds, stepZ = dz * botSpeed * ds;
+        const nx = bot.pos.x + stepX, nz = bot.pos.z + stepZ;
+        if(!checkColl(nx, nz, bot.id)){ bot.pos.x = nx; bot.pos.z = nz; bot._blocked = 0; }
+        else if(!checkColl(nx, bot.pos.z, bot.id)){ bot.pos.x = nx; bot._blocked = 0; }
+        else if(!checkColl(bot.pos.x, nz, bot.id)){ bot.pos.z = nz; bot._blocked = 0; }
+        else {
+          bot._blocked = (bot._blocked || 0) + ds;
+          if(bot._blocked > 60){ bot.pos.x = nx; bot.pos.z = nz; }  // escape hatch
+        }
 
         bot.mesh.position.x = bot.pos.x;
         bot.mesh.position.z = bot.pos.z;
@@ -4926,12 +5057,36 @@ function updateRobots(ds){
           }
       }
 
-      // Apply cooldown after action to prevent immediate re-evaluation thrashing
-      if(actionDone) bot._actionCooldown = 15;
+      // ── Universal actions ───────────────────────────────────────────────
+      // Catches every (role x holding x station) combination the role-specific
+      // handlers above don't name, so nothing falls through silently.
+      if(!actionDone){
+        if(t.type === 'trash'){
+          if(!bot.holding && t.contents >= 4){ bot.holding = 'trash_bag'; t.contents = 0; actionDone = true; }
+          else if(bot.holding && bot.holding !== 'trash_bag' && t.contents < 4){
+            t.contents++;
+            bot.holding = bot.holding.includes('_on_tray') ? 'tray' : null;
+            actionDone = true;
+          }
+        } else if(t.type === 'dumpster' && bot.holding === 'trash_bag'){
+          bot.holding = null; actionDone = true; playSound('dump');
+        } else if(t.type === 'counter' && !t.item && bot.holding && bot.holding !== 'trash_bag'){
+          t.item = bot.holding; bot.holding = null; actionDone = true;
+        } else if(t.type === 'trayrack' && bot.holding === 'tray'){
+          t.cleanTrays++; bot.holding = null; actionDone = true;
+        }
+      }
+
+      // Cool down after EVERY arrival, not just successful ones. A robot that
+      // lost a race for a resource used to re-target and re-arrive on the very
+      // next frame, and each arrival rebuilt the entire restaurant's visuals.
+      bot._actionCooldown = actionDone ? 15 : 30;
+      if(actionDone) bot._stuck = 0;
 
       if(bot.state !== 'washing') bot.state = 'idle';
       bot.target = null;
-      updateStationVisuals();
+      // Only redraw when something actually changed.
+      if(actionDone) updateStationVisuals();
     }
   }
 }
@@ -5000,7 +5155,10 @@ function drawFloatUI(){
   });
   
   for(const k in stations){ const t=stations[k]; if(t.type!=='table'||!t.group||t.group.state!=='ordering') continue;
-    const p=scr(new THREE.Vector3(t.x,4.8,t.z)); if(p.z>=1) return;
+    // `continue`, NOT `return`: this is a plain for..in, so returning here used
+    // to abandon every remaining table AND skip the innerHTML write at the end,
+    // freezing the entire overlay whenever one table sat behind the camera.
+    const p=scr(new THREE.Vector3(t.x,4.8,t.z)); if(p.z>=1) continue;
     
     // Draw patience bar over the center of the table
     const pct=Math.max(0,t.group.foodPatience/t.group.maxFood);
@@ -5289,7 +5447,7 @@ function animate(){
           moveToTarget(g,ds); 
           g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
           
-          if(g.waitPatience<=0){ g.state='leave'; stats.groupsServed++; stats.walkouts=(stats.walkouts||0)+1; }
+          if(g.waitPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; }
           else if(qi===0){
             let tgt=null;
             for(const k in stations){ const s=stations[k]; if(s.type==='table'&&!s.group&&s.dirtyTrays===0){tgt=s;break;} }
@@ -5309,7 +5467,7 @@ function animate(){
         }
         else if(g.state==='ordering'){
           g.foodPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
-          if(g.foodPatience<=0){ g.state='leave'; stats.groupsServed++; stats.walkouts=(stats.walkouts||0)+1; g.tbl.group=null; g.tbl.served=0; }
+          if(g.foodPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; g.tbl.group=null; g.tbl.served=0; }
         }
         else if(g.state==='eating'){
           g.eatTimer-=ds;
@@ -5336,6 +5494,10 @@ function animate(){
             if(stars >= 4) rawCash += (stars - 3) * g.size * 1.5;
 
             if(g.type === 'vip') rawCash *= 3;
+            // Early-day boost: Tier-1 shop items cost $55-80 while a Day-1 group
+            // paid ~$16, putting the first upgrade 3-4 days out. This lands it
+            // on Day 2 without inflating the rest of the curve.
+            rawCash *= eco.day <= 4 ? 1.30 : eco.day <= 6 ? 1.15 : 1.0;
             rawCash *= diffPayoutMult();
 
             // Serve streak: consecutive serves within the window stack a tip
@@ -5361,7 +5523,11 @@ function animate(){
             }
             spawnFloater(g.tbl.mesh.position, `+$${cash.toFixed(2)}`);
             
-            g.tbl.dirtyTrays = g.tbl.served; g.tbl.served=0; g.tbl.group=null; updateStationVisuals();
+            // `+=`: a heavy customer eats several rounds at one table, so the
+            // trays from earlier rounds are still sitting there. Assigning here
+            // deleted them from the game's closed tray economy and could starve
+            // the player of trays mid-day.
+            g.tbl.dirtyTrays += g.tbl.served; g.tbl.served=0; g.tbl.group=null; updateStationVisuals();
 
             if(g.type === 'heavy' && g.heavyCount > 1) {
                 g.heavyCount--;
@@ -5397,7 +5563,7 @@ function animate(){
         }
         else if(g.state==='leaving'){
           g.target.set(doorX()+(g.id%1-.5)*6, 0, bounds.b+18);
-          if(moveToTarget(g,ds)){ scene.remove(g.mesh); groups.splice(i,1); }
+          if(moveToTarget(g,ds)){ discard(scene, g.mesh); groups.splice(i,1); }
         }
       }
     }
