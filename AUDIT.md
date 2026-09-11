@@ -1,5 +1,11 @@
 # Burger Bar — Full Technical & Design Audit
 
+> **STATUS: acted on.** Everything in §1, §2, §4.1, §4.2 and §4.5 below has been
+> fixed and is covered by the test suite in [`tests/`](tests/) (`node tests/run.js`,
+> 21 tests). The architecture work in §3.3 (module split) is the one item
+> deliberately **not** done — reasoning in [§7](#7-what-was-fixed-and-what-was-not).
+> The findings are left written in the present tense as the original diagnosis.
+
 > A deep pass over the entire codebase (`index.html`, 5,423 lines; ~4,495 lines
 > of game script) covering correctness, the high-day crash, architecture, and
 > what it would actually take to get this to a commercial standard.
@@ -481,3 +487,63 @@ bottleneck should *move*, not disappear:
 needed regardless), then play to ~Day 15 with the DevTools memory profiler open
 and watch `renderer.info.memory.geometries` climb monotonically. That confirms
 §1 end-to-end on real hardware in about ten minutes.
+
+
+---
+
+## 7. What was fixed, and what was not
+
+Everything below was verified by `node tests/run.js` (21 tests) plus A/B runs
+against the pre-fix revision using the same harness.
+
+### Fixed
+
+| § | Finding | Evidence |
+|---|---------|----------|
+| 1 | GPU leak / the crash | 183 geometries + 42 materials per rebuild → **0**. A 30-day soak leaks **3 geometries total**. |
+| 1 (2nd) | Three live WebGL contexts | Home renderers disposed on gameplay entry, rebuilt on return. |
+| 2.1 | `drawFloatUI` froze the whole HUD | `return` → `continue`; test drives a table behind the camera. |
+| 2.2 | Heavy customers destroyed trays | `=` → `+=`; test runs a heavy group through a round. |
+| 2.3 | All tables spawned on one tile | Placed via `freeSpot()`; test buys 6 and asserts 6 unique spots. |
+| 2.4 | Full trash bin deadlocked robots | Universal fallback + robots can bag/dump; exhaustive sweep is green. |
+| 2.5 | Failed robot actions thrashed | Cooldown now applies to failed arrivals; rebuild gated on `actionDone`. |
+| 2.6 | Walkouts counted as serves | Removed from `groupsServed`; reputation hit at half weight instead. |
+| 2.7 | Robots ignored collision | Sliding collision + a progress watchdog (see the regression note below). |
+| 2.x | Silent save failures, daily-goal determinism, O(n²) queue indexing, stale `todayStars` | All fixed. |
+| 4.1 | Core skill untaught | Matching seats pulse / others dim while carrying a plate; wrong plate now says so; station labels for the first 4 days; results screen explains the score. |
+| 4.2 | Curve | Day length capped at 28 groups; late days escalate by pressure; VIPs Day 8, heavies Day 12; early payout nudge. |
+| 4.3 | Streak invisible | Live streak meter in the HUD. |
+| 4.5 | Accessibility | Order text labels, larger-text mode, station labels — all toggleable in Settings. |
+
+### A regression this caught, worth recording
+
+Adding robot collision (§2.7) **broke the serve loop**: robots wedged between
+the tray rack and the back wall, sliding freely on one axis while never getting
+closer on the other, so an "is either axis blocked" escape hatch never fired. A
+10-day A/B against the pre-fix build showed 2 served → 0 served.
+
+The fix was to watch **progress toward the target** rather than per-axis
+blocking: if a robot hasn't got meaningfully closer in ~1.5s it phases through
+obstacles until it arrives. Reaching the target outranks looking correct.
+
+The lesson is in the test suite now: the original robot test only checked that
+bussers moved dirty trays, and it passed throughout. The test that catches this
+is `a staffed bar actually serves customers end to end` — a full day driven to
+`results` with only robots working.
+
+### Not done, deliberately
+
+**§3.3 steps 1–3 — the ES-module split, deleting the dormant seafood branches,
+and the dirty-flag render layer.** This is still the right long-term call and
+the reasoning in §3.2 stands. It is not done here because it is a large,
+mechanical, whole-file refactor whose only honest verification is *running the
+game in a browser*, and the Three.js CDN is blocked in this environment. Shipping
+a blind restructure of all 4,500 lines on top of the behavioural fixes above
+would put the fixes at risk for no immediate player benefit.
+
+The leak that made it urgent is fixed at the source, so the pressure is off. It
+should be done in a session where the game can actually be loaded and played.
+
+**§3.3 step 5 — vendoring `three.min.js` locally.** Same blocker: the CDN cannot
+be reached from here to download it. Still worth doing, and still required for
+offline/PWA/itch.io builds.

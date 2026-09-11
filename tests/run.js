@@ -76,6 +76,21 @@ t('updateStationVisuals does not leak materials across repeated rebuilds', () =>
   lte(perCall, 1, `materials leaked per updateStationVisuals() call:`);
 });
 
+t('entering gameplay releases the Home Screen WebGL contexts', () => {
+  const g = boot();
+  g.run('showStartMenu(); initHomeRenderer(); initRestaurantRenderer();');
+  ok(g.run('return !!(hc.renderer || rp.renderer);'), 'home renderers never initialised');
+  g.run('eco.day=1; executeDayStart();');
+  eq(g.run('return !!hc.renderer;'), false, 'home chef renderer still holding a WebGL context:');
+  eq(g.run('return !!rp.renderer;'), false, 'restaurant preview renderer still holding a WebGL context:');
+});
+
+t('returning to the Home Screen rebuilds its renderers', () => {
+  const g = boot();
+  g.run('showStartMenu(); initHomeRenderer(); eco.day=1; executeDayStart(); showStartMenu();');
+  ok(g.run('return !!hc.renderer;'), 'home chef renderer was not rebuilt after gameplay');
+});
+
 t('spawning and despawning customers costs no GPU memory', () => {
   const g = boot(); lateGame(g);
   g.run(`gameState='playing';
@@ -250,6 +265,38 @@ t('robots still complete work after collision was added', () => {
   ok(left < start, `bussers cleared no dirty trays in 1800 frames (${start} -> ${left}) -- robots are stuck`);
 });
 
+t('a staffed bar actually serves customers end to end', () => {
+  // This is the integration test that matters: robots must cook, plate, serve
+  // and bus a real day to completion. A narrower "did the busser move trays"
+  // check passed while robot collision was silently livelocking the serve loop.
+  const g = boot();
+  g.run(`eco.cash=9999; eco.totalTrays=12; upg.grillMult=3; eco.day=0;
+    for(let i=1;i<3;i++) addStation('table'+i,'table',-6+i*5,6,5,5);
+    upg.tableCount=3;
+    for(let i=0;i<6;i++) addStation('robot'+i,'robot',-6+i*2,2,1.5,1.5,
+      {role:['chef','waiter','busser'][i%3], hiredDay:1});
+    upg.robotCount=6;
+    executeDayStart();`);
+  let f = 0;
+  while(g.get('gameState') === 'playing' && f < 40000){ g.frame(60); f += 60; }
+  const served = g.run('return stats.groupsServed;');
+  const cash   = g.run('return stats.cashEarned;');
+  eq(g.get('gameState'), 'results', 'the day never finished:');
+  ok(served > 0, `robot staff served nobody in a full day (${served} served, ${g.run('return stats.walkouts;')} walked out)`);
+  ok(cash > 0, 'a full staffed day earned $0');
+});
+
+t('robots reach their targets despite obstacles', () => {
+  const g = boot();
+  g.run(`eco.day=1; executeDayStart();
+    addStation('robotX','robotX'==='x'?'robot':'robot', -1.3, -8, 1.5,1.5, {role:'chef',hiredDay:1});`);
+  // Park a chef right in the wedge between the tray rack and the back wall.
+  g.run(`var b = stations['robotX']; b.pos.set(-1.3, 0, -8); b.state='idle'; b.target=null;`);
+  g.frame(1200);
+  const moved = g.run(`var b=stations['robotX']; return Math.abs(b.pos.x - (-1.3)) + Math.abs(b.pos.z - (-8));`);
+  ok(moved > 1.0, `a robot wedged against a station never escaped (moved ${moved.toFixed(2)} units)`);
+});
+
 // ── 4. Economy / recipes ────────────────────────────────────────────────────
 section('4. Economy and recipes');
 
@@ -281,6 +328,65 @@ t('day length is capped so late days do not run forever', () => {
   })()`);
   const day100 = counts.find(c=>c[0]===100)[1];
   lte(day100, 40, `Day 100 spawns ${day100} groups (unbounded growth):`);
+});
+
+section('5. Player feedback');
+
+t('the results screen explains a bad day', () => {
+  const g = boot();
+  g.run(`eco.day=2; executeDayStart();
+    stats.groupsServed=4; stats.totalStars=8; stats.walkouts=3; stats.cashEarned=50;
+    endDay();`);
+  g.flushTimers();
+  const coach = g.text('res-coach');
+  ok(/walked out/i.test(coach), `results screen gave no cause for the score (got: "${coach}")`);
+});
+
+t('the results screen praises a great day', () => {
+  const g = boot();
+  g.run(`eco.day=2; executeDayStart();
+    stats.groupsServed=5; stats.totalStars=25; stats.walkouts=0; stats.cashEarned=200;
+    endDay();`);
+  g.flushTimers();
+  ok(g.text('res-coach').length > 0, 'results screen showed no coaching line at all');
+});
+
+t('a wrong plate at a table is reported, not silently ignored', () => {
+  const g = boot();
+  g.run(`eco.day=2; executeDayStart();
+    groups.forEach(x=>discard(scene,x.mesh)); groups.length=0; stats.groupsLeft=0;
+    var tbl = Object.values(stations).find(s=>s.type==='table');
+    tbl.group = {orders:['fries_on_tray'], unservedOrders:['fries_on_tray'],
+                 servedMask:[false], state:'ordering', mesh:new THREE.Group(),
+                 size:1, foodPatience:100, maxFood:100};
+    tbl.served = 0;
+    player.pos.set(tbl.x, 0, tbl.z); player.dir = 0;
+    player.holding = 'burger_on_tray';       // wrong item on purpose
+    globalThis.__f0 = floaters.length;
+    handleAction();
+  `);
+  eq(g.run('return player.holding;'), 'burger_on_tray', 'wrong plate was served anyway:');
+  ok(g.run('return floaters.length;') > g.run('return globalThis.__f0;'),
+     'serving the wrong plate produced no feedback at all');
+});
+
+t('matching seats are highlighted while carrying a plate', () => {
+  const g = boot();
+  g.run(`eco.day=2; executeDayStart();
+    groups.forEach(x=>discard(scene,x.mesh)); groups.length=0; stats.groupsLeft=0;
+    var tbl = Object.values(stations).find(s=>s.type==='table');
+    var m = new THREE.Group(); m.add(new THREE.Group()); m.add(new THREE.Group());
+    tbl.group = {orders:['burger_on_tray','fries_on_tray'], unservedOrders:['burger_on_tray','fries_on_tray'],
+                 servedMask:[false,false], state:'ordering', mesh:m, size:2,
+                 foodPatience:100, maxFood:100};
+    tbl.served = 0;
+    player.holding = 'burger_on_tray';
+    gameState = 'playing';
+    drawFloatUI();
+  `);
+  const html = g.html('floating-ui');
+  ok(/fbubble match/.test(html), 'the matching seat was not highlighted');
+  ok(/fbubble dim/.test(html),   'non-matching seats were not dimmed');
 });
 
 // ── summary ─────────────────────────────────────────────────────────────────

@@ -8,7 +8,9 @@ const vm = require('vm');
 const { THREE, counters, resetCounters } = require('./stub-three.js');
 const { install } = require('./stub-dom.js');
 
-const INDEX = path.join(__dirname, '..', 'index.html');
+// Allows pointing the harness at another build (e.g. a pre-fix revision) for
+// A/B comparison: BURGERBAR_INDEX=/tmp/old.html node tests/run.js
+const INDEX = process.env.BURGERBAR_INDEX || path.join(__dirname, '..', 'index.html');
 
 function extractGameScript(html){
   const start = html.indexOf('<script type="text/gamejs"');
@@ -33,8 +35,8 @@ function boot(opts = {}){
     performance: dom.window.performance,
     requestAnimationFrame: dom.window.requestAnimationFrame,
     cancelAnimationFrame: dom.window.cancelAnimationFrame,
-    setTimeout: dom.window.setTimeout, clearTimeout: dom.window.clearTimeout,
-    setInterval: dom.window.setInterval, clearInterval: dom.window.clearInterval,
+    setTimeout: dom.window.setTimeout.bind(dom.window), clearTimeout: dom.window.clearTimeout.bind(dom.window),
+    setInterval: dom.window.setInterval.bind(dom.window), clearInterval: dom.window.clearInterval.bind(dom.window),
   });
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
@@ -56,6 +58,9 @@ function boot(opts = {}){
     frame(n = 1, msPerFrame = 16.7){
       for(let i=0;i<n;i++){ dom.stepClock(msPerFrame); dom.raf.drain(dom.now()); }
     },
+    flushTimers(){ return dom.timers.flush(); },
+    text(id){ return dom.document.getElementById(id).textContent; },
+    html(id){ return dom.document.getElementById(id).innerHTML; },
     leak(){ return { geo: counters.geoCreated - counters.geoDisposed,
                      mat: counters.matCreated - counters.matDisposed,
                      created: counters.geoCreated, disposed: counters.geoDisposed }; },

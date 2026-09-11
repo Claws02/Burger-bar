@@ -85,6 +85,29 @@ canvas{display:block;width:100%;height:100%;}
 .fbubble::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);border-width:9px 9px 0;border-style:solid;border-color:#333 transparent transparent;}
 .fbar{position:absolute;width:56px;height:7px;background:rgba(0,0,0,.65);border-radius:3px;transform:translate(-50%,-50%);overflow:hidden;border:2px solid rgba(255,255,255,.85);}
 .fbar-fill{height:100%;background:#4CAF50;transition:width .1s,background-color .3s;}
+/* Order-matching cue: the seat whose order matches what you're carrying pops,
+   every other seat dims. This is the core skill of the game and was previously
+   taught nowhere. */
+.fbubble.match{border-color:#2E7D32;background:#E8F5E9;box-shadow:0 0 0 3px rgba(76,175,80,.55),0 3px 10px rgba(0,0,0,.4);animation:seatPulse .9s ease-in-out infinite;}
+.fbubble.match::after{border-top-color:#2E7D32;}
+.fbubble.dim{opacity:.32;filter:saturate(.4);}
+@keyframes seatPulse{0%,100%{transform:translate(-50%,-100%) scale(1);}50%{transform:translate(-50%,-100%) scale(1.13);}}
+/* Small floating name tags over stations, shown for the first few days. */
+.stlabel{position:absolute;transform:translate(-50%,-50%);background:rgba(20,24,28,.82);color:#fff;
+  font-size:11px;font-weight:700;letter-spacing:.4px;padding:3px 8px;border-radius:9px;
+  pointer-events:none;white-space:nowrap;border:1px solid rgba(255,255,255,.22);}
+/* Serve-streak meter next to the cash HUD. */
+#streak-wrap{display:none;align-items:center;gap:6px;margin-left:10px;}
+#streak-bar{width:52px;height:6px;background:rgba(0,0,0,.45);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,.35);}
+#streak-fill{height:100%;width:100%;background:linear-gradient(90deg,#FF8A65,#FFD54F);transition:width .12s linear;}
+#streak-x{font-size:12px;font-weight:900;color:#FFD54F;text-shadow:0 1px 2px rgba(0,0,0,.7);}
+/* Accessibility: bump every HUD/menu font size. */
+body.bigtext{font-size:118%;}
+body.bigtext .fbubble{font-size:21px;}
+body.bigtext #cash-val,body.bigtext #rating-val{font-size:118%;}
+body.bigtext .stlabel{font-size:13px;}
+/* Order text tags, for players who can't rely on emoji alone. */
+.otag{display:block;font-size:9px;font-weight:800;letter-spacing:.6px;line-height:1.1;opacity:.75;margin-top:1px;}
 
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;}
 #top-hud{position:absolute;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px; display:none;}
@@ -695,7 +718,7 @@ canvas{display:block;width:100%;height:100%;}
   <div id="ui-layer">
     <div id="top-hud">
       <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: 0</span></div>
-      <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span></div>
+      <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span><span id="streak-wrap"><span id="streak-x">🔥 x1</span><span id="streak-bar"><span id="streak-fill"></span></span></span></div>
     </div>
     <div id="touch-overlay"></div>
     <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -808,6 +831,20 @@ canvas{display:block;width:100%;height:100%;}
         <span style="font-weight:900;font-size:14px;">👁️ Colorblind-friendly bars</span>
         <span id="set-cb-state" style="color:#888;font-weight:900;">OFF</span>
       </button>
+      <button class="upg-item" id="set-lbl-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleLabels()">
+        <span style="font-weight:900;font-size:14px;">🏷️ Station labels</span>
+        <span id="set-lbl-state" style="color:#90caf9;font-weight:900;">AUTO</span>
+      </button>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Auto: names float over each station for your first few days.</div>
+      <button class="upg-item" id="set-tag-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleOrderTags()">
+        <span style="font-weight:900;font-size:14px;">🔤 Order text labels</span>
+        <span id="set-tag-state" style="color:#888;font-weight:900;">OFF</span>
+      </button>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Adds a word under each order icon instead of emoji alone.</div>
+      <button class="upg-item" id="set-big-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleBigText()">
+        <span style="font-weight:900;font-size:14px;">🔎 Larger text</span>
+        <span id="set-big-state" style="color:#888;font-weight:900;">OFF</span>
+      </button>
       <button class="upg-item" id="set-diff-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleDifficulty()">
         <span style="font-weight:900;font-size:14px;">🎯 Difficulty</span>
         <span id="set-diff-state" style="color:#90caf9;font-weight:900;">NORMAL</span>
@@ -878,6 +915,7 @@ canvas{display:block;width:100%;height:100%;}
         <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">Today's Rating</div>
         <div id="res-stars-row" style="display:flex;justify-content:center;gap:8px;margin-bottom:8px;"></div>
         <div id="res-rating-num" style="font-size:24px;font-weight:900;color:#ffc107;opacity:0;transition:opacity .4s;">⭐ 0.0</div>
+        <div id="res-coach" style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,.72);margin-top:6px;opacity:0;transition:opacity .4s;min-height:15px;"></div>
       </div>
       <div style="background:rgba(0,0,0,.4);border-radius:16px;padding:18px 24px;width:100%;margin-bottom:16px;text-align:center;">
         <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">Cash Earned</div>
@@ -936,6 +974,7 @@ function loadSettings(){
     const raw = localStorage.getItem('burgerBoss_settings');
     if(raw) settings = Object.assign(settings, JSON.parse(raw));
   } catch(e){}
+  try{ applyBigText(); }catch(e){}
 }
 function saveSettings(){
   try { localStorage.setItem('burgerBoss_settings', JSON.stringify(settings)); } catch(e){}
@@ -1994,7 +2033,17 @@ function saveGame(){
       stores[activeStoreIdx].layout = layout;
     }
     localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records, dailyGoals}));
-  }catch(e){}
+    window._saveWarned = false;
+  }catch(e){
+    // An empty catch here meant a full localStorage quota (or a private window)
+    // lost the player's progress with no indication whatsoever. Warn once, and
+    // point at Export Save so the run is recoverable.
+    console.warn('Save failed', e);
+    if(!window._saveWarned){
+      window._saveWarned = true;
+      try{ showToast("⚠️ Couldn't save progress — use Export Save in Settings", 4500); }catch(_){}
+    }
+  }
 }
 
 function loadSave(){
@@ -2496,7 +2545,10 @@ function achvMetrics(){
   return { groups, robots, maxDay, cash:eco.cash, stores:stores.length,
            tables:  upg.tableCount || 1,
            grillLv: upg.grillMult  || 0,
-           todayStars: stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0 };
+           // Only meaningful while a day is actually being scored; on the Home
+           // Screen this used to report yesterday's average as "today".
+           todayStars: (gameState==='playing' && stats.groupsServed>0)
+             ? stats.totalStars/stats.groupsServed : 0 };
 }
 
 // Live progress for an achievement against the current metrics.
@@ -2559,8 +2611,12 @@ function dailyGoalPool(day){
     {id:'stars', icon:'⭐', metric:'stars',  goal:4,                         mode:'reach',  reward:60,       label:g=>`Finish at ${g}★ or better`},
     {id:'nowalk',icon:'🏃', metric:'walkouts',goal:0,                        mode:'atMost', reward:50,       label:()=>`No customers walk out`},
   ];
-  if(menuComboActive())
-    pool.push({id:'combo', icon:'🥤', metric:'combos', goal:Math.max(2, Math.ceil(day/2)), mode:'reach', reward:55, label:g=>`Serve ${g} combo meals`});
+  // The combo goal is ALWAYS in the pool, gated by `needs` instead of being
+  // conditionally pushed. seededPick shuffles by index, so a pool that changed
+  // length when combos were toggled in the Shop handed back a different three
+  // goals than the ones already previewed on the Home Screen.
+  pool.push({id:'combo', icon:'🥤', metric:'combos', goal:Math.max(2, Math.ceil(day/2)), mode:'reach', reward:55,
+             needs:()=>menuComboActive(), label:g=>`Serve ${g} combo meals`});
   return pool;
 }
 
@@ -2574,7 +2630,10 @@ function seededPick(arr, n, seed){
 }
 
 function rollDailyGoals(day){
-  const picks = seededPick(dailyGoalPool(day), 3, day*2654435761);
+  // Shuffle the whole fixed-length pool deterministically, THEN drop goals the
+  // player can't currently attempt, then take three. Order stays stable.
+  const shuffled = seededPick(dailyGoalPool(day), 99, day*2654435761);
+  const picks = shuffled.filter(p => !p.needs || p.needs()).slice(0, 3);
   dailyGoals = picks.map(p => ({
     id:p.id, icon:p.icon, metric:p.metric, goal:p.goal, mode:p.mode,
     reward:p.reward, desc:p.label(p.goal), done:false
@@ -3262,6 +3321,27 @@ function stopHomeAnim(){
   stopRestaurantAnim();
 }
 
+// The Home Screen runs two extra WebGL contexts (the spinning chef and the
+// restaurant preview) alongside the main game canvas. Stopping their animation
+// loops did NOT release the contexts, and some mobile GPUs evict the oldest
+// context once about eight are live -- which shows up as the game canvas
+// turning black. Entering gameplay now tears both down; they are rebuilt lazily
+// the next time the Home Screen is shown (both init fns already no-op when the
+// renderer exists).
+function releaseHomeRenderers(){
+  stopHomeAnim();
+  for(const holder of [hc, rp]){
+    if(!holder || !holder.renderer) continue;
+    try{
+      if(holder.scene) disposeObj(holder.scene);
+      holder.renderer.dispose();
+      if(holder.renderer.forceContextLoss) holder.renderer.forceContextLoss();
+    }catch(e){ console.warn('Home renderer teardown failed', e); }
+    holder.renderer = null; holder.scene = null; holder.camera = null;
+  }
+  hc.chef = null;
+}
+
 function positionHomeChef(){ resizeHomeCanvas(); }
 
 // ─────────────────────────────────────────────────────────────
@@ -3403,6 +3483,14 @@ function refreshSettingsUI(){
   if(cb){ cb.textContent = settings.colorblind?'ON':'OFF'; cb.style.color = settings.colorblind?'#66BB6A':'#888'; }
   const df = document.getElementById('set-diff-state');
   if(df){ const casual = settings.difficulty==='casual'; df.textContent = casual?'CASUAL':'NORMAL'; df.style.color = casual?'#66BB6A':'#90caf9'; }
+  const lb = document.getElementById('set-lbl-state');
+  if(lb){ const m = settings.labels || 'auto';
+    lb.textContent = m.toUpperCase();
+    lb.style.color = m==='off' ? '#888' : m==='on' ? '#66BB6A' : '#90caf9'; }
+  const tg = document.getElementById('set-tag-state');
+  if(tg){ tg.textContent = settings.ordertags?'ON':'OFF'; tg.style.color = settings.ordertags?'#66BB6A':'#888'; }
+  const bg = document.getElementById('set-big-state');
+  if(bg){ bg.textContent = settings.bigtext?'ON':'OFF'; bg.style.color = settings.bigtext?'#66BB6A':'#888'; }
 }
 function showSettings(){
   stopHomeAnim();
@@ -3462,6 +3550,28 @@ function toggleColorblind(){
   settings.colorblind = !settings.colorblind;
   refreshSettingsUI(); saveSettings();
 }
+// Station labels cycle auto -> on -> off. 'auto' shows them for the first few
+// days only, which is when new players actually need them.
+function toggleLabels(){
+  const order = ['auto','on','off'];
+  settings.labels = order[(order.indexOf(settings.labels || 'auto') + 1) % order.length];
+  refreshSettingsUI(); saveSettings();
+}
+function toggleOrderTags(){
+  settings.ordertags = !settings.ordertags;
+  refreshSettingsUI(); saveSettings();
+}
+function toggleBigText(){
+  settings.bigtext = !settings.bigtext;
+  applyBigText(); refreshSettingsUI(); saveSettings();
+}
+function applyBigText(){
+  if(document.body && document.body.classList)
+    document.body.classList.toggle('bigtext', !!settings.bigtext);
+}
+window.toggleLabels = toggleLabels;
+window.toggleOrderTags = toggleOrderTags;
+window.toggleBigText = toggleBigText;
 function toggleDifficulty(){
   settings.difficulty = (settings.difficulty==='casual') ? 'normal' : 'casual';
   refreshSettingsUI(); saveSettings();
@@ -3855,7 +3965,7 @@ function executeDayStart() {
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
   document.getElementById('pause-btn').style.display='flex';
-  stopHomeAnim();
+  releaseHomeRenderers();   // free the two Home Screen WebGL contexts
   ['start-screen','shop-screen','results-screen'].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.style.display='none';
@@ -4077,6 +4187,26 @@ function showResults(){
   }, 540+i*155);
 
   setTimeout(()=>{ el('res-rating-num').textContent=`⭐ ${todayAvg.toFixed(1)} today · ${cum} overall`; el('res-rating-num').style.opacity='1'; }, 1480);
+  // One line of "what actually happened today". The results screen showed the
+  // score but never the cause, so there was nothing to act on tomorrow.
+  setTimeout(()=>{
+    const co = el('res-coach'); if(!co) return;
+    const walked = stats.walkouts || 0;
+    const served = stats.groupsServed || 0;
+    let msg;
+    if(walked > 0){
+      msg = `🚶 ${walked} ${walked===1?'customer':'groups of customers'} walked out — serve faster or add a table.`;
+    } else if(served === 0){
+      msg = 'No customers served today.';
+    } else if(todayAvg >= 4.5){
+      msg = '⭐ Nearly flawless service — keep that streak alive.';
+    } else if(todayAvg >= 3.5){
+      msg = '👍 Solid day. Shave a few seconds off each order for 5★.';
+    } else {
+      msg = '⏳ Orders sat too long — cook ahead and keep clean trays stocked.';
+    }
+    co.textContent = msg; co.style.opacity = '1';
+  }, 1600);
   setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
   setTimeout(()=>{
     // Show passive + achievement income if any
@@ -4520,6 +4650,13 @@ function handleAction(){
       : player.holding && (player.holding.includes('burger') || player.holding.includes('soda') || player.holding.includes('fries'));
     if(player.holding && heldIsFood && t.group && t.group.state==='ordering'){
       if(serveHeldToGroup(t, player.holding)){ player.holding=null; ok=true; }
+      else {
+        // Bringing the wrong plate to a table used to do nothing at all -- no
+        // sound, no message -- which is why "why didn't it serve?" was the most
+        // common confusion. Say so out loud.
+        playSound('error');
+        spawnFloater(new THREE.Vector3(t.x, 2.4, t.z), 'Nobody ordered that!', '#EF5350');
+      }
     } else if(!player.holding && t.dirtyTrays>0){
       player.holding = isSeafood() ? 'dirty_basket' : 'dirty_tray';
       t.dirtyTrays--; ok=true;
@@ -4598,7 +4735,8 @@ function updateRobots(ds){
     // Validate target still exists and is a valid station
     if(bot.state === 'moving' && bot.target) {
         const targetId = Object.keys(stations).find(id => stations[id] === bot.target);
-        if(!targetId) { bot.target = null; bot.state = 'idle'; }
+        if(!targetId) { bot.target = null; bot.state = 'idle';
+          bot._bestDist = undefined; bot._stall = 0; bot._ghost = 0; }
     }
 
     if(bot.state==='idle' && !(bot._actionCooldown > 0)){
@@ -4924,18 +5062,32 @@ function updateRobots(ds){
         let dx = dx_direct / dist;
         let dz = dz_direct / dist;
 
-        // Robots used to walk straight through walls, counters and tables.
-        // They slide along obstacles like the player does -- but because there
-        // is no pathfinding, a robot boxed in on both axes is allowed through
-        // after ~1s rather than freezing for the rest of the day.
+        // Robots used to walk straight through walls, counters and tables. They
+        // now slide along obstacles like the player does -- but there is NO
+        // pathfinding, so sliding alone can livelock: a robot wedged between
+        // the tray rack and the back wall slides freely on z forever while
+        // never getting closer on x.
+        //
+        // The watchdog therefore measures PROGRESS TOWARD THE TARGET, not
+        // whether a given axis is blocked. If the robot hasn't got meaningfully
+        // closer in ~1.5s it phases through obstacles until it arrives.
+        // Reaching the target always outranks looking correct.
         const stepX = dx * botSpeed * ds, stepZ = dz * botSpeed * ds;
         const nx = bot.pos.x + stepX, nz = bot.pos.z + stepZ;
-        if(!checkColl(nx, nz, bot.id)){ bot.pos.x = nx; bot.pos.z = nz; bot._blocked = 0; }
-        else if(!checkColl(nx, bot.pos.z, bot.id)){ bot.pos.x = nx; bot._blocked = 0; }
-        else if(!checkColl(bot.pos.x, nz, bot.id)){ bot.pos.z = nz; bot._blocked = 0; }
-        else {
-          bot._blocked = (bot._blocked || 0) + ds;
-          if(bot._blocked > 60){ bot.pos.x = nx; bot.pos.z = nz; }  // escape hatch
+        if(bot._ghost > 0){
+          bot._ghost -= ds;
+          bot.pos.x = nx; bot.pos.z = nz;
+        } else {
+          if(!checkColl(nx, nz, bot.id)){ bot.pos.x = nx; bot.pos.z = nz; }
+          else if(!checkColl(nx, bot.pos.z, bot.id)){ bot.pos.x = nx; }
+          else if(!checkColl(bot.pos.x, nz, bot.id)){ bot.pos.z = nz; }
+
+          if(bot._bestDist === undefined || dist < bot._bestDist - 0.05){
+            bot._bestDist = dist; bot._stall = 0;
+          } else {
+            bot._stall = (bot._stall || 0) + ds;
+            if(bot._stall > 90){ bot._ghost = 240; bot._stall = 0; }
+          }
         }
 
         bot.mesh.position.x = bot.pos.x;
@@ -5085,6 +5237,7 @@ function updateRobots(ds){
 
       if(bot.state !== 'washing') bot.state = 'idle';
       bot.target = null;
+      bot._bestDist = undefined; bot._stall = 0; bot._ghost = 0;   // reset nav watchdog
       // Only redraw when something actually changed.
       if(actionDone) updateStationVisuals();
     }
@@ -5095,6 +5248,36 @@ function updateRobots(ds){
 //  FLOATING UI
 // ─────────────────────────────────────────────────────────────
 const floatUI=document.getElementById('floating-ui');
+// Short text label for an order, for the accessibility tag under each bubble.
+function orderTag(o){
+  switch(o){
+    case 'burger_on_tray':      return 'BURGER';
+    case 'soda_on_tray':        return 'SODA';
+    case 'burger_soda_on_tray': return 'COMBO';
+    case 'fries_on_tray':       return 'FRIES';
+    case 'taco_in_basket':      return 'TACO';
+    case 'chowder_in_basket':   return 'CHOWDER';
+    case 'lemonade_in_basket':  return 'LEMONADE';
+    case 'taco_chowder_basket': return 'TACO+CHWD';
+    case 'taco_lemonade_basket':return 'TACO+LMN';
+    default: return '';
+  }
+}
+// Friendly in-world names, shown over each station for the first few days (or
+// whenever the player leaves labels on). New players could not tell the Fridge
+// from the Tray Rack without opening Practice.
+const STATION_LABELS = {
+  fridge:'FRIDGE', grill:'GRILL', fryer:'FRYER', trayrack:'TRAYS', sink:'SINK',
+  counter:'COUNTER', trash:'TRASH', dumpster:'DUMPSTER', table:'TABLE',
+  sodafountain:'SODA', cooler:'COOLER', beachgrill:'GRILL', assembly:'ASSEMBLY',
+  chowderpot:'CHOWDER', lemonadestation:'LEMONADE', basketrack:'BASKETS',
+};
+function stationLabelsVisible(){
+  if(settings.labels === 'on')  return true;
+  if(settings.labels === 'off') return false;
+  return eco.day <= 4;           // 'auto': training wheels for the first few days
+}
+
 function scr(v){
   const p=v.clone().project(camera);
   return {x:(p.x*.5+.5)*window.innerWidth, y:(p.y*-.5+.5)*window.innerHeight, z:p.z};
@@ -5144,6 +5327,17 @@ function drawFloatUI(){
     }
   }
   window._currentStinkPenalty = stinkPenalty;
+
+  if(stationLabelsVisible()){
+    for(const k in stations){
+      const st = stations[k];
+      const name = STATION_LABELS[st.type];
+      if(!name || st.type === 'robot') continue;
+      const lp = scr(new THREE.Vector3(st.x, st.type === 'table' ? 1.2 : 4.2, st.z));
+      if(lp.z >= 1) continue;
+      html += `<div class="stlabel" style="left:${lp.x}px;top:${lp.y}px;">${name}</div>`;
+    }
+  }
   
   groups.forEach(g=>{ 
     if(g.state==='queue') {
@@ -5179,6 +5373,13 @@ function drawFloatUI(){
        if(cp.z < 1) {
           let icon = '';
           const seatServed = t.group.servedMask ? t.group.servedMask[i] : (i < t.served);
+          // Order-matching cue. While carrying a plate, the seat that ordered it
+          // pulses green and every other seat dims -- the single rule the whole
+          // game turns on, and it used to be taught nowhere.
+          let cls = '';
+          if(!seatServed && player.holding){
+            cls = (t.group.orders[i] === player.holding) ? ' match' : ' dim';
+          }
           if (seatServed) {
               icon = '✔️';
           } else {
@@ -5197,7 +5398,10 @@ function drawFloatUI(){
                 else icon = '🍔';
               }
           }
-          html+=`<div class="fbubble" style="left:${cp.x}px;top:${cp.y}px;padding:2px 6px;font-size:14px;">${icon}</div>`;
+          // Emoji-only orders are unreadable for some players; the tag is a
+          // short text label under the icon, toggled in Settings.
+          const tag = (settings.ordertags && !seatServed) ? `<span class="otag">${orderTag(t.group.orders[i])}</span>` : '';
+          html+=`<div class="fbubble${cls}" style="left:${cp.x}px;top:${cp.y}px;padding:2px 6px;font-size:14px;">${icon}${tag}</div>`;
        }
     });
   }
@@ -5413,6 +5617,19 @@ function animate(){
       if(needVis) updateStationVisuals();
 
       if(streakTimer>0){ streakTimer-=ds; if(streakTimer<=0) serveStreak=0; }
+      // Surface the streak. The bonus system was well designed but completely
+      // invisible until it fired, so nobody chased it.
+      {
+        const sw = document.getElementById('streak-wrap');
+        if(sw){
+          if(serveStreak >= 2 && streakTimer > 0){
+            sw.style.display = 'inline-flex';
+            const mult = 1 + Math.min(serveStreak - 1, 4) * 0.1;
+            document.getElementById('streak-x').textContent = `🔥 x${mult.toFixed(1)}`;
+            document.getElementById('streak-fill').style.width = Math.max(0, Math.min(100, streakTimer / 360 * 100)) + '%';
+          } else sw.style.display = 'none';
+        }
+      }
       if(stats.spawnTimer>0) stats.spawnTimer-=ds;
       if(stats.groupsLeft>0&&stats.spawnTimer<=0){ 
         // After day 10: spawn up to maxSimultaneous groups at once when timer fires
@@ -5435,14 +5652,17 @@ function animate(){
         endDay(); return;
       }
 
-      const queueGroups = groups.filter(g => g.state === 'queue');
+      // Stamp queue positions once per frame. This used to be a filtered array
+      // plus an indexOf() per group (O(n^2)), read from a snapshot taken before
+      // the loop could seat anyone.
+      { let qpos = 0; for(const q of groups) if(q.state === 'queue') q._qi = qpos++; }
       for(let i=groups.length-1;i>=0;i--){
         const g=groups[i];
         if(g.state==='approach_door'){
           g.target.set(doorX(),0,bounds.b-2); if(moveToTarget(g,ds)) g.state='queue';
         }
         else if(g.state==='queue'){
-          const qi = queueGroups.indexOf(g);
+          const qi = g._qi || 0;
           g.target.set(doorX() + (qi % 2 === 0 ? -1.0 : 1.0), 0, bounds.b - 2 + qi * 2.5); // Line out the door
           moveToTarget(g,ds); 
           g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);

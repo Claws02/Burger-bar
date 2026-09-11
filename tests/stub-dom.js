@@ -59,6 +59,13 @@ function install(){
   // rAF does NOT auto-run. Callbacks are queued by id (the game runs several
   // concurrent loops -- main animate(), home-screen spin, results counter) so a
   // cancelAnimationFrame on one must not silently kill the others.
+  const timers = { pending:new Map(), id:0,
+    flush(){ let n=0;
+      for(let pass=0; pass<8 && timers.pending.size; pass++){
+        const due=[...timers.pending]; timers.pending.clear();
+        for(const [,t] of due){ try{ t.fn(); n++; }catch(e){ timers.lastError=e; } }
+      }
+      return n; } };
   const raf = { pending:new Map(), id:0,
     drain(ts){ const due=[...raf.pending]; raf.pending.clear();
       for(const [,cb] of due){ try{ cb(ts); }catch(e){ raf.lastError=e; throw e; } }
@@ -72,7 +79,11 @@ function install(){
     requestAnimationFrame(cb){ const id=++raf.id; raf.pending.set(id,cb); return id; },
     cancelAnimationFrame(id){ raf.pending.delete(id); },
     performance:{ now:()=>fakeNow },
-    setTimeout:()=>0, clearTimeout(){}, setInterval:()=>0, clearInterval(){},
+    // Timers are queued, not dropped, so tests can flush deferred UI work
+    // (the results screen does most of its rendering inside setTimeout).
+    setTimeout(fn, ms){ const id=++timers.id; timers.pending.set(id,{fn,at:(ms||0)}); return id; },
+    clearTimeout(id){ timers.pending.delete(id); },
+    setInterval(){ return ++timers.id; }, clearInterval(){},
     matchMedia:()=>({matches:false, addEventListener(){}, addListener(){}}),
     AudioContext: function(){ return { state:'suspended', currentTime:0, destination:{},
       createGain:()=>({ gain:{value:1,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}, connect(){} }),
@@ -84,7 +95,7 @@ function install(){
   window.window = window;
   window.webkitAudioContext = window.AudioContext;
 
-  return { window, document, localStorage, raf,
+  return { window, document, localStorage, raf, timers,
     stepClock:(ms)=>{ fakeNow+=ms; }, now:()=>fakeNow, makeEl };
 }
 module.exports = { install, makeEl };

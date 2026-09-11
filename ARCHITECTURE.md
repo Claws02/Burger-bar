@@ -37,6 +37,41 @@ showStartMenu()  (Home Screen, gameState='start_menu')
 
 ---
 
+## 1a. Shared GPU resources (read this before adding meshes)
+
+Three.js does **not** free GPU buffers when a mesh leaves the scene graph — only
+an explicit `.dispose()` does. Rebuilding visuals used to allocate a fresh
+geometry + material set every call and never release the old one, leaking ~183
+geometries and ~42 materials per `updateStationVisuals()`. Because the rebuild
+rate *also* rises with progression (more stations, and one rebuild per robot
+arrival), the leak rate was ~34× higher at Day 50 than Day 1 — which is why it
+presented as "the game crashes at higher levels".
+
+The rule now:
+
+| Helper | Use for | Notes |
+|--------|---------|-------|
+| `M(color[,opacity])` / `MB(color)` | **all** materials | Memoized. Same colour → same object, tagged `_shared`. |
+| `GBox/GCyl/GSph/GCylT/GSphS/GCone` | **all** geometry | Cached by shape key, tagged `_shared`. |
+| `cachedGeo(key, make)` | one-off shapes | For anything the helpers don't cover. |
+| `MU(color[,opacity])` | a material you will **mutate** | Unique. You own it; you must dispose it. |
+| `disposeObj(obj)` | freeing a display object | Skips anything `_shared`. |
+| `discard(parent, obj)` | remove **and** free | The normal way to drop a mesh. |
+
+Two consequences worth remembering:
+
+- **Never mutate a material returned by `M()`/`MB()`** — every other mesh of that
+  colour shares it. Use `MU()` and dispose it yourself (trail particles do this).
+- **Never key a cached geometry on a random value.** Crumbs and cloud puffs used
+  `Math.random()` radii, which would have made the cache unbounded; both snap to
+  a small fixed set of sizes now.
+
+Anything removed from the scene goes through `discard()` — station visuals,
+customer despawn, day reset, `cleanupGameScene`, `buildWorld`/`buildRoom`
+teardown, `removeStation`. The Home Screen's two extra WebGL contexts (chef +
+restaurant preview) are released by `releaseHomeRenderers()` when a day starts
+and rebuilt lazily on return.
+
 ## 2. Game states (`gameState`)
 
 | State          | Meaning                                             |
@@ -234,8 +269,16 @@ approach_door → queue → to_table → ordering → eating → leave → leavi
 ```
 
 - **Group size** 1–2 (heavy groups are size 1 but order 3 times in a row).
-- **Types** (Day ≥ 10): 15 % `vip` (½ patience, **3× pay**), 15 % `heavy`
-  (3 sequential orders).
+- **Types, staggered:** `vip` (½ patience, **3× pay**) from **Day 8**; `heavy`
+  (3 sequential orders) from **Day 12**. They used to both start on Day 10, the
+  same day simultaneous arrivals began — three new mechanics in one shift.
+- **Day length is capped at 28 groups** (`DAY_LENGTH_CAP` in `executeDayStart`).
+  It used to be `day + 1` forever, so a Day-100 shift was 100+ groups of
+  identical work. Past the cap days get *harder*, not *longer*: simultaneous
+  arrivals ramp (up to 5) and patience tightens to a floor of 0.7×.
+- **Walkouts are not serves.** They no longer increment `groupsServed` (which
+  was inflating every achievement keyed off it); they feed the rolling
+  reputation average as a half-weight 1-star customer instead.
 - **Two patience clocks:** `waitPatience` (in the door queue) and `foodPatience`
   (seated, waiting for food). A trash `♨️` stink penalty drains both ~20 % faster.
 - **Stars** at end of eating: `score = waitFrac*0.3 + foodFrac*0.7`, bucketed
@@ -276,6 +319,27 @@ Hired from the Shop, role-set in Edit Mode by facing one and pressing ACT
 
 Robots **level 1→5** with in-store days (`getRobotLevel`), which raises their
 move speed. Idle stores also pay a small passive income per robot.
+
+### Robot FSM invariants (do not break these)
+
+An exhaustive role × held-item sweep once found **32 states** where a robot
+parked permanently and never worked again — every role's bin branch required
+`contents < 4`, so a single full trash bin bricked the whole staff. Three rules
+keep that from coming back, and `tests/run.js` enforces all of them:
+
+1. **No dead ends.** After the role-specific planner there is a *universal
+   fallback plan* (counter → bin → dumpster), universal *action* handlers for
+   any `(role × holding × station)` the role handlers don't name, and a
+   last-resort drop after ~5s. Robots can bag and dump the trash themselves.
+2. **Cool down after every arrival, not just successful ones.** A robot that
+   loses a race for a resource used to re-target and re-arrive on the next
+   frame, rebuilding every visual in the restaurant each time.
+3. **Navigation is watched by progress, not by blocking.** Robots slide along
+   obstacles, but there is *no pathfinding*, so a robot can slide freely on one
+   axis forever while never getting closer on the other. If `dist` hasn't
+   improved in ~1.5 s the robot phases through until it arrives. Arriving beats
+   looking correct — an "is either axis blocked" check is **not** sufficient and
+   silently killed the serve loop when it was tried.
 
 ---
 
@@ -394,8 +458,21 @@ is a clean future add (mirror the grill branch in `updateRobots`).
 No build step. Validate the game script without a browser:
 
 ```bash
-# extract the inert game script and syntax-check it
-sed -n '919,5083p' index.html > /tmp/game.js && node --check /tmp/game.js
+node tests/run.js          # 21 tests, no install, no network, no browser
+```
+
+`tests/harness.js` boots the **real** game script from `index.html` in a Node
+`vm` against a stubbed Three.js + DOM, then steps frames deterministically. The
+Three.js stub counts geometry/material construction vs. disposal, so memory
+regressions are a number rather than a guess. `tests/run.js` covers GPU
+disposal, the robot FSM sweep, the tray economy, day pacing and the feedback
+layer, and drives a full staffed day end to end.
+
+To compare against another revision:
+
+```bash
+git show <rev>:index.html > /tmp/old.html
+BURGERBAR_INDEX=/tmp/old.html node tests/run.js
 ```
 
 Then smoke-test in a browser (`python3 -m http.server 8000`): play Day 1, cook
