@@ -72,6 +72,37 @@ teardown, `removeStation`. The Home Screen's two extra WebGL contexts (chef +
 restaurant preview) are released by `releaseHomeRenderers()` when a day starts
 and rebuilt lazily on return.
 
+## 1b. Characters vs. skins
+
+A **character** is a body plan; a **skin** is the colour scheme painted onto it.
+They are independent, so any skin works on any character.
+
+- `CHARACTERS` lists them (`human`, six animals, five objects). `human` is the
+  default and is always available.
+- `buildCharacter(id, skin)` is the **single source of truth** for both the Home
+  Screen chef and the in-game player, so the two cannot drift. It returns
+  `{group, body, head, armL, armR, hat}`; `hat` is `null` for characters that
+  don't wear one, so `applyCrown()` and skin application must null-check.
+- `rebuildPlayerMesh()` swaps the in-game player. It disposes the old group and
+  reassigns `pBody/pHead/pHat*` (declared with `let`, not `const`). The held item
+  hangs off `pMesh`, not the character group, so it survives a rebuild.
+- Every character is built from the cached geometry helpers, so switching costs
+  **zero** GPU memory after first use (enforced by a test).
+
+To add a character: add an entry to `CHARACTERS` and a `case` in
+`buildCharacter`. Use only the cached helpers, and give it a `body` part.
+
+### WebGL canvases are single-use
+
+A `<canvas>` hands out exactly **one** WebGL context for its lifetime;
+`getContext()` returns the same object forever, and after `forceContextLoss()`
+that context is dead. So `releaseHomeRenderers()` also calls `recycleCanvas()`,
+replacing the element with a fresh clone — otherwise the next renderer draws
+nothing, which presented as "the chef doesn't load on the title screen".
+Recycling the node also drops its event listeners, which is why
+`initChefDrag()` is guarded per-element (`canvas._dragBound`) rather than by a
+global flag.
+
 ## 2. Game states (`gameState`)
 
 | State          | Meaning                                             |
@@ -407,8 +438,12 @@ achievements, reset each morning, each paying a small cash bonus.
 - **Award** (`checkDailyGoals`, called in `endDay` before the results math):
   credits `dg.reward` for each newly-completed goal, tracked as
   `stats._dailyEarned` (🎯 line on the Results screen).
-- **Surfaces:** live/preview list at the top of the Achievements screen; a
-  completed/missed recap on the Results screen.
+- **Surfaces:** a **top-left button + dropdown during play** (`toggleGoalsPanel`
+  / `renderGoalsPanel`) showing live progress, rewards and a `done/total` badge;
+  a live/preview list at the top of the Achievements screen; and a
+  completed/missed recap on the Results screen. The panel re-renders only when
+  the underlying stats actually change (a signature check in the frame loop),
+  not every frame.
 
 **Day-boundary heads-ups.** Milestone alerts (Day 10 Busy Hours/VIP) and
 newly-unlocked shop items are **queued at the END of the day**
@@ -458,7 +493,7 @@ is a clean future add (mirror the grill branch in `updateRobots`).
 No build step. Validate the game script without a browser:
 
 ```bash
-node tests/run.js          # 21 tests, no install, no network, no browser
+node tests/run.js          # 37 tests, no install, no network, no browser
 ```
 
 `tests/harness.js` boots the **real** game script from `index.html` in a Node

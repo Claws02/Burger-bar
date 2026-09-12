@@ -91,6 +91,36 @@ t('returning to the Home Screen rebuilds its renderers', () => {
   ok(g.run('return !!hc.renderer;'), 'home chef renderer was not rebuilt after gameplay');
 });
 
+t('the home chef survives repeated home <-> gameplay cycles', () => {
+  // A <canvas> hands out exactly one WebGL context for its lifetime, so
+  // releasing the home renderers and then rebuilding on the SAME element left
+  // the chef rendering nothing. The canvas must be recycled.
+  const g = boot();
+  g.run('showStartMenu();');
+  const first = g.run('return document.getElementById("home-chef-canvas")._uid || 0;');
+  for(let c = 1; c <= 4; c++){
+    g.run('eco.day=' + c + '; executeDayStart();');
+    g.run('showStartMenu();');
+    ok(g.run('return !!hc.renderer;'), `home chef renderer missing after cycle ${c}`);
+    ok(g.run('return !!hc.mesh;'),     `home chef mesh missing after cycle ${c}`);
+    ok(g.run('return !!rp.renderer;'), `restaurant preview missing after cycle ${c}`);
+  }
+  const last = g.run('return document.getElementById("home-chef-canvas")._uid || 0;');
+  ok(last !== first, 'the chef canvas element was reused after its WebGL context was destroyed');
+});
+
+t('chef drag listeners are bound once per canvas, not per visit', () => {
+  const g = boot();
+  g.run('window.__binds=0; var _o=initChefDrag; initChefDrag=function(){ var c=document.getElementById("home-chef-canvas"); var was=c._dragBound; var r=_o.apply(this,arguments); if(!was && c._dragBound) window.__binds++; return r; };');
+  g.run('showStartMenu();');
+  for(let c = 1; c <= 5; c++){ g.run('eco.day=' + c + '; executeDayStart();'); g.run('showStartMenu();'); }
+  // One binding per *element*; the element is recycled each release, so binds
+  // should track canvas swaps, never grow with repeated visits to one canvas.
+  g.run('showStartMenu(); showStartMenu(); showStartMenu();');
+  const binds = g.run('return window.__binds;');
+  lte(binds, 6, `drag listeners re-bound ${binds} times across 5 cycles + 3 extra visits`);
+});
+
 t('spawning and despawning customers costs no GPU memory', () => {
   const g = boot(); lateGame(g);
   g.run(`gameState='playing';
@@ -387,6 +417,155 @@ t('matching seats are highlighted while carrying a plate', () => {
   const html = g.html('floating-ui');
   ok(/fbubble match/.test(html), 'the matching seat was not highlighted');
   ok(/fbubble dim/.test(html),   'non-matching seats were not dimmed');
+});
+
+section('5b. In-game daily goals');
+
+t('the goals button and panel appear only during play', () => {
+  const g = boot();
+  g.run('showStartMenu();');
+  eq(g.run('return document.getElementById("goals-hud").style.display;'), 'none',
+     'goals HUD was visible on the Home Screen:');
+  g.run('eco.day=4; executeDayStart();');
+  eq(g.run('return document.getElementById("goals-hud").style.display;'), 'flex',
+     'goals HUD was missing during play:');
+  g.run('showStartMenu();');
+  eq(g.run('return document.getElementById("goals-hud").style.display;'), 'none',
+     'goals HUD stayed visible after returning home:');
+});
+
+t('the panel lists the live goals with progress', () => {
+  const g = boot();
+  g.run('eco.day=6; executeDayStart();');
+  g.run('toggleGoalsPanel();');
+  ok(g.run('return document.getElementById("goals-hud").classList.contains("open");'),
+     'the panel did not open');
+  const html = g.html('goals-panel-list');
+  const rows = (html.match(/gp-row/g) || []).length;
+  eq(rows, g.run('return dailyGoals.length;'), 'panel rows did not match the day\'s goals:');
+  ok(/gp-fill/.test(html), 'no progress bars rendered');
+  ok(/\+\$/.test(html),  'no reward shown');
+});
+
+t('the goals badge tracks progress and completion', () => {
+  const g = boot();
+  g.run('eco.day=6; executeDayStart(); toggleGoalsPanel();');
+  const before = g.text('goals-btn-count');
+  g.run('stats.groupsServed=200; stats.cashEarned=99999; stats.totalStars=1000; stats.combosServed=200; stats.walkouts=0; renderGoalsPanel();');
+  const after = g.text('goals-btn-count');
+  ok(before !== after, `badge never updated (stayed ${before})`);
+  ok(/^(\d+)\/\1$/.test(after), `badge did not reach completion (got ${after})`);
+  ok(g.run('return document.getElementById("goals-btn").classList.contains("done");'),
+     'the button was not marked complete');
+});
+
+t('toggling the panel closes it again', () => {
+  const g = boot();
+  g.run('eco.day=4; executeDayStart(); toggleGoalsPanel(); toggleGoalsPanel();');
+  eq(g.run('return document.getElementById("goals-hud").classList.contains("open");'), false,
+     'the panel stayed open after a second tap:');
+});
+
+section('5c. How to Play visuals');
+
+t('How to Play draws the kitchen flow diagram', () => {
+  const g = boot();
+  g.run('showPractice();');
+  const flow = g.html('practice-flow');
+  ok(/<svg/.test(flow), 'no flow diagram rendered');
+  ok((flow.match(/pf-node/g) || []).length >= 6, 'flow diagram has too few stations');
+  ok(/marker-end/.test(flow), 'flow diagram has no directional arrows');
+  ok(/aria-label/.test(flow), 'flow diagram has no text alternative');
+});
+
+t('every How to Play step carries a visual', () => {
+  const g = boot();
+  g.run('showPractice();');
+  const steps = g.html('practice-steps');
+  const n = (steps.match(/practice-step/g) || []).length;
+  const v = (steps.match(/pstep-vis/g) || []).length;
+  ok(n > 0, 'no steps rendered');
+  eq(v, n, 'steps without a visual strip:');
+  ok((steps.match(/pv-tile/g) || []).length >= n, 'visual strips have no tiles');
+});
+
+t('the grill step shows the cook/burn timeline', () => {
+  const g = boot();
+  g.run('showPractice();');
+  const steps = g.html('practice-steps');
+  ok(/pv-timeline/.test(steps), 'no grill timing illustration');
+  ok(/BURNT/.test(steps), 'the burn state is not shown');
+});
+
+section('6. Characters');
+
+t('every character builds a complete body', () => {
+  const g = boot();
+  const ids = g.run('return CHARACTERS.map(c=>c.id);');
+  ok(ids.length >= 8, `only ${ids.length} characters defined`);
+  ok(ids.includes('human'), 'the human chef option was dropped');
+  for(const id of ids){
+    g.run(`cosm.character='${id}'; rebuildPlayerMesh();`);
+    const meshes = g.run('return (function(){let n=0; pCharGroup.traverse(()=>n++); return n;})();');
+    ok(g.run('return !!pBody;'), `${id} built no body mesh`);
+    ok(meshes >= 5, `${id} built only ${meshes} meshes — likely an empty silhouette`);
+  }
+});
+
+t('characters have both animal and object options', () => {
+  const g = boot();
+  const kinds = g.run('return CHARACTERS.map(c=>c.kind);');
+  ok(kinds.includes('Animal'), 'no animal characters');
+  ok(kinds.includes('Object'), 'no object characters');
+  ok(kinds.includes('Human'),  'no human character');
+});
+
+t('switching characters costs no GPU memory', () => {
+  const g = boot();
+  const ids = g.run('return CHARACTERS.map(c=>c.id);');
+  const cycle = () => ids.forEach(id => g.run(`cosm.character='${id}'; rebuildPlayerMesh();`));
+  cycle();                       // warm the shared geometry cache
+  const base = g.leak();
+  for(let i=0;i<4;i++) cycle();
+  eq(g.leak().geo - base.geo, 0, 'geometry leaked while switching characters:');
+  eq(g.leak().mat - base.mat, 0, 'materials leaked while switching characters:');
+});
+
+t('the character picker renders and marks the current pick', () => {
+  const g = boot();
+  g.run('showSkinsShop();');
+  const html = g.html('char-row');
+  const n = (html.match(/char-chip/g) || []).length;
+  ok(n >= 8, `character picker rendered ${n} chips`);
+  ok(/char-chip on/.test(html), 'the equipped character was not highlighted');
+});
+
+t('Surprise me picks a different, non-human character', () => {
+  const g = boot();
+  g.run("cosm.character='human'; showSkinsShop();");
+  for(let i=0;i<12;i++){
+    const before = g.run('return cosm.character;');
+    g.run('randomCharacter();');
+    const after = g.run('return cosm.character;');
+    ok(after !== 'human', 'Surprise me landed on the human chef');
+    ok(after !== before,  'Surprise me returned the character already equipped');
+  }
+});
+
+t('the chosen character survives a save/reload', () => {
+  const g = boot();
+  g.run("setCharacter('dino'); saveGame();");
+  const raw = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  const g2 = boot({save: raw});
+  eq(g2.run('return cosm.character;'), 'dino', 'character was not persisted:');
+  ok(g2.run('return !!pCharGroup;'), 'player mesh was not rebuilt from the saved character');
+});
+
+t('a character with no chef hat does not break the crown or skins', () => {
+  const g = boot();
+  g.run("cosm.character='coffee'; upg.burgerCrown=true; rebuildPlayerMesh(); applyCrown();");
+  g.run("applyChefSkin('gold');");
+  ok(g.run('return !!pCharGroup;'), 'applying a skin to a hatless character broke the player mesh');
 });
 
 // ── summary ─────────────────────────────────────────────────────────────────

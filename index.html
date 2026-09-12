@@ -92,10 +92,6 @@ canvas{display:block;width:100%;height:100%;}
 .fbubble.match::after{border-top-color:#2E7D32;}
 .fbubble.dim{opacity:.32;filter:saturate(.4);}
 @keyframes seatPulse{0%,100%{transform:translate(-50%,-100%) scale(1);}50%{transform:translate(-50%,-100%) scale(1.13);}}
-/* Small floating name tags over stations, shown for the first few days. */
-.stlabel{position:absolute;transform:translate(-50%,-50%);background:rgba(20,24,28,.82);color:#fff;
-  font-size:11px;font-weight:700;letter-spacing:.4px;padding:3px 8px;border-radius:9px;
-  pointer-events:none;white-space:nowrap;border:1px solid rgba(255,255,255,.22);}
 /* Serve-streak meter next to the cash HUD. */
 #streak-wrap{display:none;align-items:center;gap:6px;margin-left:10px;}
 #streak-bar{width:52px;height:6px;background:rgba(0,0,0,.45);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,.35);}
@@ -105,9 +101,52 @@ canvas{display:block;width:100%;height:100%;}
 body.bigtext{font-size:118%;}
 body.bigtext .fbubble{font-size:21px;}
 body.bigtext #cash-val,body.bigtext #rating-val{font-size:118%;}
-body.bigtext .stlabel{font-size:13px;}
 /* Order text tags, for players who can't rely on emoji alone. */
 .otag{display:block;font-size:9px;font-weight:800;letter-spacing:.6px;line-height:1.1;opacity:.75;margin-top:1px;}
+/* Character picker (Skins screen) */
+#char-section{width:100%;max-width:480px;background:rgba(0,0,0,.3);border-radius:16px;padding:12px 14px;margin-bottom:14px;border:1px solid rgba(255,255,255,.1);}
+.char-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:8px;}
+.char-title{font-size:15px;font-weight:900;color:#4fc3f7;}
+#char-random-btn{background:rgba(79,195,247,.16);border:1.5px solid rgba(79,195,247,.55);color:#4fc3f7;
+  font-family:inherit;font-weight:900;font-size:12px;padding:6px 12px;border-radius:12px;cursor:pointer;white-space:nowrap;}
+#char-random-btn:active{transform:scale(.95);}
+#char-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
+.char-chip{flex:0 0 auto;width:66px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.14);
+  border-radius:14px;padding:8px 4px 6px;text-align:center;cursor:pointer;transition:transform .12s,border-color .15s;}
+.char-chip:active{transform:scale(.94);}
+.char-chip.on{border-color:#4fc3f7;background:rgba(79,195,247,.16);box-shadow:0 0 0 2px rgba(79,195,247,.28);}
+.char-chip .cc-ico{font-size:26px;line-height:1.15;}
+.char-chip .cc-name{font-size:9.5px;font-weight:800;color:rgba(255,255,255,.82);line-height:1.15;margin-top:2px;}
+.char-chip .cc-kind{font-size:8px;font-weight:800;letter-spacing:.5px;color:rgba(255,255,255,.42);text-transform:uppercase;}
+.char-note{font-size:10.5px;color:rgba(255,255,255,.42);margin-top:8px;line-height:1.4;}
+/* ── In-game daily goals (top-left) ── */
+#goals-hud{position:absolute;top:14px;left:14px;z-index:8;display:none;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:auto;}
+#goals-btn{display:flex;align-items:center;gap:6px;background:rgba(10,15,25,.85);backdrop-filter:blur(8px);
+  border:1.5px solid rgba(79,195,247,.45);border-radius:14px;padding:8px 11px;color:#fff;font-family:inherit;
+  font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.4);line-height:1;}
+#goals-btn:active{transform:scale(.95);}
+#goals-btn.done{border-color:rgba(102,187,106,.7);}
+#goals-btn-count{color:#4fc3f7;}
+#goals-btn.done #goals-btn-count{color:#66BB6A;}
+#goals-btn-caret{font-size:10px;opacity:.7;transition:transform .18s;}
+#goals-hud.open #goals-btn-caret{transform:rotate(180deg);}
+#goals-panel{display:none;width:214px;background:rgba(10,15,25,.94);backdrop-filter:blur(10px);
+  border:1.5px solid rgba(255,255,255,.16);border-radius:16px;padding:10px 11px;
+  box-shadow:0 8px 24px rgba(0,0,0,.55);animation:goalsDrop .16s ease-out;}
+#goals-hud.open #goals-panel{display:block;}
+@keyframes goalsDrop{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+#goals-panel-head{font-size:9.5px;font-weight:900;letter-spacing:1.2px;color:rgba(255,255,255,.45);margin-bottom:8px;}
+.gp-row{margin-bottom:9px;}
+.gp-row:last-child{margin-bottom:0;}
+.gp-top{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:rgba(255,255,255,.9);line-height:1.25;}
+.gp-top .gp-ico{font-size:13px;flex:0 0 auto;}
+.gp-row.done .gp-top{color:#66BB6A;}
+.gp-bar{height:5px;background:rgba(0,0,0,.5);border-radius:3px;overflow:hidden;margin-top:4px;border:1px solid rgba(255,255,255,.14);}
+.gp-fill{height:100%;background:#4fc3f7;transition:width .25s;}
+.gp-row.done .gp-fill{background:#66BB6A;}
+.gp-meta{display:flex;justify-content:space-between;font-size:9.5px;font-weight:800;color:rgba(255,255,255,.5);margin-top:3px;}
+.gp-meta .gp-rew{color:#ffc107;}
+body.bigtext .gp-top{font-size:13px;}
 
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;}
 #top-hud{position:absolute;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px; display:none;}
@@ -514,6 +553,30 @@ body.bigtext .stlabel{font-size:13px;}
 .pstep-body{flex:1;min-width:0;}
 .pstep-title{font-size:13px;font-weight:900;color:#fff;margin-bottom:3px;}
 .pstep-desc{font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.45;}
+/* ── How to Play visuals ── */
+#practice-flow{width:100%;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:10px 8px 6px;margin-bottom:12px;}
+#practice-flow svg{width:100%;height:auto;display:block;}
+.pf-label{font:700 8.5px system-ui,sans-serif;fill:rgba(255,255,255,.6);letter-spacing:.3px;}
+.pf-node{fill:rgba(255,255,255,.07);stroke:rgba(255,255,255,.22);stroke-width:1.2;}
+.pf-node-hot{fill:rgba(255,152,0,.16);stroke:rgba(255,152,0,.6);}
+.pf-node-cool{fill:rgba(79,195,247,.14);stroke:rgba(79,195,247,.55);}
+.pf-arrow{stroke:rgba(255,255,255,.35);stroke-width:1.6;fill:none;}
+.pf-arrow-loop{stroke:rgba(79,195,247,.5);stroke-width:1.6;fill:none;stroke-dasharray:3 3;}
+.pf-cap{font:900 9px system-ui,sans-serif;fill:rgba(255,255,255,.45);letter-spacing:1px;}
+/* per-step "what you're holding" strip */
+.pstep-vis{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:7px;}
+.pv-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:44px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:9px;padding:4px 6px;}
+.pv-tile.hold{border-color:rgba(102,187,106,.55);background:rgba(102,187,106,.13);}
+.pv-tile.warn{border-color:rgba(239,83,80,.55);background:rgba(239,83,80,.13);}
+.pv-ico{font-size:17px;line-height:1.1;}
+.pv-lbl{font-size:7.5px;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.3px;margin-top:1px;text-align:center;white-space:nowrap;}
+.pv-arrow{color:rgba(255,255,255,.4);font-size:12px;font-weight:900;}
+/* grill timing bar illustration */
+.pv-timeline{display:flex;width:100%;height:9px;border-radius:5px;overflow:hidden;margin-top:7px;border:1px solid rgba(255,255,255,.18);}
+.pv-seg{flex:1;display:flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:900;color:rgba(0,0,0,.65);letter-spacing:.3px;}
+body.bigtext .pv-lbl{font-size:9px;}
 
 /* ── FIRST-RUN INTRO CAROUSEL ── */
 #intro-screen{
@@ -720,6 +783,17 @@ body.bigtext .stlabel{font-size:13px;}
       <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: 0</span></div>
       <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span><span id="streak-wrap"><span id="streak-x">🔥 x1</span><span id="streak-bar"><span id="streak-fill"></span></span></span></div>
     </div>
+    <div id="goals-hud">
+      <button id="goals-btn" onclick="toggleGoalsPanel()">
+        <span id="goals-btn-ico">🎯</span>
+        <span id="goals-btn-count">0/3</span>
+        <span id="goals-btn-caret">▾</span>
+      </button>
+      <div id="goals-panel">
+        <div id="goals-panel-head">TODAY'S GOALS</div>
+        <div id="goals-panel-list"></div>
+      </div>
+    </div>
     <div id="touch-overlay"></div>
     <div id="joystick-zone"><div id="joystick-knob"></div></div>
     <div id="action-btn">✋</div>
@@ -770,6 +844,7 @@ body.bigtext .stlabel{font-size:13px;}
     <div id="practice-panel">
       <div id="practice-title">📖 HOW TO COOK</div>
       <div id="practice-subtitle" id="practice-subtitle-text">Learn the workflow step by step</div>
+      <div id="practice-flow"></div>
       <div id="practice-steps"></div>
       <button class="btn-green" id="practice-close" onclick="closePractice()">GOT IT ✓</button>
     </div>
@@ -795,6 +870,14 @@ body.bigtext .stlabel{font-size:13px;}
     <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:480px;margin-bottom:14px;">
       <h1 style="font-size:26px;margin:0;color:#ec407a;">👕 CHEF SKINS</h1>
       <div style="background:rgba(255,193,7,.15);border:2px solid #ffc107;border-radius:14px;padding:6px 14px;font-size:17px;font-weight:900;">💰 <span id="skins-cash">$0</span></div>
+    </div>
+    <div id="char-section">
+      <div class="char-head">
+        <span class="char-title">🎭 Who's cooking?</span>
+        <button id="char-random-btn" onclick="randomCharacter()">🎲 Surprise me</button>
+      </div>
+      <div id="char-row"></div>
+      <div class="char-note">Characters change your cook's body. Skins below change their colours — any skin works on any character.</div>
     </div>
     <div class="skin-grid" id="skin-grid"></div>
     <button class="btn-green" onclick="closeSkinsShop()" style="margin-top:14px;">BACK</button>
@@ -831,11 +914,6 @@ body.bigtext .stlabel{font-size:13px;}
         <span style="font-weight:900;font-size:14px;">👁️ Colorblind-friendly bars</span>
         <span id="set-cb-state" style="color:#888;font-weight:900;">OFF</span>
       </button>
-      <button class="upg-item" id="set-lbl-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleLabels()">
-        <span style="font-weight:900;font-size:14px;">🏷️ Station labels</span>
-        <span id="set-lbl-state" style="color:#90caf9;font-weight:900;">AUTO</span>
-      </button>
-      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Auto: names float over each station for your first few days.</div>
       <button class="upg-item" id="set-tag-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleOrderTags()">
         <span style="font-weight:900;font-size:14px;">🔤 Order text labels</span>
         <span id="set-tag-state" style="color:#888;font-weight:900;">OFF</span>
@@ -1977,7 +2055,7 @@ function toggleMenuFries(){
 }
 
 // Skin/cosmetic state (global across stores)
-let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic' };
+let cosm = { ownedSkins: ['classic'], equippedSkin: 'classic', character: 'human' };
 
 // Achievements unlocked (account-wide; persisted in the save).
 let achievements = { unlocked: [] };
@@ -2073,7 +2151,7 @@ function loadSave(){
       // multi-store empire. activeStoreIdx is pinned to the first burger bar.
       activeStoreIdx = 0;
     }
-    if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic'}, s.cosm);
+    if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic', character:'human'}, s.cosm);
     if(s.achievements) achievements = Object.assign({unlocked:[]}, s.achievements);
     if(s.records) records = Object.assign({bestDayCash:0, bestDayStars:0, totalServed:0}, s.records);
     if(Array.isArray(s.dailyGoals)) dailyGoals = s.dailyGoals;
@@ -2118,17 +2196,29 @@ function loadActiveStore() {
 const player={pos:new THREE.Vector3(0,0,0), dir:0, radius:.85, speed:.15, holding:null, wobble:0};
 const pMesh=new THREE.Group(); scene.add(pMesh);
 
-const pBody=new THREE.Mesh(new THREE.CylinderGeometry(.65,.65,1.6,12), M('#ffffff')); pBody.position.y=.8; pBody.castShadow=true; pMesh.add(pBody);
-const pHead=new THREE.Mesh(GSph(.55,12), matSkin); pHead.position.y=1.95; pHead.castShadow=true; pMesh.add(pHead);
-const pHatRim=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,.32,16), M('#eeeeee')); pHatRim.position.y=2.38; pHatRim.castShadow=true; pMesh.add(pHatRim);
-const pHatBody=new THREE.Mesh(new THREE.CylinderGeometry(.6,.82,1.55,16), M('#ffffff')); pHatBody.position.y=3.15; pHatBody.castShadow=true; pMesh.add(pHatBody);
-const pHatTop=new THREE.Mesh(GSph(.6,16), M('#ffffff')); pHatTop.scale.set(1,.55,1); pHatTop.position.y=3.95; pHatTop.castShadow=true; pMesh.add(pHatTop);
+// The player mesh is rebuilt from the shared character definition whenever the
+// character or skin changes, so what you pick on the Home Screen is exactly
+// what you play as. `let` (not const) because rebuildPlayerMesh() reassigns them.
+let pBody=null, pHead=null, pHatRim=null, pHatBody=null, pHatTop=null, pCharGroup=null;
+function rebuildPlayerMesh(){
+  if(pCharGroup){ pMesh.remove(pCharGroup); disposeObj(pCharGroup); pCharGroup = null; }
+  const parts = buildCharacter((cosm.character || 'human'), getActiveSkin());
+  pCharGroup = parts.group;
+  pMesh.add(pCharGroup);
+  pBody = parts.body; pHead = parts.head;
+  pHatRim  = parts.hat ? parts.hat.rim  : null;
+  pHatBody = parts.hat ? parts.hat.body : null;
+  pHatTop  = parts.hat ? parts.hat.top  : null;
+  if(upg && upg.burgerCrown) applyCrown();
+  // The held item hangs off pMesh, not the character, so it survives a rebuild.
+  if(typeof updateHolding === 'function' && player && player.holding) updateHolding();
+}
 
 function applyCrown(){
   if(!upg.burgerCrown) return;
-  pHatBody.material = M('#FFD700');
-  pHatTop.material = M('#FFC107');
-  pHatRim.material = M('#FFA000');
+  if(pHatBody) pHatBody.material = M('#FFD700');
+  if(pHatTop)  pHatTop.material  = M('#FFC107');
+  if(pHatRim)  pHatRim.material  = M('#FFA000');
 }
 
 let heldMesh=null;
@@ -2657,6 +2747,46 @@ function dailyGoalText(dg, m){
   return `${Math.min(Math.floor(cur),dg.goal)} / ${dg.goal}`;
 }
 
+// ── In-game daily goals panel ───────────────────────────────────────────────
+// The day's goals used to be visible only on the Home Screen and the Results
+// screen -- i.e. never while you could still do anything about them. This is
+// the same data, live, behind a button in the top-left.
+let goalsPanelOpen = false;
+
+function toggleGoalsPanel(){
+  goalsPanelOpen = !goalsPanelOpen;
+  const hud = document.getElementById('goals-hud');
+  if(hud) hud.classList.toggle('open', goalsPanelOpen);
+  if(goalsPanelOpen) renderGoalsPanel();
+  playSound('counter');
+}
+window.toggleGoalsPanel = toggleGoalsPanel;
+
+function renderGoalsPanel(){
+  const list = document.getElementById('goals-panel-list');
+  const btn  = document.getElementById('goals-btn');
+  const cnt  = document.getElementById('goals-btn-count');
+  if(!list) return;
+  const m = dailyMetrics();
+  const goals = dailyGoals || [];
+  let done = 0;
+  let html = '';
+  for(const dg of goals){
+    const hit = dg.done || dailyGoalDone(dg, m);
+    if(hit) done++;
+    const frac = Math.round(dailyGoalFrac(dg, m) * 100);
+    html += `<div class="gp-row${hit?' done':''}">` +
+              `<div class="gp-top"><span class="gp-ico">${hit?'✅':dg.icon}</span><span>${dg.desc}</span></div>` +
+              `<div class="gp-bar"><div class="gp-fill" style="width:${frac}%"></div></div>` +
+              `<div class="gp-meta"><span>${dailyGoalText(dg, m)}</span><span class="gp-rew">+$${dg.reward}</span></div>` +
+            `</div>`;
+  }
+  if(!goals.length) html = '<div class="gp-meta">No goals today.</div>';
+  list.innerHTML = html;
+  if(cnt) cnt.textContent = `${done}/${goals.length || 0}`;
+  if(btn) btn.classList.toggle('done', goals.length > 0 && done === goals.length);
+}
+
 // Award any newly-completed goals; called once at day end. Returns cash earned.
 function checkDailyGoals(){
   const m = dailyMetrics();
@@ -2858,99 +2988,289 @@ function initHomeRenderer(){
   resizeHomeCanvas();
 }
 
-function buildHomeChef(){
-  if(!hc.scene) return;
-  if(hc.mesh){ hc.scene.remove(hc.mesh); hc.mesh = null; }
+// ── CHARACTERS ───────────────────────────────────────────────────────────────
+// A CHARACTER is a body plan; a SKIN is the colour scheme painted onto it. They
+// are independent, so any skin works on any character. Every character is built
+// from the shared cached geometry helpers (GBox/GCyl/GSph/...), so adding one
+// costs nothing at runtime beyond its own distinct shapes.
+//
+// buildCharacter() is the single source of truth for both the Home Screen chef
+// and the in-game player, so the two can never drift apart.
+const CHARACTERS = [
+  {id:'human',   name:'Chef',        icon:'👨‍🍳', kind:'Human'},
+  {id:'cat',     name:'Chef Cat',    icon:'🐱',   kind:'Animal'},
+  {id:'bear',    name:'Chef Bear',   icon:'🐻',   kind:'Animal'},
+  {id:'penguin', name:'Chef Penguin',icon:'🐧',   kind:'Animal'},
+  {id:'frog',    name:'Chef Frog',   icon:'🐸',   kind:'Animal'},
+  {id:'dino',    name:'Chef Dino',   icon:'🦖',   kind:'Animal'},
+  {id:'bunny',   name:'Chef Bunny',  icon:'🐰',   kind:'Animal'},
+  {id:'burger',  name:'Sir Burger',  icon:'🍔',   kind:'Object'},
+  {id:'toaster', name:'Toastmaster', icon:'🍞',   kind:'Object'},
+  {id:'robot',   name:'Cook-Bot',    icon:'🤖',   kind:'Object'},
+  {id:'avocado', name:'Avocado',     icon:'🥑',   kind:'Object'},
+  {id:'coffee',  name:'Mug',         icon:'☕',   kind:'Object'},
+];
+function getActiveCharacter(){
+  return CHARACTERS.find(c => c.id === (cosm.character || 'human')) || CHARACTERS[0];
+}
 
-  const sk = getActiveSkin();
-  const g = new THREE.Group();
+// Build a character at gameplay scale: feet on y=0, head around y=2, hat above.
+// Returns the group plus the parts callers animate or recolour.
+function buildCharacter(charId, sk){
+  const def  = CHARACTERS.find(c => c.id === charId) || CHARACTERS[0];
+  const g    = new THREE.Group();
+  const P    = { group:g, body:null, head:null, armL:null, armR:null, hat:null };
+  const dark = '#263238';
 
-  // Helper reusing same geometry helpers as gameplay
-  const cyl  = (rt,rb,h,seg=14) => new THREE.CylinderGeometry(rt,rb,h,seg);
-  const sph  = (r,seg=12)        => new THREE.SphereGeometry(r,seg,seg);
-  const box  = (w,h,d)           => new THREE.BoxGeometry(w,h,d);
-  const mat  = c => new THREE.MeshLambertMaterial({color:c});
-  const mesh = (geo,mat,x=0,y=0,z=0) => {
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(x,y,z); m.castShadow=true; g.add(m); return m;
+  const add = (geo, m, x=0, y=0, z=0, parent=g) => {
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.position.set(x,y,z); mesh.castShadow = true; parent.add(mesh); return mesh;
+  };
+  const bodyM = M(sk.bodyColor), headM = M(sk.headColor), hatM = M(sk.hatColor);
+  const eyeM  = M('#222222'), whiteM = M('#ffffff');
+
+  // Two dot eyes + highlights, used by nearly every character.
+  const faceEyes = (y, z, spread=.22, r=.11) => {
+    add(GSph(r,8),      eyeM,   -spread, y, z);
+    add(GSph(r,8),      eyeM,    spread, y, z);
+    add(GSph(r*.42,6),  whiteM, -spread+.05, y+.04, z+.07);
+    add(GSph(r*.42,6),  whiteM,  spread+.05, y+.04, z+.07);
+  };
+  // Classic chef hat. Animals and objects wear a smaller one so it reads as a
+  // hat rather than swallowing the silhouette.
+  const chefHat = (y, scale=1) => {
+    const rim  = add(GCyl(.9*scale,.3*scale,16),        M(sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor), 0, y, 0);
+    const body = add(GCylT(.6*scale,.82*scale,1.55*scale,16), hatM, 0, y+.77*scale, 0);
+    const top  = add(GSph(.6*scale,16),                 hatM, 0, y+1.57*scale, 0);
+    top.scale.set(1,.55,1);
+    P.hat = {rim, body, top};
+  };
+  // Simple limbs. Arms are groups so the idle animation can swing them.
+  const arms = (y, reach=.82, armColor=sk.bodyColor, handColor=sk.headColor) => {
+    for(const side of [-1, 1]){
+      const arm = new THREE.Group(); g.add(arm);
+      add(GBox(.32,.9,.32), M(armColor), 0, -.3, 0, arm);
+      add(GSph(.22,10),     M(handColor), 0, -.7, 0, arm);
+      arm.position.set(side*reach, y, 0);
+      arm.rotation.z = side * -0.3;
+      if(side < 0) P.armL = arm; else P.armR = arm;
+    }
+  };
+  const legs = (y=-.52, color='#37474f') => {
+    for(const side of [-1, 1]){
+      add(GCylT(.28,.24,.9,10), M(color), side*.28, y, 0);
+      add(GBox(.42,.18,.58),    M('#212121'), side*.28, y-.5, .1);
+    }
   };
 
-  // ── BODY (exact same as gameplay pBody) ──
-  hc.body = mesh(cyl(.65,.65,1.6,14), mat(sk.bodyColor), 0, .8, 0);
-
-  // ── HEAD ──
-  mesh(sph(.55,14), mat(sk.headColor), 0, 1.95, 0);
-
-  // ── EYES ──
-  mesh(sph(.12,8), mat('#222'), -.22, 2.06, .5);
-  mesh(sph(.12,8), mat('#222'),  .22, 2.06, .5);
-  mesh(sph(.05,6), mat('#fff'), -.17, 2.10, .59);
-  mesh(sph(.05,6), mat('#fff'),  .27, 2.10, .59);
-
-  // ── SMILE ──
-  const smilePts = [];
-  for(let a = -28; a <= 28; a += 7){
-    const r = a * Math.PI/180;
-    smilePts.push(new THREE.Vector3(Math.sin(r)*.28, -Math.cos(r)*.09+1.75, .52));
+  switch(def.id){
+    case 'cat': {
+      P.body = add(GCylT(.58,.7,1.5,14), bodyM, 0, .78, 0);
+      P.head = add(GSph(.62,14),         bodyM, 0, 2.0, 0);
+      for(const side of [-1,1]){                                  // ears
+        const ear = add(GCone(.26,.46,4), bodyM, side*.34, 2.52, 0);
+        ear.rotation.z = side * .18;
+        add(GCone(.15,.28,4), M('#f8bbd0'), side*.34, 2.50, .06);
+      }
+      faceEyes(2.06, .56, .23, .12);
+      add(GCone(.09,.12,4), M('#f48fb1'), 0, 1.94, .60).rotation.x = Math.PI/2;
+      for(const side of [-1,1]) for(let i=0;i<2;i++)              // whiskers
+        add(GBox(.5,.02,.02), M('#eceff1'), side*.42, 1.92+i*.09, .48);
+      const tail = add(GCylT(.06,.11,1.3,8), bodyM, 0, 1.0, -.62);
+      tail.rotation.x = -0.6;
+      arms(1.45); legs(-.5, sk.bodyColor); chefHat(2.55, .72);
+      break;
+    }
+    case 'bear': {
+      P.body = add(GCylT(.72,.82,1.55,14), bodyM, 0, .8, 0);
+      P.head = add(GSph(.68,14),           bodyM, 0, 2.05, 0);
+      for(const side of [-1,1]){
+        add(GSph(.22,10), bodyM, side*.46, 2.52, 0);
+        add(GSph(.13,8),  M('#8d6e63'), side*.46, 2.54, .08);
+      }
+      faceEyes(2.12, .60, .24, .11);
+      add(GSph(.26,10), M('#d7ccc8'), 0, 1.92, .54).scale.set(1,.75,.7);
+      add(GSph(.11,8),  M('#3e2723'), 0, 1.96, .74);
+      arms(1.48); legs(-.48, sk.bodyColor); chefHat(2.60, .74);
+      break;
+    }
+    case 'penguin': {
+      P.body = add(GSph(.72,14), bodyM, 0, 1.0, 0); P.body.scale.set(1,1.45,.95);
+      add(GSph(.55,14), M('#fafafa'), 0, .95, .34).scale.set(1,1.3,.6);
+      P.head = add(GSph(.56,14), bodyM, 0, 2.05, 0);
+      add(GSph(.42,12), M('#fafafa'), 0, 1.98, .3).scale.set(1,1,.6);
+      faceEyes(2.12, .48, .19, .10);
+      add(GCone(.17,.42,6), M('#ffb300'), 0, 1.95, .52).rotation.x = Math.PI/2;
+      for(const side of [-1,1]){                                  // flippers
+        const arm = new THREE.Group(); g.add(arm);
+        const f = add(GBox(.2,.85,.42), bodyM, 0, -.35, 0, arm);
+        f.scale.set(1,1,1);
+        arm.position.set(side*.72, 1.45, 0); arm.rotation.z = side*-.22;
+        if(side<0) P.armL = arm; else P.armR = arm;
+      }
+      for(const side of [-1,1]) add(GBox(.34,.12,.5), M('#ffb300'), side*.24, .06, .12);
+      chefHat(2.48, .7);
+      break;
+    }
+    case 'frog': {
+      P.body = add(GSph(.75,14), bodyM, 0, .9, 0); P.body.scale.set(1,1.05,.95);
+      P.head = add(GSph(.6,14),  bodyM, 0, 1.85, 0);
+      for(const side of [-1,1]){                                  // bulging eyes
+        add(GSph(.26,10), M('#f5f5f5'), side*.3, 2.32, .12);
+        add(GSph(.14,8),  eyeM,         side*.3, 2.36, .28);
+      }
+      add(GBox(.62,.05,.04), M('#2e7d32'), 0, 1.66, .56);
+      arms(1.35, .74, sk.bodyColor, sk.bodyColor);
+      for(const side of [-1,1]) add(GBox(.5,.2,.62), bodyM, side*.34, .06, .12);
+      chefHat(2.32, .66);
+      break;
+    }
+    case 'dino': {
+      P.body = add(GCylT(.66,.8,1.5,14), bodyM, 0, .8, 0);
+      P.head = add(GSph(.6,14), bodyM, 0, 2.0, .06); P.head.scale.set(1,.92,1.15);
+      add(GBox(.62,.26,.5), bodyM, 0, 1.82, .48);                 // snout
+      faceEyes(2.18, .5, .24, .11);
+      for(let i=0;i<4;i++)                                        // back plates
+        add(GCone(.16,.3,4), M('#ffca28'), 0, 1.5-i*.34, -.55-i*.02);
+      const tail = add(GCylT(.1,.3,1.5,8), bodyM, 0, .7, -.8); tail.rotation.x = -.5;
+      arms(1.42, .76); legs(-.48, sk.bodyColor);
+      chefHat(2.52, .7);
+      break;
+    }
+    case 'bunny': {
+      P.body = add(GCylT(.56,.7,1.45,14), bodyM, 0, .76, 0);
+      P.head = add(GSph(.58,14),          bodyM, 0, 1.95, 0);
+      for(const side of [-1,1]){                                  // long ears
+        const ear = add(GCylT(.13,.09,1.0,8), bodyM, side*.24, 2.72, 0);
+        ear.rotation.z = side*.12;
+        add(GCylT(.07,.05,.8,8), M('#f8bbd0'), side*.24, 2.72, .07).rotation.z = side*.12;
+      }
+      faceEyes(2.02, .52, .21, .11);
+      add(GSph(.09,8), M('#f48fb1'), 0, 1.9, .55);
+      add(GSph(.24,10), M('#fafafa'), 0, .8, -.66);               // tail
+      arms(1.4); legs(-.5, sk.bodyColor); chefHat(2.5, .66);
+      break;
+    }
+    case 'burger': {
+      add(GSphS(.86,12,8), M('#e6b873'), 0, .42, 0).scale.set(1,.62,1);   // bottom bun
+      P.body = add(GCyl(.8,.34,14), M('#6a4220'), 0, .86, 0);              // patty
+      add(GBox(1.66,.1,1.66), M('#ffcc00'), 0, 1.08, 0);                   // cheese
+      add(GCyl(.78,.14,14),  M('#7cb342'), 0, 1.2, 0);                     // lettuce
+      add(GCyl(.72,.12,14),  M('#e62030'), 0, 1.32, 0);                    // tomato
+      P.head = add(GSphS(.88,14,10), M('#e6b873'), 0, 1.62, 0);            // top bun
+      P.head.scale.set(1,.72,1);
+      for(let i=0;i<5;i++)                                                 // sesame
+        add(GSphS(.07,6,5), whiteM, Math.cos(i*1.26)*.46, 1.94, Math.sin(i*1.26)*.46);
+      faceEyes(1.52, .76, .26, .12);
+      arms(1.1, .92, sk.bodyColor, sk.headColor); legs(-.3, '#8d6e63');
+      chefHat(2.16, .6);
+      break;
+    }
+    case 'toaster': {
+      P.body = add(GBox(1.5,1.3,1.0), M('#cfd8dc'), 0, .9, 0);
+      add(GBox(1.56,.16,1.06), M('#90a4ae'), 0, 1.56, 0);
+      for(const side of [-1,1]) add(GBox(.44,.12,.62), M('#37474f'), side*.32, 1.62, 0);
+      P.head = add(GBox(.5,.62,.12), M('#e6b873'), 0, 1.95, 0);            // toast popping up
+      add(GBox(.4,.2,.14), M('#8d6e63'), 0, 2.12, .02);
+      faceEyes(1.0, .52, .3, .13);
+      add(GBox(.44,.06,.06), M('#546e7a'), 0, .72, .52);                   // smile
+      add(GCyl(.14,.1,10), M('#ef5350'), .56, .62, .52);                   // dial
+      arms(1.15, .88, '#90a4ae', sk.headColor); legs(-.32, '#546e7a');
+      chefHat(1.78, .58);
+      break;
+    }
+    case 'robot': {
+      P.body = add(GBox(1.15,1.4,.85), M('#b0bec5'), 0, .88, 0);
+      add(GBox(.72,.5,.06), M('#37474f'), 0, 1.02, .44);                   // chest panel
+      for(let i=0;i<3;i++) add(GSph(.07,6), M(['#ef5350','#ffee58','#66bb6a'][i]), -.2+i*.2, 1.02, .49);
+      P.head = add(GBox(.95,.8,.8), M('#cfd8dc'), 0, 2.05, 0);
+      add(GBox(.78,.34,.06), M('#263238'), 0, 2.12, .42);                  // visor
+      add(GSph(.1,8), M('#4fc3f7'), -.2, 2.12, .47);
+      add(GSph(.1,8), M('#4fc3f7'),  .2, 2.12, .47);
+      add(GCyl(.05,.36,6), M('#90a4ae'), 0, 2.6, 0);                       // antenna
+      add(GSph(.13,8), M('#ef5350'), 0, 2.82, 0);
+      arms(1.45, .8, '#90a4ae', '#78909c'); legs(-.5, '#546e7a');
+      chefHat(2.5, .62);
+      break;
+    }
+    case 'avocado': {
+      P.body = add(GSph(.8,14), M('#33691e'), 0, 1.0, 0); P.body.scale.set(1,1.3,.95);
+      add(GSph(.66,14), M('#aed581'), 0, 1.0, .26).scale.set(1,1.25,.55);
+      P.head = add(GSph(.34,12), M('#5d4037'), 0, 1.05, .42);              // pit
+      faceEyes(1.55, .55, .22, .10);
+      add(GBox(.3,.05,.04), M('#33691e'), 0, 1.34, .56);
+      arms(1.25, .82, '#33691e', sk.headColor); legs(-.28, '#33691e');
+      chefHat(2.1, .6);
+      break;
+    }
+    case 'coffee': {
+      P.body = add(GCylT(.72,.62,1.5,16), M('#fafafa'), 0, .85, 0);
+      add(GCyl(.74,.12,16), M('#6d4c41'), 0, 1.56, 0);                     // coffee surface
+      const handle = add(GCyl(.1,.62,8), M('#fafafa'), .8, .95, 0);        // handle
+      handle.rotation.z = Math.PI/2; handle.scale.set(1,1,1);
+      add(GBox(.16,.5,.16), M('#fafafa'), .86, 1.2, 0);
+      add(GBox(.16,.5,.16), M('#fafafa'), .86, .7, 0);
+      P.head = add(GSph(.5,12), M('#fafafa'), 0, 1.8, 0); P.head.visible = false;
+      faceEyes(1.05, .62, .25, .12);
+      add(GBox(.34,.05,.05), M('#8d6e63'), 0, .8, .63);
+      arms(1.15, .86, '#eceff1', sk.headColor); legs(-.3, '#bdbdbd');
+      chefHat(1.72, .58);
+      break;
+    }
+    default: {  // 'human' — the original chef, unchanged
+      P.body = add(GCyl(.65,1.6,14), bodyM, 0, .8, 0);
+      P.head = add(GSph(.55,14),     headM, 0, 1.95, 0);
+      faceEyes(2.06, .5, .22, .12);
+      const smilePts = [];
+      for(let a=-28; a<=28; a+=7){
+        const r = a*Math.PI/180;
+        smilePts.push(new THREE.Vector3(Math.sin(r)*.28, -Math.cos(r)*.09+1.75, .52));
+      }
+      const smileGeo = cachedGeo('smile', () =>
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(smilePts), 10, .03, 6, false));
+      add(smileGeo, M('#c2185b'), 0, 0, 0);
+      const cheekM = M('#ffb3ba', .7);
+      add(GSph(.14,8), cheekM, -.38, 1.88, .44);
+      add(GSph(.14,8), cheekM,  .38, 1.88, .44);
+      arms(1.5); legs(-.52); chefHat(2.38, 1);
+      break;
+    }
   }
-  const smileCurve = new THREE.CatmullRomCurve3(smilePts);
-  const smileGeo = new THREE.TubeGeometry(smileCurve, 10, .03, 6, false);
-  const smileMesh = new THREE.Mesh(smileGeo, mat('#c2185b'));
-  smileMesh.castShadow = true; g.add(smileMesh);
+  return P;
+}
 
-  // ── CHEEKS ──
-  const cheekMat = new THREE.MeshLambertMaterial({color:'#ffb3ba', transparent:true, opacity:.7});
-  mesh(new THREE.SphereGeometry(.15,8,8).scale?sph(.14,8):sph(.14,8), cheekMat, -.38, 1.88, .44);
-  mesh(sph(.14,8), cheekMat,  .38, 1.88, .44);
+function buildHomeChef(){
+  if(!hc.scene) return;
+  if(hc.mesh){ hc.scene.remove(hc.mesh); disposeObj(hc.mesh); hc.mesh = null; }
 
-  // ── HAT RIM ──
-  mesh(cyl(.9,.9,.3,16), mat(sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor), 0, 2.38, 0);
+  const parts = buildCharacter((cosm.character || 'human'), getActiveSkin());
+  hc.body = parts.body; hc.armL = parts.armL; hc.armR = parts.armR;
+  hc.hatBody = parts.hat ? parts.hat.body : null;
 
-  // ── HAT BODY ──
-  hc.hatBody = mesh(cyl(.6,.82,1.55,16), mat(sk.hatColor), 0, 3.15, 0);
+  // Spatula in the right hand, so every character reads as a cook.
+  if(parts.armR){
+    const sh = new THREE.Mesh(GBox(.1,.9,.1),   M('#9e9e9e')); sh.position.set(0,-.1,0); parts.armR.add(sh);
+    const hd = new THREE.Mesh(GBox(.55,.08,.4), M('#bdbdbd')); hd.position.set(0,.45,0);  parts.armR.add(hd);
+  }
 
-  // ── HAT TOP ──
-  const hatTop = mesh(sph(.6,16), mat(sk.hatColor), 0, 3.95, 0);
-  hatTop.scale.set(1, .55, 1);
-
-  // ── ARMS (separate groups so we can animate them) ──
-  const armMat = mat(sk.bodyColor);
-  hc.armL = new THREE.Group(); g.add(hc.armL);
-  const aL = new THREE.Mesh(box(.32, .9, .32), armMat); aL.castShadow=true;
-  aL.position.set(0, -.3, 0); hc.armL.add(aL);
-  const handL = new THREE.Mesh(sph(.22,10), mat(sk.headColor)); handL.position.set(0,-.7,0); handL.castShadow=true; hc.armL.add(handL);
-  hc.armL.position.set(-.82, 1.5, 0);
-  hc.armL.rotation.z = 0.3;
-
-  hc.armR = new THREE.Group(); g.add(hc.armR);
-  const aR = new THREE.Mesh(box(.32, .9, .32), armMat); aR.castShadow=true;
-  aR.position.set(0, -.3, 0); hc.armR.add(aR);
-  const handR = new THREE.Mesh(sph(.22,10), mat(sk.headColor)); handR.position.set(0,-.7,0); handR.castShadow=true; hc.armR.add(handR);
-  hc.armR.position.set(.82, 1.5, 0);
-  hc.armR.rotation.z = -0.3;
-
-  // ── SPATULA in right hand ──
-  const spatHandle = new THREE.Mesh(box(.1,.9,.1), mat('#9e9e9e')); spatHandle.position.set(0,-.1,0); hc.armR.add(spatHandle);
-  const spatHead   = new THREE.Mesh(box(.55,.08,.4), mat('#bdbdbd')); spatHead.position.set(0,.45,.0); hc.armR.add(spatHead);
-
-  // ── LEGS ──
-  mesh(cyl(.28,.24,.9,10), mat('#37474f'), -.28, -.52, 0);
-  mesh(cyl(.28,.24,.9,10), mat('#37474f'),  .28, -.52, 0);
-
-  // ── SHOES ──
-  mesh(box(.42,.18,.58), mat('#212121'), -.28, -1.02, .1);
-  mesh(box(.42,.18,.58), mat('#212121'),  .28, -1.02, .1);
-
-  g.position.y = 1.05;  // lift off ground so feet touch shadow plane
-  hc.mesh = g;
-  hc.scene.add(g);
+  parts.group.position.y = 1.05;   // lift so feet meet the shadow plane
+  hc.mesh = parts.group;
+  hc.scene.add(parts.group);
 }
 
 function resizeHomeCanvas(){
   const canvas = document.getElementById('home-chef-canvas');
-  if(!canvas || !hc.renderer) return;
-  const w = canvas.clientWidth  || 180;
-  const h = canvas.clientHeight || 280;
+  if(!canvas || !hc.renderer || !hc.camera) return;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  // If the Home Screen hasn't been laid out yet the canvas measures 0, and
+  // baking in a placeholder aspect here left the chef stretched or off-frame
+  // with nothing to correct it. Retry on the next frame instead.
+  if(!w || !h){
+    if(!hc._resizeRetry){
+      hc._resizeRetry = requestAnimationFrame(()=>{ hc._resizeRetry = null; resizeHomeCanvas(); });
+    }
+    return;
+  }
   hc.renderer.setSize(w, h, false);
   hc.camera.aspect = w / h;
   hc.camera.updateProjectionMatrix();
@@ -2980,7 +3300,8 @@ function runHomeAnim(){
 // ── Drag-to-spin on chef canvas ──────────────────────────────
 function initChefDrag(){
   const canvas = document.getElementById('home-chef-canvas');
-  if(!canvas) return;
+  if(!canvas || canvas._dragBound) return;   // one binding per canvas element
+  canvas._dragBound = true;
   let dragX = null;
   const onDown = e => { e.preventDefault(); dragX = (e.touches ? e.touches[0].clientX : e.clientX); };
   const onMove = e => {
@@ -3328,8 +3649,22 @@ function stopHomeAnim(){
 // turning black. Entering gameplay now tears both down; they are rebuilt lazily
 // the next time the Home Screen is shown (both init fns already no-op when the
 // renderer exists).
+// A <canvas> can only ever hand out ONE WebGL context: getContext() returns the
+// same object forever, and after forceContextLoss() that context is dead for
+// good. Building a new WebGLRenderer on the same element therefore renders
+// nothing -- which is exactly the "chef doesn't load on the title screen" bug.
+// Swapping in a fresh element gives the next renderer a virgin canvas, and
+// discards the old node's event listeners along with it.
+function recycleCanvas(id){
+  const old = document.getElementById(id);
+  if(!old || !old.parentNode) return;
+  const fresh = old.cloneNode(false);   // attributes only: no listeners, no context
+  old.parentNode.replaceChild(fresh, old);
+}
+
 function releaseHomeRenderers(){
   stopHomeAnim();
+  let released = false;
   for(const holder of [hc, rp]){
     if(!holder || !holder.renderer) continue;
     try{
@@ -3338,8 +3673,17 @@ function releaseHomeRenderers(){
       if(holder.renderer.forceContextLoss) holder.renderer.forceContextLoss();
     }catch(e){ console.warn('Home renderer teardown failed', e); }
     holder.renderer = null; holder.scene = null; holder.camera = null;
+    released = true;
   }
-  hc.chef = null;
+  if(released){
+    recycleCanvas('home-chef-canvas');
+    recycleCanvas('home-restaurant-canvas');
+  }
+  // Drop every cached reference into the scene we just disposed, so nothing
+  // animates a dead mesh and buildHomeChef() starts from a clean slate.
+  hc.chef = null; hc.mesh = null; hc.body = null; hc.armL = null; hc.armR = null;
+  hc._spinVel = 0; hc._spinY = 0;
+  hc._dragBound = false;
 }
 
 function positionHomeChef(){ resizeHomeCanvas(); }
@@ -3361,14 +3705,9 @@ function applyChefSkinToSVG(skinId){
 
 function applyChefSkin(skinId) {
   const sk = SKIN_DEFS.find(s=>s.id===skinId) || SKIN_DEFS[0];
-  // Gameplay 3D chef
-  try {
-    pHatBody.material = M(sk.hatColor);
-    pHatTop.material  = M(sk.hatColor);
-    pHatRim.material  = M(sk.hatColor==='#ffffff'?'#eeeeee':sk.hatColor);
-    pBody.material    = M(sk.bodyColor);
-    pHead.material    = M(sk.headColor);
-  } catch(e){}
+  // Gameplay 3D chef: rebuilt wholesale, since a character is a body plan and
+  // not every one of them has the same parts to recolour.
+  try { rebuildPlayerMesh(); } catch(e){ console.warn('Player rebuild failed', e); }
   // Home screen 3D chef — rebuild with new skin
   if(hc.scene) buildHomeChef();
   // Trail color
@@ -3411,6 +3750,9 @@ function showStartMenu(){
   });
   document.getElementById('top-hud').style.display='none';
   document.getElementById('pause-btn').style.display='none';
+  { const gh = document.getElementById('goals-hud');
+    if(gh){ gh.style.display = 'none'; gh.classList.remove('open'); }
+    goalsPanelOpen = false; }
   document.getElementById('skins-screen').style.display='none';
   document.getElementById('stores-screen').style.display='none';
   document.getElementById('pause-screen').style.display='none';
@@ -3446,8 +3788,9 @@ function showStartMenu(){
 
   // Init 3D home chef renderer (once) then start anim
   stopHomeAnim();
-  if(!hc.renderer) { initHomeRenderer(); initChefDrag(); }
+  if(!hc.renderer) { initHomeRenderer(); }
   else { resizeHomeCanvas(); buildHomeChef(); }
+  initChefDrag();          // no-ops unless this canvas element is new
   applyChefSkin(cosm.equippedSkin);
   runHomeAnim();
 
@@ -3483,10 +3826,6 @@ function refreshSettingsUI(){
   if(cb){ cb.textContent = settings.colorblind?'ON':'OFF'; cb.style.color = settings.colorblind?'#66BB6A':'#888'; }
   const df = document.getElementById('set-diff-state');
   if(df){ const casual = settings.difficulty==='casual'; df.textContent = casual?'CASUAL':'NORMAL'; df.style.color = casual?'#66BB6A':'#90caf9'; }
-  const lb = document.getElementById('set-lbl-state');
-  if(lb){ const m = settings.labels || 'auto';
-    lb.textContent = m.toUpperCase();
-    lb.style.color = m==='off' ? '#888' : m==='on' ? '#66BB6A' : '#90caf9'; }
   const tg = document.getElementById('set-tag-state');
   if(tg){ tg.textContent = settings.ordertags?'ON':'OFF'; tg.style.color = settings.ordertags?'#66BB6A':'#888'; }
   const bg = document.getElementById('set-big-state');
@@ -3550,13 +3889,6 @@ function toggleColorblind(){
   settings.colorblind = !settings.colorblind;
   refreshSettingsUI(); saveSettings();
 }
-// Station labels cycle auto -> on -> off. 'auto' shows them for the first few
-// days only, which is when new players actually need them.
-function toggleLabels(){
-  const order = ['auto','on','off'];
-  settings.labels = order[(order.indexOf(settings.labels || 'auto') + 1) % order.length];
-  refreshSettingsUI(); saveSettings();
-}
 function toggleOrderTags(){
   settings.ordertags = !settings.ordertags;
   refreshSettingsUI(); saveSettings();
@@ -3569,7 +3901,6 @@ function applyBigText(){
   if(document.body && document.body.classList)
     document.body.classList.toggle('bigtext', !!settings.bigtext);
 }
-window.toggleLabels = toggleLabels;
 window.toggleOrderTags = toggleOrderTags;
 window.toggleBigText = toggleBigText;
 function toggleDifficulty(){
@@ -3652,10 +3983,49 @@ window.togglePause=togglePause; window.quitToMenu=quitToMenu;
 window.showQuitConfirm=showQuitConfirm; window.hideQuitConfirm=hideQuitConfirm;
 
 // ── SKINS SHOP ───────────────────────────────────────────────
+// Paint the character row. Characters are free body plans -- the paid cosmetic
+// is still the skin -- so this is a straight picker with no price gating.
+function renderCharacterRow(){
+  const row = document.getElementById('char-row');
+  if(!row) return;
+  row.innerHTML = '';
+  const cur = cosm.character || 'human';
+  for(const ch of CHARACTERS){
+    const chip = document.createElement('div');
+    chip.className = 'char-chip' + (ch.id === cur ? ' on' : '');
+    chip.innerHTML = `<div class="cc-ico">${ch.icon}</div>` +
+                     `<div class="cc-name">${ch.name}</div>` +
+                     `<div class="cc-kind">${ch.kind}</div>`;
+    chip.onclick = () => setCharacter(ch.id);
+    row.appendChild(chip);
+  }
+}
+function setCharacter(id){
+  if(!CHARACTERS.some(c => c.id === id)) return;
+  cosm.character = id;
+  try{ rebuildPlayerMesh(); }catch(e){ console.warn('Player rebuild failed', e); }
+  if(hc.scene) buildHomeChef();
+  saveGame();
+  renderCharacterRow();
+  playSound('coin');
+}
+// "Surprise me" deliberately never lands on the human chef or on who you
+// already are -- the point is to get something you didn't pick.
+function randomCharacter(){
+  const pool = CHARACTERS.filter(c => c.id !== 'human' && c.id !== (cosm.character || 'human'));
+  if(!pool.length) return;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  setCharacter(pick.id);
+  showToast(`${pick.icon} ${pick.name} is on the line!`);
+}
+window.setCharacter = setCharacter;
+window.randomCharacter = randomCharacter;
+
 function showSkinsShop(){
   stopHomeAnim();
   document.getElementById('home-screen').style.display='none';
   document.getElementById('skins-cash').textContent='$'+eco.cash.toFixed(2);
+  renderCharacterRow();
   const grid = document.getElementById('skin-grid');
   grid.innerHTML='';
   for(const sk of SKIN_DEFS){
@@ -3696,14 +4066,14 @@ window.showSkinsShop=showSkinsShop; window.closeSkinsShop=closeSkinsShop;
 // ── PRACTICE / TUTORIAL ─────────────────────────────────────
 const PRACTICE_STEPS = {
   burger: [
-    { icon:'🧊', title:`Step 1 — Grab Raw Meat`, desc:`Walk to the Fridge and press ACT to pick up a raw patty.` },
-    { icon:'🔥', title:`Step 2 — Cook on the Grill`, desc:`Carry the patty to the Grill and press ACT to place it. Watch the green progress bar fill up. When it turns orange, it's cooked — pick it up before it burns (turns black)!` },
-    { icon:'🍱', title:`Step 3 — Grab a Tray`, desc:`Go to the Tray Rack and press ACT to pick up a clean tray.` },
-    { icon:'🍔', title:`Step 4 — Assemble on Counter`, desc:`Bring the cooked patty to a Counter while holding a tray — or place the patty on the counter, then grab the tray and come back — the burger auto-assembles on the counter.` },
-    { icon:'🛎️', title:`Step 5 — Serve the Table`, desc:`Carry the burger tray to a table with waiting customers (look for the 🍔 bubble above their head) and press ACT to serve them.` },
-    { icon:'🍽️', title:`After Eating — Clean Up`, desc:`After customers eat, dirty trays appear on the table. Pick them up, take to the Sink (hold ACT for 3 seconds to wash), then return the clean tray to the Tray Rack.` },
-    { icon:'🥤', title:`Bonus — Soda Fountain`, desc:`After Day 5 you can unlock a Soda Fountain. Customers may order soda or a burger+soda combo. Use the tray + soda fountain to assemble a combo before serving.` },
-    { icon:'🤖', title:`Robots Help You!`, desc:`Buy robots from the Shop. Set their role in Edit Mode: Chef cooks patties, Waiter serves food, Busser cleans trays. Robots level up each day!` },
+    { vis:[{i:'🧊',l:'Fridge'},{a:1},{i:'🥩',l:'Raw patty',h:1}], icon:'🧊', title:`Step 1 — Grab Raw Meat`, desc:`Walk to the Fridge and press ACT to pick up a raw patty.` },
+    { vis:[{i:'🥩',l:'Raw',h:1},{a:1},{i:'🔥',l:'Grill'},{a:1},{i:'🍖',l:'Cooked',h:1}], timeline:1, icon:'🔥', title:`Step 2 — Cook on the Grill`, desc:`Carry the patty to the Grill and press ACT to place it. Watch the green progress bar fill up. When it turns orange, it's cooked — pick it up before it burns (turns black)!` },
+    { vis:[{i:'🍱',l:'Tray Rack'},{a:1},{i:'🍽️',l:'Clean tray',h:1}], icon:'🍱', title:`Step 3 — Grab a Tray`, desc:`Go to the Tray Rack and press ACT to pick up a clean tray.` },
+    { vis:[{i:'🍖',l:'Cooked',h:1},{i:'🍽️',l:'+ Tray',h:1},{a:1},{i:'🍔',l:'Burger',h:1}], icon:'🍔', title:`Step 4 — Assemble on Counter`, desc:`Bring the cooked patty to a Counter while holding a tray — or place the patty on the counter, then grab the tray and come back — the burger auto-assembles on the counter.` },
+    { vis:[{i:'🍔',l:'Burger',h:1},{a:1},{i:'🪑',l:'Table'},{a:1},{i:'💰',l:'Paid'}], icon:'🛎️', title:`Step 5 — Serve the Table`, desc:`Carry the burger tray to a table with waiting customers (look for the 🍔 bubble above their head) and press ACT to serve them.` },
+    { vis:[{i:'🍽️',l:'Dirty',w:1},{a:1},{i:'🚿',l:'Sink 3s'},{a:1},{i:'🍱',l:'Tray Rack'}], icon:'🍽️', title:`After Eating — Clean Up`, desc:`After customers eat, dirty trays appear on the table. Pick them up, take to the Sink (hold ACT for 3 seconds to wash), then return the clean tray to the Tray Rack.` },
+    { vis:[{i:'🍽️',l:'Tray',h:1},{a:1},{i:'🥤',l:'Fountain'},{a:1},{i:'🍔🥤',l:'Combo',h:1}], icon:'🥤', title:`Bonus — Soda Fountain`, desc:`After Day 5 you can unlock a Soda Fountain. Customers may order soda or a burger+soda combo. Use the tray + soda fountain to assemble a combo before serving.` },
+    { vis:[{i:'🤖',l:'Chef'},{i:'🛎️',l:'Waiter'},{i:'🧹',l:'Busser'}], icon:'🤖', title:`Robots Help You!`, desc:`Buy robots from the Shop. Set their role in Edit Mode: Chef cooks patties, Waiter serves food, Busser cleans trays. Robots level up each day!` },
   ],
   seafood: [
     { icon:'🐟', title:`Step 1 — Grab Raw Fish`, desc:`Walk to the Cooler (blue station) and press ACT to pick up a raw fish fillet. It refills automatically — unlimited supply!` },
@@ -3718,6 +4088,65 @@ const PRACTICE_STEPS = {
   ],
 };
 
+// A picture of the line. Text alone never made clear that the loop CLOSES --
+// that dirty trays have to come back round to the rack before you can plate
+// again -- so the return path is drawn explicitly.
+function practiceFlowSVG(type){
+  const seafood = type === 'seafood';
+  const nodes = seafood
+    ? [['🧊','Cooler'],['🔥','Grill'],['🌮','Assemble'],['🧺','Basket'],['🛎️','Serve']]
+    : [['🧊','Fridge'],['🔥','Grill'],['🍱','Trays'],['🍔','Build'],['🛎️','Serve']];
+  const xs = [34, 106, 178, 250, 322];
+  let n = '';
+  nodes.forEach(([ico, lbl], i) => {
+    const cls = i === 1 ? 'pf-node pf-node-hot' : i === 2 ? 'pf-node pf-node-cool' : 'pf-node';
+    n += `<circle class="${cls}" cx="${xs[i]}" cy="30" r="17"/>` +
+         `<text x="${xs[i]}" y="36" text-anchor="middle" font-size="16">${ico}</text>` +
+         `<text class="pf-label" x="${xs[i]}" y="59" text-anchor="middle">${lbl}</text>`;
+    if(i < nodes.length - 1)
+      n += `<path class="pf-arrow" d="M${xs[i]+20} 30 H${xs[i+1]-22}" marker-end="url(#pfArrow)"/>`;
+  });
+  // Wash loop: Serve -> Sink -> back to the tray/basket rack.
+  const wash = seafood ? 'Wash baskets' : 'Wash trays';
+  n += `<path class="pf-arrow-loop" d="M322 50 V82 H196" marker-end="url(#pfArrowC)"/>` +
+       `<circle class="pf-node pf-node-cool" cx="178" cy="82" r="15"/>` +
+       `<text x="178" y="87" text-anchor="middle" font-size="14">🚿</text>` +
+       `<text class="pf-label" x="178" y="104" text-anchor="middle">${wash}</text>` +
+       `<path class="pf-arrow-loop" d="M178 67 V50" marker-end="url(#pfArrowC)"/>`;
+  return `<svg viewBox="0 0 356 112" role="img" aria-label="Kitchen flow: ${nodes.map(x=>x[1]).join(' to ')}, then wash and repeat">
+    <defs>
+      <marker id="pfArrow" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+        <path d="M0 0 L8 4 L0 8 z" fill="rgba(255,255,255,.35)"/></marker>
+      <marker id="pfArrowC" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+        <path d="M0 0 L8 4 L0 8 z" fill="rgba(79,195,247,.5)"/></marker>
+    </defs>
+    <text class="pf-cap" x="4" y="10">THE LINE</text>
+    ${n}
+  </svg>`;
+}
+
+// "What you're holding, before and after" for a single step. Green tiles are
+// things in your hands; red is something that needs dealing with.
+function stepVisual(step){
+  let out = '';
+  if(step.vis && step.vis.length){
+    out += '<div class="pstep-vis">' + step.vis.map(v =>
+      v.a ? '<span class="pv-arrow">→</span>'
+          : `<span class="pv-tile${v.h?' hold':''}${v.w?' warn':''}">` +
+            `<span class="pv-ico">${v.i}</span><span class="pv-lbl">${v.l}</span></span>`
+    ).join('') + '</div>';
+  }
+  if(step.timeline){
+    // The grill's three states, in the order you'll meet them.
+    out += '<div class="pv-timeline">' +
+           '<span class="pv-seg" style="background:#4CAF50;flex:2;">COOKING</span>' +
+           '<span class="pv-seg" style="background:#FF9800;flex:1.4;">READY — GRAB IT</span>' +
+           '<span class="pv-seg" style="background:#212121;color:rgba(255,255,255,.7);flex:1;">BURNT</span>' +
+           '</div>';
+  }
+  return out;
+}
+
 function showPractice(){
   // Use the currently-viewed store type (may differ from active store)
   const viewedType = (STORE_COLORS[rp.storeIdx] || {}).type || 'burger';
@@ -3726,6 +4155,8 @@ function showPractice(){
   const container = document.getElementById('practice-steps');
   const subtitleEl = document.getElementById('practice-subtitle-text') || document.getElementById('practice-subtitle');
   if(subtitleEl) subtitleEl.textContent = sub;
+  const flow = document.getElementById('practice-flow');
+  if(flow) flow.innerHTML = practiceFlowSVG(viewedType);
   container.innerHTML = '';
   steps.forEach((step, i) => {
     const div = document.createElement('div');
@@ -3735,6 +4166,7 @@ function showPractice(){
       <div class="pstep-body">
         <div class="pstep-title">${step.title}</div>
         <div class="pstep-desc">${step.desc}</div>
+        ${stepVisual(step)}
       </div>`;
     container.appendChild(div);
   });
@@ -3965,6 +4397,12 @@ function executeDayStart() {
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
   document.getElementById('pause-btn').style.display='flex';
+  {
+    const gh = document.getElementById('goals-hud');
+    if(gh){ gh.style.display = 'flex'; gh.classList.remove('open'); }
+    goalsPanelOpen = false;
+    renderGoalsPanel();
+  }
   releaseHomeRenderers();   // free the two Home Screen WebGL contexts
   ['start-screen','shop-screen','results-screen'].forEach(id=>{
       const el = document.getElementById(id);
@@ -5263,21 +5701,6 @@ function orderTag(o){
     default: return '';
   }
 }
-// Friendly in-world names, shown over each station for the first few days (or
-// whenever the player leaves labels on). New players could not tell the Fridge
-// from the Tray Rack without opening Practice.
-const STATION_LABELS = {
-  fridge:'FRIDGE', grill:'GRILL', fryer:'FRYER', trayrack:'TRAYS', sink:'SINK',
-  counter:'COUNTER', trash:'TRASH', dumpster:'DUMPSTER', table:'TABLE',
-  sodafountain:'SODA', cooler:'COOLER', beachgrill:'GRILL', assembly:'ASSEMBLY',
-  chowderpot:'CHOWDER', lemonadestation:'LEMONADE', basketrack:'BASKETS',
-};
-function stationLabelsVisible(){
-  if(settings.labels === 'on')  return true;
-  if(settings.labels === 'off') return false;
-  return eco.day <= 4;           // 'auto': training wheels for the first few days
-}
-
 function scr(v){
   const p=v.clone().project(camera);
   return {x:(p.x*.5+.5)*window.innerWidth, y:(p.y*-.5+.5)*window.innerHeight, z:p.z};
@@ -5328,16 +5751,6 @@ function drawFloatUI(){
   }
   window._currentStinkPenalty = stinkPenalty;
 
-  if(stationLabelsVisible()){
-    for(const k in stations){
-      const st = stations[k];
-      const name = STATION_LABELS[st.type];
-      if(!name || st.type === 'robot') continue;
-      const lp = scr(new THREE.Vector3(st.x, st.type === 'table' ? 1.2 : 4.2, st.z));
-      if(lp.z >= 1) continue;
-      html += `<div class="stlabel" style="left:${lp.x}px;top:${lp.y}px;">${name}</div>`;
-    }
-  }
   
   groups.forEach(g=>{ 
     if(g.state==='queue') {
@@ -5465,6 +5878,9 @@ touchOv.addEventListener('pointercancel',e=>{ if(e.pointerId===joyId){joyId=null
 //  INIT
 // ─────────────────────────────────────────────────────────────
 loadSave();
+// Build the player from the saved character + skin. Must run after loadSave()
+// (so cosm is populated) and after the CHARACTERS/buildCharacter definitions.
+try { rebuildPlayerMesh(); } catch(e){ console.warn('Initial player build failed', e); }
 updateBoundsFromLevel();
 
 if (loadedLayout && loadedLayout.length > 0) {
@@ -5577,9 +5993,9 @@ function animate(){
       const ta=Math.atan2(vx,vz); let df=ta-player.dir;
       while(df<-Math.PI)df+=Math.PI*2; while(df>Math.PI)df-=Math.PI*2;
       player.dir+=df*.28; pMesh.rotation.y=player.dir;
-      player.wobble+=.28*ds; pBody.rotation.z=Math.sin(player.wobble)*.1;
+      player.wobble+=.28*ds; if(pBody) pBody.rotation.z=Math.sin(player.wobble)*.1;
       pMesh.position.y=Math.abs(Math.sin(player.wobble))*.18;
-    } else { player.wobble=0; pBody.rotation.z=0; pMesh.position.y=0; }
+    } else { player.wobble=0; if(pBody) pBody.rotation.z=0; pMesh.position.y=0; }
     pMesh.position.x=player.pos.x; pMesh.position.z=player.pos.z;
 
     camera.position.x=player.pos.x; camera.position.z=player.pos.z+frustumSize*.95;
@@ -5615,6 +6031,13 @@ function animate(){
         });
       }
       if(needVis) updateStationVisuals();
+
+      // Refresh the goals panel only when the numbers behind it actually move.
+      if(goalsPanelOpen){
+        const sig = stats.groupsServed + '|' + Math.floor(stats.cashEarned) + '|' +
+                    stats.combosServed + '|' + stats.walkouts + '|' + Math.round(stats.totalStars);
+        if(sig !== window._goalsSig){ window._goalsSig = sig; renderGoalsPanel(); }
+      }
 
       if(streakTimer>0){ streakTimer-=ds; if(streakTimer<=0) serveStreak=0; }
       // Surface the streak. The bonus system was well designed but completely
@@ -5729,6 +6152,7 @@ function animate(){
 
             const cash = Math.round(rawCash * 100) / 100;
             eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
+            renderGoalsPanel();   // keep the top-left badge honest even when closed
             updateCashUI();
             playSound('coin');
             // Mastery feedback: a chime + callout on great service.
