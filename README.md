@@ -48,9 +48,14 @@ python3 -m http.server 8000
 ## Features
 
 - The **Burger Bar** cook/serve line (fridge → grill → tray → counter → table)
-- 12 unlockable chef **skins**
+- A dozen **characters** — the classic human chef plus animals (cat, bear,
+  penguin, frog, dino, bunny) and objects (burger, toaster, robot, avocado,
+  mug) — with a 🎲 *Surprise me* roll. Characters are body shapes; the 12
+  unlockable **skins** recolour whichever one you pick.
 - **Achievements** with cash & skin rewards, plus lifetime **records**
+- **Daily goals** visible while you play, from a button in the top-left
 - **Settings**: volume, background music, colorblind-friendly bars,
+  order text labels, larger text,
   Casual difficulty, and save export/import
 - Installable as a **PWA** (web app manifest + icons included)
 - Saves locally via `localStorage` (with backup codes for transfer)

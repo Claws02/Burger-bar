@@ -9,17 +9,49 @@ function makeClassList(el){
     toggle:(c,f)=>{ const on=f!==undefined?f:!s.has(c); on?s.add(c):s.delete(c); return on; },
     contains:c=>s.has(c), _set:s };
 }
+let onReplace = () => {};
+let _elUid = 0;
 function makeEl(id='', tag='div'){
   const el = {
+    _uid: ++_elUid,
     id, tagName:tag.toUpperCase(), style:new Proxy({},{get:(t,k)=>t[k]??'',set:(t,k,v)=>{t[k]=v;return true;}}),
-    children:[], dataset:{}, value:'', checked:false, disabled:false,
+    children:[], dataset:{}, value:'', checked:false, disabled:false, parentNode:null,
     _text:'', _html:'',
     get textContent(){ return this._text; }, set textContent(v){ this._text=String(v); this.children=[]; },
-    get innerHTML(){ return this._html; }, set innerHTML(v){ this._html=String(v); },
+    // Reflect appended children too: much of the game's UI is built with
+    // createElement/appendChild, and a getter that only returned assigned
+    // markup made those elements look empty to tests.
+    get innerHTML(){
+      return this._html + this.children.map(c => c.outerHTML).join('');
+    },
+    set innerHTML(v){ this._html=String(v); this.children.forEach(c=>c.parentNode=null); this.children=[]; },
+    get outerHTML(){
+      const cls = [...this.classList._set].join(' ');
+      const tag = this.tagName.toLowerCase();
+      return `<${tag}${this.id?` id="${this.id}"`:''}${cls?` class="${cls}"`:''}>`
+           + this.innerHTML + (this._text||'') + `</${tag}>`;
+    },
     get innerText(){ return this._text; }, set innerText(v){ this._text=String(v); },
-    appendChild(c){ this.children.push(c); return c; },
-    removeChild(c){ const i=this.children.indexOf(c); if(i>=0)this.children.splice(i,1); return c; },
-    insertBefore(c){ this.children.unshift(c); return c; },
+    appendChild(c){ this.children.push(c); c.parentNode=this; return c; },
+    removeChild(c){ const i=this.children.indexOf(c); if(i>=0)this.children.splice(i,1); c.parentNode=null; return c; },
+    insertBefore(c){ this.children.unshift(c); c.parentNode=this; return c; },
+    // Needed to exercise canvas recycling: a WebGL canvas can only ever hand
+    // out one context, so the game replaces the element rather than reusing it.
+    cloneNode(deep){
+      const n = makeEl(this.id, this.tagName.toLowerCase());
+      for(const k in this.dataset) n.dataset[k] = this.dataset[k];
+      for(const c of this.classList._set) n.classList.add(c);
+      if(deep) n.children = this.children.slice();
+      if(this.getContext) n.getContext = () => ({ getExtension:()=>null, canvas:n });
+      return n;
+    },
+    replaceChild(nu, old){
+      const i = this.children.indexOf(old);
+      if(i>=0){ this.children[i] = nu; } else { this.children.push(nu); }
+      nu.parentNode = this; old.parentNode = null;
+      if(nu.id) onReplace(nu);
+      return old;
+    },
     setAttribute(k,v){ this.dataset[k]=v; }, getAttribute(k){ return this.dataset[k]; },
     removeAttribute(k){ delete this.dataset[k]; },
     addEventListener(){}, removeEventListener(){}, focus(){}, blur(){}, click(){}, remove(){},
@@ -29,19 +61,32 @@ function makeEl(id='', tag='div'){
     offsetWidth:800, offsetHeight:600, clientWidth:800, clientHeight:600,
   };
   el.classList = makeClassList(el);
+  // The game assigns .className directly in several places; keep it and
+  // classList backed by the same set so serialization sees both.
+  Object.defineProperty(el, 'className', {
+    get(){ return [...el.classList._set].join(' '); },
+    set(v){ el.classList._set.clear();
+      String(v).split(/\s+/).filter(Boolean).forEach(c => el.classList._set.add(c)); },
+    enumerable:true, configurable:true,
+  });
   return el;
 }
 
 function install(){
   const els = new Map();
+  const body = makeEl('body','body');
   const canvas = makeEl('gameCanvas','canvas');
   canvas.getContext = () => ({ getExtension:()=>null, canvas });
+  body.appendChild(canvas);
   els.set('gameCanvas', canvas);
-
-  const body = makeEl('body','body');
+  // Keep getElementById in sync when an element is swapped out wholesale.
+  onReplace = el => { els.set(el.id, el); };
   const document = {
     body, documentElement: makeEl('html','html'),
-    getElementById(id){ if(!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
+    getElementById(id){
+      if(!els.has(id)){ const e = makeEl(id); body.appendChild(e); els.set(id, e); }
+      return els.get(id);
+    },
     createElement(tag){ const e=makeEl('',tag); if(tag==='canvas') e.getContext=()=>({getExtension:()=>null}); return e; },
     querySelector(){ return null; }, querySelectorAll(){ return []; },
     addEventListener(){}, removeEventListener(){},
