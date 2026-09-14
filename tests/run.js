@@ -328,6 +328,103 @@ t('robots reach their targets despite obstacles', () => {
 });
 
 // ── 4. Economy / recipes ────────────────────────────────────────────────────
+section('3b. Robots and the fry station');
+
+// A bar with a fryer, a full robot crew, and customers who only want fries.
+function friesBar(g){
+  g.run(`
+    eco.cash=9999; eco.totalTrays=12; upg.grillMult=3; eco.day=12;
+    upg.fryerCount=1; eco.menu={combos:false, fries:true};
+    addStation('fryer0','fryer', 5, -8.5, 3.2, 2);
+    for(let i=1;i<3;i++){ addStation('table'+i,'table',-6+i*5,6,5,5); upg.tableCount++; }
+    for(let i=0;i<6;i++) addStation('robot'+i,'robot',-6+i*2,2,1.5,1.5,
+      {role:['chef','waiter','busser'][i%3], hiredDay:1});
+    upg.robotCount=6;
+    executeDayStart();
+    groups.forEach(x=>discard(scene,x.mesh)); groups.length=0; stats.groupsLeft=0; stats.spawnTimer=1e9;
+  `);
+}
+// Seat a group that wants only fries, with effectively unlimited patience.
+function seatFriesOrder(g){
+  g.run(`
+    var tbl = Object.values(stations).find(s=>s.type==='table' && !s.group && s.dirtyTrays===0);
+    var m = new THREE.Group(); m.add(new THREE.Group());
+    var grp = {id:Math.random(), size:1, type:'normal', state:'ordering',
+      orders:['fries_on_tray'], unservedOrders:['fries_on_tray'], servedMask:[false],
+      foodPatience:1e9, maxFood:1e9, waitPatience:1e9, maxWait:1e9,
+      mesh:m, pos:new THREE.Vector3(tbl.x,0,tbl.z), target:new THREE.Vector3(tbl.x,0,tbl.z),
+      tbl:tbl, heavyCount:1, eatTimer:0};
+    tbl.group = grp; tbl.served = 0; groups.push(grp);
+    gameState='playing';
+  `);
+}
+
+t('robot chefs actually use the fry station', () => {
+  const g = boot(); friesBar(g); seatFriesOrder(g);
+  let used = false;
+  for(let i = 0; i < 400 && !used; i++){
+    g.frame(15);
+    used = g.run(`return (function(){
+      var f = Object.values(stations).find(s=>s.type==='fryer');
+      if(f.slots.some(sl=>sl)) return true;                 // something is frying
+      return Object.values(stations).some(s=>s.type==='robot' &&
+        (s.holding==='fries' || s.holding==='fries_on_tray'));
+    })();`);
+  }
+  ok(used, 'no robot ever dropped a basket in the fryer or carried fries');
+});
+
+t('a robot crew serves a fries order end to end', () => {
+  const g = boot(); friesBar(g); seatFriesOrder(g);
+  let served = false;
+  for(let i = 0; i < 600 && !served; i++){
+    g.frame(15);
+    served = g.run('return stats.groupsServed > 0;');
+  }
+  ok(served, 'the robot crew never served a fries-only order');
+});
+
+t('robot chefs bin burnt fries instead of wedging', () => {
+  const g = boot(); friesBar(g);
+  g.run(`
+    var f = Object.values(stations).find(s=>s.type==='fryer');
+    f.slots[0] = {state:'burnt_fries', progress:200, burnTimer:400};
+    // Keep the day alive: with no customers left AND none on the floor the
+    // frame loop ends the day immediately and the robots never tick.
+    stats.groupsLeft = 1; stats.spawnTimer = 1e9;
+    gameState='playing';
+  `);
+  let cleared = false;
+  for(let i = 0; i < 400 && !cleared; i++){
+    g.frame(15);
+    cleared = g.run(`return !Object.values(stations).find(s=>s.type==='fryer')
+      .slots.some(sl=>sl && sl.state==='burnt_fries');`);
+  }
+  ok(cleared, 'burnt fries sat in the fryer forever, blocking the slot');
+});
+
+t('chefs do not abandon burgers to fry', () => {
+  // Fries off the menu entirely: the fryer must stay untouched.
+  const g = boot(); friesBar(g);
+  g.run("eco.menu.fries = false;");
+  g.run(`
+    var tbl = Object.values(stations).find(s=>s.type==='table');
+    var m = new THREE.Group(); m.add(new THREE.Group());
+    var grp = {id:0.7, size:1, type:'normal', state:'ordering',
+      orders:['burger_on_tray'], unservedOrders:['burger_on_tray'], servedMask:[false],
+      foodPatience:1e9, maxFood:1e9, waitPatience:1e9, maxWait:1e9,
+      mesh:m, pos:new THREE.Vector3(tbl.x,0,tbl.z), target:new THREE.Vector3(tbl.x,0,tbl.z),
+      tbl:tbl, heavyCount:1, eatTimer:0};
+    tbl.group = grp; tbl.served = 0; groups.push(grp);
+    stats.groupsLeft = 1; stats.spawnTimer = 1e9;
+    gameState='playing';
+  `);
+  g.frame(3000);
+  const fried = g.run(`return Object.values(stations).find(s=>s.type==='fryer').slots.some(sl=>sl);`);
+  eq(fried, false, 'a chef fried potatoes nobody ordered:');
+  ok(g.run('return stats.groupsServed > 0;'), 'the burger order was not served');
+});
+
 section('4. Economy and recipes');
 
 t('every order spawnGroup can generate is servable', () => {
