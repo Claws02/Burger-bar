@@ -481,10 +481,33 @@ each is learned before the next:
 Each lands as a Shop unlock + a Menu toggle, so growth is opt-in and the bar
 stays as simple or as rich as the player wants.
 
-**Robots & fries:** robot chefs currently cook **burgers only** — fries are a
-hands-on item, so enabling fries is a deliberate "I'll work the fryer myself"
-choice. Waiters will still carry fries you've plated. Teaching robots the fryer
-is a clean future add (mirror the grill branch in `updateRobots`).
+**Robots & fries:** robot chefs work **both cookers**. The empty-handed chef
+planner is one flat priority list across the grill and the fryer:
+
+1. burnt fries  → bin them (a burnt item occupies its slot forever)
+2. charred patty → bin it
+3. finished fries → collect (they burn on a fixed timer)
+4. cooked patty → collect
+5. empty fryer slot **and `friesDemand() > 0`** → drop a basket
+6. empty grill slot → fetch a patty from the fridge
+
+`friesDemand()` counts outstanding `fries_on_tray` orders minus the fries
+already in flight (frying, staged on a counter, or in anyone's hands, the
+player included). Chefs only start a basket when it is positive — fries cook on
+a fixed timer and burn whether or not anyone wants them, so frying
+speculatively just fills the slots with charcoal and blocks the station. This
+is also what stops a chef abandoning burgers for potatoes nobody ordered
+(enforced by the test *"chefs do not abandon burgers to fry"*).
+
+Chefs stage plain `fries` on a counter exactly as they stage a cooked patty;
+waiters combine `tray + fries → fries_on_tray` there, or plate straight out of
+the basket by arriving at the fryer holding a tray (the player's own shortcut).
+A chef will plate at the tray rack itself if every counter is occupied.
+
+Measured effect, robots-only bar with fries on the menu, days 12–20:
+served 98 → 158, walkout rate 53% → 30%, takings +49%. Before this, roughly a
+fifth of all orders were fries that no robot could serve, so those customers
+always walked.
 
 ---
 
@@ -493,7 +516,7 @@ is a clean future add (mirror the grill branch in `updateRobots`).
 No build step. Validate the game script without a browser:
 
 ```bash
-node tests/run.js          # 37 tests, no install, no network, no browser
+node tests/run.js          # 41 tests, no install, no network, no browser
 ```
 
 `tests/harness.js` boots the **real** game script from `index.html` in a Node

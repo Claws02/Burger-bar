@@ -424,7 +424,8 @@ bottleneck should *move*, not disappear:
 - **Milkshake (~Day 15)** — teaches a hold action, mirroring the sink. Already
   scoped in `ARCHITECTURE.md §11b`.
 - **Robot depth** — let the player assign a robot to a *specific* station. Turns
-  automation from a purchase into a light puzzle. (And teach chefs the fryer.)
+  automation from a purchase into a light puzzle. (Chefs now work the fryer —
+  see §7.)
 - **Visible streak timer.** The streak system is well-designed and completely
   invisible until it fires. A thin decaying bar near the cash HUD would make
   players chase it.
@@ -513,6 +514,7 @@ against the pre-fix revision using the same harness.
 | 4.1 | Core skill untaught | Matching seats pulse / others dim while carrying a plate; wrong plate now says so; station labels for the first 4 days; results screen explains the score. |
 | 4.2 | Curve | Day length capped at 28 groups; late days escalate by pressure; VIPs Day 8, heavies Day 12; early payout nudge. |
 | 4.3 | Streak invisible | Live streak meter in the HUD. |
+| 3b | Robots ignored the fry station entirely | Chefs fry (demand-gated), waiters plate and serve. Robots-only bar: served 98 → 158, walkouts 53% → 30%. |
 | 4.5 | Accessibility | Order text labels, larger-text mode, station labels — all toggleable in Settings. |
 
 ### A regression this caught, worth recording

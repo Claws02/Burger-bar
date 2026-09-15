@@ -83,7 +83,8 @@
   consider a rolling/endless mode on top of the daily-goal cadence.
 - ✅ **Fries** (done) — a Fry Station unlocks on Day 11 and adds `fries_on_tray`
   as a toggleable menu item (a second timed cook to juggle). Next item:
-  milkshake (~Day 15). Robots don't cook fries yet (documented).
+  milkshake (~Day 15). Robot chefs now work the fryer too (demand-gated by
+  `friesDemand()`), and waiters plate and serve fries.
 - 🟢 **More menu items on the one bar.** The recipe state machine (see
   ARCHITECTURE §6) generalizes cleanly — each item = station + recipe + order +
   menu toggle. Keep the ~4–5 day cadence so each is learned before the next.
