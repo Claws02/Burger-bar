@@ -803,6 +803,58 @@ t('graphics quality cycles and can be applied without a renderer error', () => {
   eq(g.run('return qualityTier;'), 'low');
 });
 
+section('9. Daily goals scale with the player');
+
+t('serve/combo goals never exceed what the day can offer (days 1-100, max heat, any rating)', () => {
+  const g = boot();
+  for(const r of [2.5, 3.5, 4.8]){
+  g.run(`gStats.lifeGroups = 100; gStats.lifeStars = ${r} * 100;`);
+  g.run(`adapt.heat = 10; adapt.playStreak = 9; adapt.skill = 3; adapt.lastPlayDate = null; settings.difficulty='normal';`);
+  const bad = g.run(`
+    const out = [];
+    for(let d=1; d<=100; d++){
+      const cap = plannedGroupCount(d);
+      for(const p of dailyGoalPool(d)){
+        if((p.metric==='groups' || p.metric==='combos') && p.goal > cap) out.push(d+':'+p.id+'='+p.goal+'>'+cap);
+      }
+    }
+    return out;`);
+  eq(bad.length, 0, `rating ${r}: impossible goals: ` + bad.slice(0,5).join(', '));
+  }
+});
+
+t('a hot kitchen gets harder (and better-paid) goals than a cold one', () => {
+  const g = boot();
+  const pick = heat => g.run(`window.__fakeToday='2026-06-02'; adapt.lastPlayDate='2026-06-02';
+    adapt.playStreak=1; adapt.skill=${heat}; adapt.easeShifts=0;
+    const p = dailyGoalPool(20); return {earn:p.find(x=>x.id==='earn').goal, pay:p.find(x=>x.id==='earn').reward,
+      serve:p.find(x=>x.id==='serve').goal, streak:p.find(x=>x.id==='streak').goal};`);
+  const cold = pick(0), hot = pick(3);
+  ok(hot.earn > cold.earn && hot.pay > cold.pay, `earn ${cold.earn}->${hot.earn}, pay ${cold.pay}->${hot.pay}`);
+  ok(hot.serve >= cold.serve && hot.streak >= cold.streak, 'serve/streak goals should not get easier');
+});
+
+t('a returning player gets softer goals on the ease-in shift', () => {
+  const g = boot();
+  const r = g.run(`window.__fakeToday='2026-07-20'; adapt.lastPlayDate='2026-07-01'; adapt.playStreak=6; adapt.skill=2;
+    const back = dailyGoalPool(20);
+    adapt.lastPlayDate='2026-07-19';
+    const daily = dailyGoalPool(20);
+    return {back: back.find(x=>x.id==='earn').goal, daily: daily.find(x=>x.id==='earn').goal,
+            walk: back.find(x=>x.id==='nowalk').goal};`);
+  ok(r.back < r.daily, `ease-in earn goal ${r.back} should be below the daily-player goal ${r.daily}`);
+  eq(r.walk, 1, 'ease-in shift should allow a walkout:');
+});
+
+t('the goals previewed on the Home Screen are the goals the shift uses', () => {
+  const g = boot();
+  g.run(`window.__fakeToday='2026-08-11'; adapt.lastPlayDate='2026-08-10'; adapt.playStreak=4; adapt.skill=1.5;
+         eco.day = 14; showStartMenu();`);
+  const preview = g.run('return JSON.stringify(dailyGoals.map(d=>d.desc));');
+  g.run('executeDayStart();');
+  eq(g.run('return JSON.stringify(dailyGoals.map(d=>d.desc));'), preview, 'goals changed between preview and play:');
+});
+
 // ── summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(60)}`);
 console.log(`  ${pass} passed, ${fail} failed`);

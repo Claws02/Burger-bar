@@ -81,33 +81,54 @@ function heatTipMult(){ return 1 + HEAT.TIP_PER_HEAT * effectiveHeat(); }
 
 // Called once at the start of every shift. Advances the calendar streak and
 // recomputes heat. Returns a short note for the day-start banner (or '').
-function adaptStartShift(){
-  const today = adaptToday();
-  let note = '';
+// What starting a shift TODAY would do to the adaptive state, without doing it.
+// Pure, so the Home Screen can preview exactly the goals the shift will use.
+function adaptProject(today){
+  const p = { playStreak: adapt.playStreak, skill: adapt.skill, easeShifts: adapt.easeShifts,
+              easeTotal: adapt.easeTotal, lastGapDays: adapt.lastGapDays, note: '' };
   if(!adapt.lastPlayDate){
-    adapt.playStreak = 1; adapt.lastGapDays = 0;
+    p.playStreak = 1; p.lastGapDays = 0;
   } else {
     const gap = adaptDayDiff(adapt.lastPlayDate, today);
     if(gap === 1){
-      adapt.playStreak++;
-      if(adapt.playStreak >= 2) note = `🔥 ${adapt.playStreak}-day streak — the kitchen heats up!`;
+      p.playStreak = adapt.playStreak + 1;
+      if(p.playStreak >= 2) p.note = `🔥 ${p.playStreak}-day streak — the kitchen heats up!`;
     } else if(gap >= 2){
       const missed = gap - 1;
-      adapt.lastGapDays = gap;
-      adapt.playStreak = 1;
+      p.lastGapDays = gap;
+      p.playStreak = 1;
       // Cool off: drop streak-earned heat and soften (but keep) the skill read.
-      adapt.skill = Math.max(HEAT.SKILL_MIN, adapt.skill - 0.5 * missed);
-      adapt.easeTotal = adapt.easeShifts = Math.min(HEAT.EASE_SHIFTS_MAX, missed >= 7 ? 3 : missed >= 3 ? 2 : 1);
-      note = missed >= 7 ? '👋 Welcome back! We\'ll ease you back in.' : '👋 Welcome back — taking it easy for a shift.';
+      p.skill = Math.max(HEAT.SKILL_MIN, adapt.skill - 0.5 * missed);
+      p.easeTotal = p.easeShifts = Math.min(HEAT.EASE_SHIFTS_MAX, missed >= 7 ? 3 : missed >= 3 ? 2 : 1);
+      p.note = missed >= 7 ? "👋 Welcome back! We'll ease you back in." : '👋 Welcome back — taking it easy for a shift.';
     }
     // gap === 0: another shift today; streak unchanged. gap < 0: clock moved
     // backwards (travel / manual change) -- ignore rather than punish.
   }
+  const streakHeat = Math.min(HEAT.STREAK_CAP, (p.playStreak - 1) * HEAT.STREAK_PER_DAY);
+  p.heat = Math.max(0, Math.min(HEAT.MAX, streakHeat + p.skill));
+  return p;
+}
+// Called once at the start of every shift. Advances the calendar streak and
+// recomputes heat. Returns a short note for the day-start banner (or '').
+function adaptStartShift(){
+  const today = adaptToday();
+  const p = adaptProject(today);
+  adapt.playStreak = p.playStreak; adapt.skill = p.skill; adapt.easeShifts = p.easeShifts;
+  adapt.easeTotal = p.easeTotal; adapt.lastGapDays = p.lastGapDays; adapt.heat = p.heat;
   if(adapt.lastPlayDate === null || adaptDayDiff(adapt.lastPlayDate, today) >= 0) adapt.lastPlayDate = today;
   adapt.bestStreak = Math.max(adapt.bestStreak || 0, adapt.playStreak);
-  const streakHeat = Math.min(HEAT.STREAK_CAP, (adapt.playStreak - 1) * HEAT.STREAK_PER_DAY);
-  adapt.heat = Math.max(0, Math.min(HEAT.MAX, streakHeat + adapt.skill));
-  return note;
+  return p.note;
+}
+// Effective heat for a given in-game day as the next shift will see it. Used by
+// the daily goals (previewed on the Home Screen before the shift starts).
+function projectedHeat(day){
+  const p = (eco.day === day && gameState === 'playing') ? adapt : adaptProject(adaptToday());
+  const d = day - HEAT.RAMP_FROM_DAY;
+  let h = p.heat * (d < 0 ? 0 : Math.min(1, (d + 1) / HEAT.RAMP_DAYS));
+  if(p.easeShifts > 0) h *= 0.4;
+  if(settings.difficulty === 'casual') h *= 0.5;
+  return { heat: Math.max(0, Math.min(HEAT.MAX, h)), easing: p.easeShifts > 0 };
 }
 
 // Called when a shift ends (not on quit). perf is 0..1: star quality times

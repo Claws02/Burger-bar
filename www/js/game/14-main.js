@@ -295,6 +295,7 @@ function animate(){
             // Serve streak: consecutive serves within the window stack a tip
             // bonus (up to +40%).
             if(streakTimer > 0) serveStreak++; else serveStreak = 1;
+            stats.bestStreak = Math.max(stats.bestStreak || 0, serveStreak);
             streakTimer = 360; // ~6s window
             const streakBonus = 1 + Math.min(serveStreak - 1, 4) * 0.1;
             rawCash *= streakBonus;

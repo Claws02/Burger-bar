@@ -111,24 +111,40 @@ function dailyMetrics(){
     stars:    groups > 0 ? stats.totalStars / groups : 0,
     combos:   stats.combosServed || 0,
     walkouts: stats.walkouts || 0,
+    streak:   stats.bestStreak || 0,
   };
 }
 
 // The candidate pool. `mode:'reach'` means cur>=goal; `'atMost'` means cur<=goal
 // (evaluated at day's end). Each returns a concrete goal for the given day.
+// Goals scale with the in-game day AND Kitchen Heat (a daily player gets
+// stiffer, better-paid goals), never ask for more than the day can offer, and
+// soften on a returning player's ease-in shift.
 function dailyGoalPool(day){
+  const { heat: h, easing } = projectedHeat(day);
+  const groupsToday = plannedGroupCount(day);
+  const reach = easing ? 0.7 : 0.78 + h * 0.012;             // share of groups to serve
+  const serveGoal = Math.min(groupsToday, Math.max(3, Math.floor(groupsToday * reach)));
+  const earnBase = 40 + Math.min(day, 28) * 14 + Math.max(0, day - 28) * 4;
+  const earnGoal = Math.round(earnBase * (easing ? 0.8 : 1 + h * 0.04) / 5) * 5;
+  const pay = r => Math.round(r * (1 + h * 0.06));
+  const starGoal = h >= 5 ? 4.5 : 4;
   const pool = [
-    {id:'serve', icon:'🍽️', metric:'groups', goal:Math.max(3, day+2),        mode:'reach',  reward:30+day*3, label:g=>`Serve ${g} groups`},
-    {id:'earn',  icon:'💵', metric:'cash',   goal:40 + day*14,               mode:'reach',  reward:40+day*4, label:g=>`Earn $${g} today`},
-    {id:'stars', icon:'⭐', metric:'stars',  goal:4,                         mode:'reach',  reward:60,       label:g=>`Finish at ${g}★ or better`},
-    {id:'nowalk',icon:'🏃', metric:'walkouts',goal:0,                        mode:'atMost', reward:50,       label:()=>`No customers walk out`},
+    {id:'serve', icon:'🍽️', metric:'groups', goal:serveGoal, mode:'reach',  reward:pay(30+Math.min(day,40)*3), label:g=>`Serve ${g} groups`},
+    {id:'earn',  icon:'💵', metric:'cash',   goal:earnGoal,  mode:'reach',  reward:pay(40+Math.min(day,40)*4), label:g=>`Earn $${g} today`},
+    {id:'stars', icon:'⭐', metric:'stars',  goal:starGoal,  mode:'reach',  reward:pay(starGoal>4?90:60),      label:g=>`Finish at ${g}★ or better`},
+    {id:'nowalk',icon:'🏃', metric:'walkouts',goal:easing?1:0, mode:'atMost', reward:pay(50),
+     label:g=>g ? `At most ${g} walkout` : `No customers walk out`},
   ];
   // The combo goal is ALWAYS in the pool, gated by `needs` instead of being
   // conditionally pushed. seededPick shuffles by index, so a pool that changed
   // length when combos were toggled in the Shop handed back a different three
   // goals than the ones already previewed on the Home Screen.
-  pool.push({id:'combo', icon:'🥤', metric:'combos', goal:Math.max(2, Math.ceil(day/2)), mode:'reach', reward:55,
-             needs:()=>menuComboActive(), label:g=>`Serve ${g} combo meals`});
+  pool.push({id:'combo', icon:'🥤', metric:'combos', goal:Math.min(groupsToday, Math.max(2, Math.min(Math.ceil(day/2), Math.floor(groupsToday*0.45)))), mode:'reach',
+             reward:pay(55), needs:()=>menuComboActive(), label:g=>`Serve ${g} combo meals`});
+  // Streak challenge appears once the player has had time to learn the streak.
+  pool.push({id:'streak', icon:'🔥', metric:'streak', goal:Math.min(8, 3 + Math.floor(h / 2.5)), mode:'reach',
+             reward:pay(45), needs:()=>day >= 6, label:g=>`Build a ${g}-serve streak`});
   return pool;
 }
 

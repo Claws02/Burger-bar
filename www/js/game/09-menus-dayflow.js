@@ -701,6 +701,20 @@ function startNextDay(){
   executeDayStart();
 }
 
+// How many groups a given day will bring. Day length is CAPPED: it used to be
+// `day + 1` forever, so a Day-100 shift was 100+ groups of identical work --
+// fatigue, not difficulty. Past the cap the day gets harder instead (more
+// simultaneous arrivals, tighter patience, Kitchen Heat). Shared with the daily
+// goals so a goal can never ask for more customers than the day will send.
+const DAY_LENGTH_CAP = 28;
+function plannedGroupCount(day){
+  let rating = parseFloat(getCumRating());
+  if(day === 1) rating = 3.0;
+  const multi = rating >= 4.0 ? 1.3 : rating < 3.0 ? 0.7 : 1.0;
+  const baseGroups = Math.min(day + 1, DAY_LENGTH_CAP);
+  return Math.max(1, Math.min(DAY_LENGTH_CAP, Math.floor(baseGroups * multi)));
+}
+
 function executeDayStart() {
   eco.day++;
   // Advance the calendar streak / heat before anything reads difficulty.
@@ -714,19 +728,7 @@ function executeDayStart() {
     gGroups: gStats.lifeGroups,
   };
   
-  let rating = parseFloat(getCumRating());
-  if(eco.day === 1) rating = 3.0;
-  let multi = 1.0;
-  if(rating >= 4.0) multi = 1.3;
-  if(rating < 3.0) multi = 0.7;
-
-  // Day length is CAPPED. It used to be `eco.day + 1` forever, so a Day-100
-  // shift was 100+ groups of identical work -- fatigue, not difficulty. Past the
-  // cap the day stops getting longer and starts getting harder instead (more
-  // simultaneous arrivals, tighter patience -- see spawnGroup).
-  const DAY_LENGTH_CAP = 28;
-  const baseGroups = Math.min(eco.day + 1, DAY_LENGTH_CAP);
-  const groupCount = Math.max(1, Math.min(DAY_LENGTH_CAP, Math.floor(baseGroups * multi)));
+  const groupCount = plannedGroupCount(eco.day);
 
   // Simultaneous arrivals ramp with the day (and with how many tables you own),
   // which is what makes late days demanding now that they're length-capped.
