@@ -14,6 +14,7 @@
     '05-player', '06-shop-edit', '07-progress', '07a-adaptive', '08-home', '09-menus-dayflow',
     '10-customers', '11-actions', '12-robots', '13-hud-input', '14-main'
   ];
+  var PRELUDE = ['js/vendor/capacitor.js', 'js/native.js'];
   var queue = ['js/vendor/three.min.js'].concat(GAME_FILES.map(function(f){ return 'js/game/' + f + '.js'; }));
   window.BURGER_GAME_FILES = GAME_FILES;
 
@@ -47,18 +48,35 @@
   });
   window.addEventListener('unhandledrejection', function(e){ logError('promise: ' + (e && e.reason)); });
 
-  function next(i){
-    if(i >= queue.length){ window._gameBooted = true; return; }
+  function load(src, cb){
     var s = document.createElement('script');
-    s.src = queue[i];
-    s.async = false;
-    s.onload = function(){
-      if(i === 0 && !window.THREE){ fail('THREE missing'); return; }
-      if(!window._bootFailed) next(i + 1);
-    };
-    s.onerror = function(){ fail('could not load ' + queue[i]); };
+    s.src = src; s.async = false;
+    s.onload = cb;
+    s.onerror = function(){ fail('could not load ' + src); };
     document.body.appendChild(s);
   }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ next(0); }, {once:true});
-  else next(0);
+  function next(i){
+    if(i >= queue.length){
+      window._gameBooted = true;
+      if(window.NativeBridge && window.NativeBridge.hideSplash) window.NativeBridge.hideSplash();
+      return;
+    }
+    load(queue[i], function(){
+      if(i === 0 && !window.THREE){ fail('THREE missing'); return; }
+      if(!window._bootFailed) next(i + 1);
+    });
+  }
+  // Native bridge first (it may restore the save from iOS storage), then the game.
+  function start(){
+    load(PRELUDE[0], function(){
+      load(PRELUDE[1], function(){
+        var ready = (window.NativeBridge && window.NativeBridge.ready) || Promise.resolve();
+        var go = function(){ if(!window._bootFailed) next(0); };
+        // Never let a stuck native call hold the game hostage.
+        Promise.race([ready, new Promise(function(r){ setTimeout(r, 2500); })]).then(go, go);
+      });
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
 })();

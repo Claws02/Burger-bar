@@ -661,8 +661,12 @@ body.bigtext .pv-lbl{font-size:9px;}
 #rating-val{font-size:12px;}
 #rush-banner{top:calc(var(--sat) + 58px);}
 #touch-hint{bottom:calc(var(--sab) + 18px);}
-@media (max-width:420px){
-  #top-hud{flex-direction:column;align-items:center;gap:5px;}
+/* Keep the centre pills between the goals pill and the pause button; wrap to
+   a second row rather than sliding underneath them. */
+#top-hud{left:calc(var(--sal) + 112px);right:calc(var(--sar) + 58px);flex-wrap:wrap;row-gap:5px;}
+@media (max-width:520px){
+  #top-hud{flex-direction:column;align-items:center;gap:5px;flex-wrap:nowrap;}
+  #day-banner{max-width:100%;overflow:hidden;}
 }
 
 /* Results / shop / settings sheets clear the status bar and home indicator */
@@ -682,3 +686,8 @@ body.bigtext .pv-lbl{font-size:9px;}
 }
 /* Intro art: keep the big emoji stack clear of the chip on short screens. */
 .iscene .ibig{font-size:clamp(30px,8.5vh,62px);margin-top:30px;}
+@media (max-width:480px){
+  #home-topbar-title .ttl-txt{display:none;}
+  #home-topbar-title{font-size:26px;}
+  #home-topbar-stats{flex:1;justify-content:flex-end;}
+}
