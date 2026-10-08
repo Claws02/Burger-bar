@@ -685,6 +685,24 @@ t('a character with no chef hat does not break the crown or skins', () => {
   ok(g.run('return !!pCharGroup;'), 'applying a skin to a hatless character broke the player mesh');
 });
 
+t('every character has a full rig (arms, legs, head) and walks without error', () => {
+  const g = boot();
+  const ids = g.run('return CHARACTERS.map(c=>c.id);');
+  for(const id of ids){
+    g.run(`cosm.character='${id}'; rebuildPlayerMesh();`);
+    ok(g.run('return !!(pArmL && pArmR && pLegL && pLegR && pHead && pBody);'), `${id} rig is missing parts`);
+    g.run('player.holding="burger_on_tray"; player.wobble=1; animatePlayerRig(true, 1); player.holding=null; animatePlayerRig(false, 1);');
+  }
+});
+
+t('the Golden Crown is part of the character model', () => {
+  const g = boot();
+  const before = g.run('return _bakeCache.size;');
+  g.run("cosm.character='human'; upg.burgerCrown=true; applyCrown();");
+  ok(g.run('return [..._bakeCache.keys()].some(k => /^ch\|human\|[^|]+\|1\|/.test(k));'), 'no crowned model was built');
+  ok(g.run('return _bakeCache.size;') > before, 'crown did not change the model');
+});
+
 section('7. Adaptive difficulty (Kitchen Heat)');
 
 // Play one shift on a given calendar date with a given performance (0..1).

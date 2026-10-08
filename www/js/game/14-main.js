@@ -61,6 +61,23 @@ let lastT=performance.now(), ds=1;
 const homeScreenEl=document.getElementById('home-screen');
 const TARGET=1/60;
 
+// Walk cycle + carry pose on the character rig. Limbs ease toward their pose so
+// starting/stopping never snaps.
+function animatePlayerRig(moving, dsF){
+  const k = Math.min(1, .25 * dsF), w = player.wobble, carrying = !!player.holding;
+  const ease = (o, prop, v) => { if(o) o.rotation[prop] += (v - o.rotation[prop]) * k; };
+  const swing = moving ? Math.sin(w) : 0;
+  ease(pLegL, 'x',  swing * .7);
+  ease(pLegR, 'x', -swing * .7);
+  ease(pBody, 'z', moving ? Math.sin(w) * .06 : 0);
+  ease(pBody, 'x', moving ? .08 : 0);
+  // Carrying: both arms forward under the tray. Otherwise they swing opposite the legs.
+  ease(pArmL, 'x', carrying ? -1.25 : -swing * .55);
+  ease(pArmR, 'x', carrying ? -1.25 :  swing * .55);
+  ease(pArmL, 'z', carrying ? .05 : .18);
+  ease(pArmR, 'z', carrying ? -.05 : -.18);
+}
+
 function animate(){
   requestAnimationFrame(animate);
   try {
@@ -127,9 +144,10 @@ function animate(){
       const ta=Math.atan2(vx,vz); let df=ta-player.dir;
       while(df<-Math.PI)df+=Math.PI*2; while(df>Math.PI)df-=Math.PI*2;
       player.dir+=df*.28; pMesh.rotation.y=player.dir;
-      player.wobble+=.28*ds; if(pBody) pBody.rotation.z=Math.sin(player.wobble)*.1;
-      pMesh.position.y=Math.abs(Math.sin(player.wobble))*.18;
-    } else { player.wobble=0; if(pBody) pBody.rotation.z=0; pMesh.position.y=0; }
+      player.wobble+=.28*ds;
+      pMesh.position.y=Math.abs(Math.sin(player.wobble))*.1;
+    } else { player.wobble=0; pMesh.position.y=0; }
+    animatePlayerRig(moving, ds);
     pMesh.position.x=player.pos.x; pMesh.position.z=player.pos.z;
 
     // Follow the player, but keep the bar framed: on tall portrait screens the

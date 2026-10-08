@@ -9,17 +9,14 @@ const pMesh=new THREE.Group(); scene.add(pMesh);
 // The player mesh is rebuilt from the shared character definition whenever the
 // character or skin changes, so what you pick on the Home Screen is exactly
 // what you play as. `let` (not const) because rebuildPlayerMesh() reassigns them.
-let pBody=null, pHead=null, pHatRim=null, pHatBody=null, pHatTop=null, pCharGroup=null;
+let pBody=null, pHead=null, pArmL=null, pArmR=null, pLegL=null, pLegR=null, pCharGroup=null;
 function rebuildPlayerMesh(){
   if(pCharGroup){ pMesh.remove(pCharGroup); disposeObj(pCharGroup); pCharGroup = null; }
-  const parts = buildCharacter((cosm.character || 'human'), getActiveSkin());
+  const parts = buildCharacter((cosm.character || 'human'), getActiveSkin(), { crown: !!(upg && upg.burgerCrown) });
   pCharGroup = parts.group;
   pMesh.add(pCharGroup);
   pBody = parts.body; pHead = parts.head;
-  pHatRim  = parts.hat ? parts.hat.rim  : null;
-  pHatBody = parts.hat ? parts.hat.body : null;
-  pHatTop  = parts.hat ? parts.hat.top  : null;
-  if(upg && upg.burgerCrown) applyCrown();
+  pArmL = parts.armL; pArmR = parts.armR; pLegL = parts.legL; pLegR = parts.legR;
   applySkates();
   // The held item hangs off pMesh, not the character, so it survives a rebuild.
   if(typeof updateHolding === 'function' && player && player.holding) updateHolding();
@@ -45,11 +42,12 @@ function applySkates(){
   });
   pMesh.add(pSkates);
 }
+// The Golden Burger Crown is part of the character model (a gold toque with
+// points), so earning it just rebuilds the player.
 function applyCrown(){
   if(!upg.burgerCrown) return;
-  if(pHatBody) pHatBody.material = M('#FFD700');
-  if(pHatTop)  pHatTop.material  = M('#FFC107');
-  if(pHatRim)  pHatRim.material  = M('#FFA000');
+  rebuildPlayerMesh();
+  if(hc && hc.scene) buildHomeChef();
 }
 
 let heldMesh=null;
