@@ -36,6 +36,38 @@ In Xcode:
 
 Swift Package Manager fetches `capacitor-swift-pm` on first open; no CocoaPods.
 
+## 1b. Game Center setup
+
+The app ships a small native Game Center plugin
+(`ios/App/App/GameCenterPlugin.swift`, registered in `MainViewController.swift`)
+and the `com.apple.developer.game-center` entitlement (`App/App.entitlements`).
+
+1. **Xcode:** *Signing & Capabilities* should list **Game Center** (it comes
+   from the entitlements file). If automatic signing complains, click
+   *+ Capability → Game Center* once.
+2. **App Store Connect → your app → Services → Game Center:** enable it, then
+   create these leaderboards (Classic, *High score*, *Integer*):
+
+   | Leaderboard ID | Name | Score format |
+   |----------------|------|--------------|
+   | `bb.best_day_earnings` | Best Day's Earnings | Money, whole dollars |
+   | `bb.days_in_business` | Days in Business | Integer |
+   | `bb.longest_streak` | Longest Daily Streak | Integer, suffix "days" |
+   | `bb.guests_served` | Guests Served | Integer |
+
+3. On the version page, tick **Game Center** so the leaderboards ship with it.
+4. Test with a Sandbox Game Center account on a device: play a shift, tap
+   **🏆 Ranks** on the Home Screen.
+
+Achievements: the game can also report its achievements to Game Center
+(`GC_ACHIEVEMENTS_ENABLED` in `www/js/game/09a-gamecenter.js`, IDs `bb.ach.<id>`).
+Each needs a 512×512 image and description in App Store Connect, so it ships
+**off**. Turn it on in a later update once they are created.
+
+Scores sync rather than fire-and-forget: the best value Apple confirmed per
+board is remembered, and anything better is resubmitted on sign-in and after
+each shift, so offline play still reaches the boards.
+
 ## 2. Device test pass (do this before submitting)
 
 - [ ] Cold launch: native splash → CLAW splash → home, no white flash
@@ -49,6 +81,9 @@ Swift Package Manager fetches `capacitor-swift-pm` on first open; no CocoaPods.
 - [ ] Older device if you have one (iPhone XR/11 class): Day 20 bar stays smooth;
       Auto graphics should drop to a lower tier by itself if not
 - [ ] Silent switch on: game audio is muted (WKWebView Web Audio follows the switch)
+- [ ] New install: the first shift runs the tutorial; Skip works; Settings → Replay works
+- [ ] Game Center: banner on launch, 🏆 Ranks opens the boards, a finished shift shows a score
+- [ ] Listen through `store/audio-preview.wav` on the phone speaker for level and tone
 
 ## 3. App Store Connect listing (draft)
 
@@ -76,6 +111,8 @@ Swift Package Manager fetches `capacitor-swift-pm` on first open; no CocoaPods.
 > 🤖 HIRE ROBOTS — Chef, waiter and busser bots learn on the job and level up.
 >
 > 🎯 DAILY GOALS & ACHIEVEMENTS — Fresh challenges every shift.
+>
+> 🏆 GAME CENTER LEADERBOARDS — Best day, longest streak, guests served.
 >
 > 👨‍🍳 BE ANYONE — A dozen characters and skins, from a classic chef to a toaster.
 >
@@ -133,3 +170,6 @@ Regenerate art with `npm run art`.
   but it is a judgement call by the reviewer.
 - **Not verified on hardware from this environment:** real-device frame rate,
   haptics feel, audio routing, Xcode archive. Section 2 covers them.
+- **The Swift Game Center plugin has not been compiled here** (no Xcode in this
+  environment). It uses standard GameKit and Capacitor 8 APIs, checked against
+  Capacitor's sources; the first Xcode build is its real test.

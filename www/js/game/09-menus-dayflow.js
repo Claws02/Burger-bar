@@ -121,6 +121,7 @@ function showStartMenu(){
   applyChefSkin(cosm.equippedSkin);
   runHomeAnim();
 
+  updateGcButton();
   // Preview window onto the player's real bar (drawn by the main loop).
   initRestaurantRenderer();
 }
@@ -890,6 +891,7 @@ function endDay(){
   checkDailyGoals();       // award daily-goal bonuses before the results math
   checkAchievements(true); // award now; celebrate on the Home Screen
   gameState='results'; saveGame(); playSound('daycomplete'); showResults();
+  gcSync();
 }
 
 // Day-milestone alerts + newly-unlocked shop items are queued at the END of a

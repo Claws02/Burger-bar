@@ -718,3 +718,4 @@ body.tutorial #touch-hint{display:none !important;}
   box-shadow:0 4px 12px rgba(0,0,0,.35);animation:edgePulse .8s ease-in-out infinite alternate;}
 @keyframes edgePulse{to{box-shadow:0 4px 18px rgba(255,193,7,.95);}}
 body.bigtext #tut-text{font-size:15px;} body.bigtext #tut-title{font-size:19px;}
+#home-btn-ranks{position:absolute;top:calc(var(--sat) + 186px);left:calc(var(--sal) + 10px);z-index:6;}

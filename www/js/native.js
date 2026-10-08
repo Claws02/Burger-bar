@@ -19,6 +19,7 @@
   var Prefs = reg('Preferences'), Haptics = reg('Haptics'), StatusBar = reg('StatusBar'),
       Splash = reg('SplashScreen'), App = reg('App');
   NB.haptics = Haptics;
+  NB.gameCenter = reg('GameCenter');   // app-local plugin: ios/App/App/GameCenterPlugin.swift
   NB.hideSplash = function(){ try { Splash.hide({ fadeOutDuration: 250 }); } catch(e){} };
 
   var PREFIX = 'burgerBoss_';

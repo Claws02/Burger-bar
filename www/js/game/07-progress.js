@@ -260,6 +260,7 @@ function checkAchievements(deferToasts){
     if(achievements.unlocked.includes(a.id)) continue;
     if((m[a.metric] || 0) >= a.goal){
       achievements.unlocked.push(a.id);
+      gcReportAchievement(a.id);
       if(a.cash){ eco.cash += a.cash; stats._achvEarned = (stats._achvEarned||0) + a.cash; }
       if(a.skin && !cosm.ownedSkins.includes(a.skin)) cosm.ownedSkins.push(a.skin);
       unlockedNow.push(a);

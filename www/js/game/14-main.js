@@ -35,6 +35,8 @@ applyCrown();
 rebuildAll();
 updateCashUI();
 showStartMenu();
+// Game Center sign-in shows Apple's banner; give the Home Screen a moment first.
+setTimeout(()=>{ try { gcSignIn(); } catch(e){} }, 1500);
 
 // Fade out the CLAWEngineering splash once the game is ready (with a minimum
 // on-screen time so the brand moment is visible even on fast loads).

@@ -3,15 +3,13 @@
 const { boot, counters } = require('./harness.js');
 
 let pass=0, fail=0; const failures=[];
-function t(name, fn){
-  try { fn(); console.log('  \x1b[32mPASS\x1b[0m ' + name); pass++; }
-  catch(e){ console.log('  \x1b[31mFAIL\x1b[0m ' + name + '\n         ' + e.message);
-    fail++; failures.push(name); }
-}
+// Tests are queued and run in order at the end, awaiting async ones.
+const queue = [];
+function t(name, fn){ queue.push({ name, fn }); }
 function eq(a,b,m){ if(a!==b) throw new Error(`${m||''} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); }
 function ok(c,m){ if(!c) throw new Error(m||'expected truthy'); }
 function lte(a,b,m){ if(!(a<=b)) throw new Error(`${m||''} expected <= ${b}, got ${a}`); }
-function section(s){ console.log('\n\x1b[1m'+s+'\x1b[0m'); }
+function section(s){ queue.push({ section: s }); }
 
 // Build a late-game bar: 8 tables, 4 grills, fryer, 4 counters, 20 trays, 8 robots.
 function lateGame(g){
@@ -942,9 +940,51 @@ t('a mid-career player never gets the tutorial unasked, but can replay it', () =
   ok(g.run('return tutorialActive();'), 'replay did not run on the next shift');
 });
 
-// ── summary ─────────────────────────────────────────────────────────────────
+section('11. Game Center');
+
+// A fake native plugin that records submissions and can be told to fail.
+function withFakeGC(g, fail){
+  g.run(`window.__gcCalls = []; window.__gcFail = ${!!fail};
+    window.NativeBridge = { gameCenter: {
+      signIn: () => Promise.resolve({ authenticated: true, playerName: 'Tester' }),
+      submitScore: o => { window.__gcCalls.push(o.leaderboardId + '=' + o.score);
+        return Promise.resolve(window.__gcFail ? { submitted:false } : { submitted:true }); },
+      showLeaderboard: () => Promise.resolve(), reportAchievement: () => Promise.resolve({}) } };`);
+}
+const settle = () => new Promise(r => setImmediate(r));
+
+t('is inert in the browser (no native bridge)', () => {
+  const g = boot();
+  g.run('gcSync(); showLeaderboards(); updateGcButton();');
+  eq(g.run('return document.getElementById("home-btn-ranks").style.display;'), 'none');
+});
+
+t('submits improvements once, and retries what Apple did not confirm', async () => {
+  const g = boot(); withFakeGC(g, true);
+  g.run('eco.day = 12; records.bestDayCash = 345.6; records.totalServed = 80; adapt.bestStreak = 4;');
+  await g.run('return gcSignIn();'); await settle();
+  eq(g.run('return __gcCalls.length;'), 4, 'all four boards submitted:');
+  ok(g.run('return __gcCalls.includes("bb.best_day_earnings=345");'), 'earnings should be whole dollars');
+  g.run('gcSync();'); await settle();
+  eq(g.run('return __gcCalls.length;'), 8, 'unconfirmed scores should be retried:');
+  g.run('__gcFail = false; gcSync();'); await settle(); await settle();
+  g.run('__gcCalls.length = 0; gcSync();'); await settle();
+  eq(g.run('return __gcCalls.length;'), 0, 'confirmed scores were resubmitted:');
+  g.run('eco.day = 13; gcSync();'); await settle();
+  eq(g.run('return __gcCalls.join();'), 'bb.days_in_business=13', 'only the improved board:');
+});
+
+// ── run + summary ───────────────────────────────────────────────────────────
+(async () => {
+for(const q of queue){
+  if(q.section){ console.log('\n\x1b[1m'+q.section+'\x1b[0m'); continue; }
+  try { await q.fn(); console.log('  \x1b[32mPASS\x1b[0m ' + q.name); pass++; }
+  catch(e){ console.log('  \x1b[31mFAIL\x1b[0m ' + q.name + '\n         ' + e.message);
+    fail++; failures.push(q.name); }
+}
 console.log(`\n${'─'.repeat(60)}`);
 console.log(`  ${pass} passed, ${fail} failed`);
 if(fail){ console.log('  failing: ' + failures.join(', ')); }
 console.log(`${'─'.repeat(60)}\n`);
 process.exit(fail ? 1 : 0);
+})();

@@ -23,7 +23,7 @@ store/                  App Store icon (1024, opaque) and 6.9" screenshots
 tests/                  headless test suite (real game code, stubbed THREE + DOM)
 tools/                  browser smoke/perf runs, art + screenshot renderers, checks
 docs/                   architecture, audits, App Store release guide
-archive/                the parked multi-map build
+archive/                the parked multi-map build (incl. the removed Seafood Shack)
 ```
 
 The game files load in the order listed in `www/js/boot.js` (`GAME_FILES`).
@@ -32,7 +32,7 @@ earlier file; `npm run check` enforces that.
 
 | File | What lives there |
 |------|------------------|
-| `00-settings-audio` | settings, synthesized SFX/music, haptics |
+| `00-settings-audio` | settings, synthesized SFX + ambience + adaptive music, haptics |
 | `01-renderer` | renderer, colour pipeline, lights, quality tiers, shared materials/geometry |
 | `01a-modelkit` | rounded boxes, canvas textures, signage, `bake()` mesh merging |
 | `02-world` | scenery, room + decor tiers, station models, upgrade tiers, station batching |
@@ -42,9 +42,12 @@ earlier file; `npm run check` enforces that.
 | `07-progress` | achievements, daily goals |
 | `07a-adaptive` | **Kitchen Heat** adaptive difficulty, lunch rushes |
 | `08-home` | home screen chef + live bar showcase |
+| `08a-characters` | the 12 player characters on one rig (walk cycle, carry pose, skins, crown) |
 | `09-menus-dayflow` | menus, settings, day start/end, results |
+| `09a-gamecenter` | Game Center leaderboards (score sync), achievements flag |
 | `10-customers` … `12-robots` | customers, actions, robot AI |
 | `13-hud-input` | pooled floating UI, touch/keyboard input |
+| `13a-tutorial` | hands-on first-shift tutorial |
 | `14-main` | boot sequence and main loop |
 
 ## Run it
@@ -57,11 +60,13 @@ npm run serve          # http://localhost:8000 — or open www/index.html
 ## Test it
 
 ```bash
-npm test               # load-order check + 58 headless tests
+npm test               # load-order check + 66 headless tests
 npm run test:native    # simulated iOS bridge: save restore/mirror, splash, haptics
 npm run perf           # Day-20 full-restaurant run in headless Chromium
 npm run visual         # screenshot tour (landscape) → .smoke/visual
 npm run portrait       # screenshot tour (portrait)  → .smoke/portrait
+node tools/render-audio.js  # offline render of all sounds → store/audio-preview.wav
+STEPS=tools/char-lineup.js node tools/smoke.js .smoke/chars  # character lineup
 ```
 
 ## Ship it (iOS)
