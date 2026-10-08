@@ -62,11 +62,8 @@ function spawnGroup(){
   g.servedMask = g.orders.map(()=>false); // per-seat served state (aligned to orders)
 
   for(let i=0;i<size;i++){
-    const m=new THREE.Group();
-    const c = type === 'vip' ? custColors[5] : custColors[Math.floor(Math.random()*(custColors.length-1))];
-    addMesh(m, GCyl(.55,1.35,12), c, 0,.68,0);
-    addMesh(m, GSph(.48,10), matSkin, 0,1.55,0);
-    if(type === 'heavy') m.scale.set(1.4, 1.0, 1.4);
+    const m=personModel(randomLook(type === 'vip'));
+    if(type === 'heavy') m.scale.set(1.3, 1.05, 1.3);
     m.position.set(i*1.7-(size>1?.85:0),0,i*.4); g.mesh.add(m);
   }
   scene.add(g.mesh); groups.push(g);
@@ -84,6 +81,76 @@ function moveToTarget(g,scale){
   const ta=Math.atan2(dx,dz); let df=ta-g.mesh.rotation.y;
   while(df<-Math.PI)df+=Math.PI*2; while(df>Math.PI)df-=Math.PI*2;
   g.mesh.rotation.y+=df*.2; return false;
+}
+
+// ── Customer models ─────────────────────────────────────────────────────────
+// Built from a handful of parts and baked per look (shirt, skin, hair), so a
+// full dining room costs a few draw calls per guest rather than a dozen.
+const CUST_SHIRTS = ['#e91e63','#ff9800','#00acc1','#43a047','#7e57c2','#1e88e5','#f4511e','#00897b'];
+const CUST_SKINS  = ['#ffd7b8','#f1c09a','#c98e62','#8d5a3b','#5c3a24'];
+const CUST_HAIR   = ['#2b1d14','#5a3a22','#a0522d','#e2b65c','#1c1c1c','#9e9e9e'];
+const CUST_PANTS  = ['#37474f','#3949ab','#5d4037','#455a64'];
+function personModel(look){
+  const key = 'cust|' + [look.shirt, look.skin, look.hair, look.hairC, look.pants, look.vip?1:0].join('|');
+  return bake(key, ()=>{
+    const g = new THREE.Group();
+    const vip = look.vip;
+    const shirt = vip ? MP('#1f2227',70) : M(CUST_SHIRTS[look.shirt]);
+    const skin  = M(CUST_SKINS[look.skin]);
+    const hairM = M(CUST_HAIR[look.hairC]);
+    const pants = vip ? M('#1f2227') : M(CUST_PANTS[look.pants]);
+    for(const lx of [-.17,.17]){
+      addMesh(g, GCap(.15,.45), pants, lx,.38,0);
+      addMesh(g, GRBox(.26,.12,.38,.05), M('#2a2a2a'), lx,.06,.06, 0,0,0,false);     // shoes
+    }
+    addMesh(g, GRBox(.86,.88,.56,.24), shirt, 0,1.12,0);                              // torso
+    if(vip){
+      addMesh(g, GCone(.2,.42,3), M('#fafafa'), 0,1.38,.27, Math.PI,0,0,false);       // shirt V
+      addMesh(g, GRBox(.09,.38,.03,.02), M('#ffca28'), 0,1.25,.3, 0,0,0,false);       // gold tie
+    } else {
+      addMesh(g, GRBox(.46,.08,.03,.02), M('#ffffff'), 0,1.38,.285, 0,0,0,false);     // collar
+    }
+    for(const ax of [-.52,.52]){
+      addMesh(g, GCap(.12,.5), shirt, ax,1.08,.02, 0,0,ax*.12);
+      addMesh(g, GSph(.12,8), skin, ax*1.04,.74,.04, 0,0,0,false);
+    }
+    addMesh(g, GCyl(.14,.16,10), skin, 0,1.6,0, 0,0,0,false);                         // neck
+    addMesh(g, GSph(.42,16), skin, 0,1.95,0).scale.set(.95,1,.95);                    // head
+    for(const ex of [-.14,.14]) addMesh(g, GSphS(.055,8,6), M('#1b1b1b'), ex,2.0,.37, 0,0,0,false);
+    addMesh(g, GBox(.16,.035,.03), M('#7b3b2e'), 0,1.82,.39, 0,0,0,false);           // smile
+    for(const ex of [-.43,.43]) addMesh(g, GSph(.08,6), skin, ex,1.96,0, 0,0,0,false); // ears
+    // Hair: 0 short, 1 bun, 2 long, 3 cap
+    const cap = cachedGeo('haircap', ()=>new THREE.SphereGeometry(.45,16,8,0,Math.PI*2,0,Math.PI*.52));
+    if(look.hair === 3 && !vip){
+      addMesh(g, cap, M(CUST_SHIRTS[(look.shirt+3)%CUST_SHIRTS.length]), 0,2.0,0, -.12,0,0);
+      addMesh(g, GRBox(.5,.05,.4,.02), M(CUST_SHIRTS[(look.shirt+3)%CUST_SHIRTS.length]), 0,2.12,.42, 0,0,0,false);
+    } else {
+      addMesh(g, cap, hairM, 0,1.99,-.02, -.18,0,0);
+      if(look.hair === 1 && !vip) addMesh(g, GSph(.2,10), hairM, 0,2.25,-.32);
+      if(look.hair === 2 && !vip) addMesh(g, GRBox(.78,.75,.24,.12), hairM, 0,1.72,-.28);
+    }
+    if(vip) addMesh(g, GRBox(.62,.13,.06,.05), MP('#0d0d0d',150), 0,2.02,.38, 0,0,0,false); // shades
+    return g;
+  });
+}
+// A fixed, deterministic cast: varied enough to read as a crowd, and it caps the
+// bake cache at 27 looks however long the session runs.
+const LOOK_POOL = (()=>{
+  const r = _rng(2026), pick = n => Math.floor(r()*n), out = [];
+  for(let i=0;i<24;i++) out.push({ shirt:i%CUST_SHIRTS.length, skin:pick(CUST_SKINS.length), hair:i%4,
+    hairC:pick(CUST_HAIR.length), pants:pick(CUST_PANTS.length), vip:false });
+  for(let i=0;i<3;i++) out.push({ shirt:0, skin:(i*2)%CUST_SKINS.length, hair:0, hairC:i, pants:0, vip:true });
+  return out;
+})();
+// Bake every look and item up front (behind the splash screen), so the first
+// VIP or first combo of a shift never stalls a frame while it is built.
+function prewarmModels(){
+  LOOK_POOL.forEach(personModel);
+  ['raw','cooked','charred','soda','tray','dirty_tray','soda_on_tray','burger_on_tray','burger_soda_on_tray',
+   'trash_bag','raw_fries','fries','burnt_fries','fries_on_tray'].forEach(itemMesh);
+}
+function randomLook(vip){
+  return vip ? LOOK_POOL[24 + Math.floor(Math.random()*3)] : LOOK_POOL[Math.floor(Math.random()*24)];
 }
 
 // ─────────────────────────────────────────────────────────────

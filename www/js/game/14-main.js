@@ -30,6 +30,7 @@ if (loadedLayout && loadedLayout.length > 0) {
     saveGame();
 }
 
+try { prewarmModels(); } catch(e){ console.warn('prewarm failed', e); }
 applyCrown();
 rebuildAll();
 updateCashUI();
@@ -131,8 +132,19 @@ function animate(){
     } else { player.wobble=0; if(pBody) pBody.rotation.z=0; pMesh.position.y=0; }
     pMesh.position.x=player.pos.x; pMesh.position.z=player.pos.z;
 
-    camera.position.x=player.pos.x; camera.position.z=player.pos.z+frustumSize*.95;
-    camera.lookAt(player.pos.x,0,player.pos.z);
+    // Follow the player, but keep the bar framed: on tall portrait screens the
+    // view is taller than the whole lot, so clamp instead of showing empty grass.
+    let camX = player.pos.x, camZ = player.pos.z;
+    {
+      const halfW = (camera.right - camera.left) / 2, halfH = (camera.top - camera.bottom) / 2 * 1.414;
+      const minX = bounds.l - 6 + halfW, maxX = bounds.r + 6 - halfW;
+      const minZ = bounds.t - 7 + halfH, maxZ = bounds.b + 16 - halfH;
+      camX = minX > maxX ? (bounds.l + bounds.r) / 2 : Math.max(minX, Math.min(maxX, camX));
+      camZ = minZ > maxZ ? (bounds.t + bounds.b + 9) / 2 : Math.max(minZ, Math.min(maxZ, camZ));
+    }
+    camera.position.x=camX; camera.position.z=camZ+frustumSize*.95;
+    camera.lookAt(camX,0,camZ);
+    fitSunToView(camX, camZ);
 
     if(gameState==='playing'){
       updateRobots(ds);
@@ -352,7 +364,13 @@ function animate(){
   }
   // The Home Screen is an opaque overlay with its own renderers; drawing the
   // full bar underneath it every frame only cost battery.
-  if(!(gameState==='start_menu' && homeScreenEl.style.display!=='none')) renderer.render(scene,camera);
+  updateStationBatch();
+  if(gameState==='start_menu' && homeScreenEl.style.display!=='none'){
+    // The opaque Home Screen covers the canvas except the preview window.
+    renderHomeShowcase();
+  } else {
+    renderer.render(scene,camera);
+  }
   } catch(err){
     // A per-frame error shouldn't blank the screen forever. Log it and, once,
     // tell the player how to recover instead of leaving a frozen black canvas.

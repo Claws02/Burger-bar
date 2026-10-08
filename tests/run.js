@@ -83,6 +83,7 @@ t('entering gameplay releases the Home Screen WebGL contexts', () => {
   g.run('eco.day=1; executeDayStart();');
   eq(g.run('return !!hc.renderer;'), false, 'home chef renderer still holding a WebGL context:');
   eq(g.run('return !!rp.renderer;'), false, 'restaurant preview renderer still holding a WebGL context:');
+  eq(g.run('return homeShowcase.on;'), false, 'home showcase still drawing during gameplay:');
 });
 
 t('returning to the Home Screen rebuilds its renderers', () => {
@@ -103,7 +104,7 @@ t('the home chef survives repeated home <-> gameplay cycles', () => {
     g.run('showStartMenu();');
     ok(g.run('return !!hc.renderer;'), `home chef renderer missing after cycle ${c}`);
     ok(g.run('return !!hc.mesh;'),     `home chef mesh missing after cycle ${c}`);
-    ok(g.run('return !!rp.renderer;'), `restaurant preview missing after cycle ${c}`);
+    ok(g.run('return homeShowcase.on;'), `restaurant preview missing after cycle ${c}`);
   }
   const last = g.run('return document.getElementById("home-chef-canvas")._uid || 0;');
   ok(last !== first, 'the chef canvas element was reused after its WebGL context was destroyed');
@@ -136,6 +137,14 @@ t('spawning and despawning customers costs no GPU memory', () => {
   const after = g.leak().geo;
   eq(spawned - base, 0, `spawning 40 customers allocated new geometry:`);
   eq(after - base, 0, `geometry retained after spawn/despawn of 40 customers:`);
+});
+
+t('baked model caches stay bounded however many customers visit', () => {
+  const g = boot(); lateGame(g);
+  g.run(`gameState='playing'; stats.groupsLeft=9999;`);
+  const before = g.run('return _bakeCache.size;');
+  g.run('for(let i=0;i<500;i++){ spawnGroup(); } groups.forEach(x=>discard(scene,x.mesh)); groups.length=0;');
+  eq(g.run('return _bakeCache.size;'), before, 'new bakes after boot prewarm:');
 });
 
 t('a full simulated day does not grow unboundedly', () => {

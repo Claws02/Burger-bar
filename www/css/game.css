@@ -161,13 +161,14 @@ body.bigtext .gp-top{font-size:13px;}
   position:absolute;top:0;left:0;width:100%;height:100%;
   display:none;z-index:10;pointer-events:auto;overflow:hidden;
   /* Full pastel sky background */
+  /* Sky above; the bottom 46% is a window onto the main canvas, where the
+     player's real bar is drawn by the showcase camera (renderHomeShowcase). */
   background:linear-gradient(180deg,
-    #b3e5fc 0%,      /* sky blue top */
-    #e1f5fe 28%,     /* lighter sky */
-    #f8bbd0 52%,     /* pink horizon */
-    #a5d6a7 62%,     /* grass starts */
-    #81c784 78%,     /* mid grass */
-    #66bb6a 100%     /* deep grass */
+    #b3e5fc 0%,
+    #e1f5fe 26%,
+    #fde4ec 50%,
+    #fde4ec 54%,
+    transparent 54%
   );
 }
 
@@ -177,6 +178,7 @@ body.bigtext .gp-top{font-size:13px;}
   z-index:2;overflow:hidden;
 }
 #home-restaurant-canvas{
+  display:none !important;
   position:absolute;top:0;left:0;
   width:100% !important;height:100% !important;
   display:block;touch-action:none;cursor:grab;
@@ -622,3 +624,61 @@ body.bigtext .pv-lbl{font-size:9px;}
 .res-heat{margin-top:5px;font-size:12px;font-weight:900;color:#FF8A65;}
 .res-heat span{color:rgba(255,255,255,.55);font-weight:800;}
 .hstat-streak{color:#FFAB91;}
+
+/* ══ LAUNCH POLISH ═════════════════════════════════════════════════════════
+   Safe areas (notch / Dynamic Island / home indicator) and a compact in-game
+   HUD that no longer covers the kitchen line. Appended last so it wins. */
+:root{
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+}
+#home-topbar{padding-top:calc(var(--sat) + 8px);padding-left:calc(var(--sal) + 12px);padding-right:calc(var(--sar) + 12px);}
+#home-topbar-title{white-space:nowrap;font-size:clamp(15px,4.6vw,22px);}
+#home-topbar-stats{gap:6px;}
+.hstat{white-space:nowrap;}
+#home-day-badge{white-space:nowrap;}
+#home-btn-settings{top:calc(var(--sat) + 78px) !important;left:calc(var(--sal) + 10px) !important;}
+#home-achv-panel{top:calc(var(--sat) + 78px);right:calc(var(--sar) + 10px);}
+#home-btn-skins{top:calc(var(--sat) + 258px);right:calc(var(--sar) + 10px);}
+#home-btn-shop{top:calc(var(--sat) + 316px);right:calc(var(--sar) + 10px);}
+@media (max-width:420px){
+  #home-topbar{padding-bottom:7px;}
+  .hstat{padding:4px 9px;font-size:12px;}
+  #home-day-badge{padding:4px 9px;font-size:11px;}
+}
+
+/* Compact single-row HUD pills */
+#top-hud{top:calc(var(--sat) + 10px);gap:8px;}
+#goals-hud{top:calc(var(--sat) + 10px);left:calc(var(--sal) + 10px);}
+#pause-btn{top:calc(var(--sat) + 10px);right:calc(var(--sar) + 10px);width:40px;height:40px;border-radius:12px;font-size:17px;}
+#day-banner{display:flex;align-items:center;gap:7px;padding:6px 13px;font-size:14px;line-height:1;border-radius:18px;white-space:nowrap;}
+#day-banner br{display:none;}
+#day-banner #day-sub{font-size:11px !important;color:rgba(255,255,255,.6) !important;}
+#day-banner #day-sub::before{content:'·';margin-right:7px;color:rgba(255,255,255,.3);}
+#day-heat{margin-top:0;font-size:11px;}
+#day-heat::before{content:'·';margin-right:7px;color:rgba(255,255,255,.3);}
+#cash-display{flex-direction:row;gap:8px;align-items:center;padding:6px 13px;font-size:15px;line-height:1;border-radius:18px;}
+#rating-val{font-size:12px;}
+#rush-banner{top:calc(var(--sat) + 58px);}
+#touch-hint{bottom:calc(var(--sab) + 18px);}
+@media (max-width:420px){
+  #top-hud{flex-direction:column;align-items:center;gap:5px;}
+}
+
+/* Results / shop / settings sheets clear the status bar and home indicator */
+#results-screen,#shop-screen,#settings-screen,#skins-screen,#achv-screen,#stores-screen{
+  padding-top:calc(var(--sat) + 16px) !important;padding-bottom:calc(var(--sab) + 12px) !important;}
+
+/* Short landscape screens (phones turned sideways in a browser): the home
+   layout is built for portrait, so give the bar preview the stage. */
+@media (orientation:landscape) and (max-height:520px){
+  #home-chef-svg-wrap{display:none;}
+  #home-screen{background:linear-gradient(180deg,#b3e5fc 0%,#e1f5fe 30%,transparent 30%);}
+  #home-restaurant-wrap{height:70%;}
+  #home-btn-play{top:auto;bottom:calc(var(--sab) + 14px);}
+  #home-btn-edit,#home-btn-practice{top:auto;bottom:calc(var(--sab) + 14px);}
+  #home-achv-panel,#home-btn-skins,#home-btn-shop{transform:scale(.8);transform-origin:top right;}
+  #home-btn-skins{top:calc(var(--sat) + 220px);} #home-btn-shop{top:calc(var(--sat) + 268px);}
+}
+/* Intro art: keep the big emoji stack clear of the chip on short screens. */
+.iscene .ibig{font-size:clamp(30px,8.5vh,62px);margin-top:30px;}

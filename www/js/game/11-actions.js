@@ -82,7 +82,7 @@ function handleAction(){
               if(upg.robots && upg.robots[rIdx]) upg.robots[rIdx].role = t.role;
               saveGame();
 
-              stGrp.remove(t.mesh); t.mesh=buildRobot(t.role); t.mesh.position.set(t.pos.x,0,t.pos.z); stGrp.add(t.mesh);
+              discard(stGrp, t.mesh); t.mesh=buildRobot(t.role, getRobotLevel(t)); t.mesh.position.set(t.pos.x,0,t.pos.z); stGrp.add(t.mesh);
               const tt=document.getElementById('role-tooltip');
               tt.textContent=`${t.role==='chef'?'👨‍🍳':t.role==='waiter'?'🛎️':'🧹'} Robot set to ${t.role.toUpperCase()}`;
               tt.style.display='block'; setTimeout(()=>tt.style.display='none', 1800);

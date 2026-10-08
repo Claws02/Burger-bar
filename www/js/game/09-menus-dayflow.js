@@ -62,6 +62,7 @@ function showStartMenu(){
   });
   document.getElementById('top-hud').style.display='none';
   document.getElementById('pause-btn').style.display='none';
+  { const th = document.getElementById('touch-hint'); if(th) th.style.display='none'; }
   { const gh = document.getElementById('goals-hud');
     if(gh){ gh.style.display = 'none'; gh.classList.remove('open'); }
     goalsPanelOpen = false; }
@@ -118,11 +119,8 @@ function showStartMenu(){
   applyChefSkin(cosm.equippedSkin);
   runHomeAnim();
 
-  // Init restaurant preview renderer (once)
-  stopRestaurantAnim();
-  if(!rp.renderer) initRestaurantRenderer();
-  else { resizeRestaurantCanvas(); buildRestaurantScene(rp.storeIdx); updateStoreDots(); }
-  runRestaurantAnim();
+  // Preview window onto the player's real bar (drawn by the main loop).
+  initRestaurantRenderer();
 }
 window.showStartMenu = showStartMenu;
 
@@ -640,6 +638,7 @@ function cleanupGameScene(){
     if(stations[k].visuals) stations[k].visuals.forEach(v => discard(scene, v));
     discard(stGrp, stations[k].mesh);
     delete stations[k];
+    markStationsDirty();
   }
   // Remove all wings geometry
   wings_obj.forEach(w=>{ discard(scene, w.obj||w); });
@@ -746,6 +745,7 @@ function executeDayStart() {
 
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
+  { const th = document.getElementById('touch-hint'); if(th) th.style.display = eco.day <= 3 ? '' : 'none'; }
   document.getElementById('pause-btn').style.display='flex';
   {
     const gh = document.getElementById('goals-hud');
@@ -790,6 +790,10 @@ function executeDayStart() {
   for(const k in stations) if(stations[k].type==='robot') { stations[k].state='idle'; stations[k].holding=null; }
 
   updateStationVisuals();
+  // Robots level up overnight; swap their models and call it out.
+  refreshUpgradeVisuals().filter(s=>s.type==='robot').forEach(s=>{
+    spawnFloater(s.mesh.position.clone().add(new THREE.Vector3(0,3.2,0)), `⬆ Lv.${getRobotLevel(s)} ${s.role.toUpperCase()}`, '#4FC3F7');
+  });
   player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
   gameState='playing'; gamePaused=false;
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';

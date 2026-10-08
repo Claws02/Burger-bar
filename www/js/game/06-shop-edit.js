@@ -80,6 +80,7 @@ function confirmExpand(dir){
 window.confirmExpand=confirmExpand; window.closeExpandPicker=closeExpandPicker;
 
 function rebuildAll(){
+  markStationsDirty();
   updateBoundsFromLevel();
   buildWorld(); buildRoom();
   updateStationVisuals();
@@ -227,7 +228,14 @@ function doBuy(id){
 
   playSound('coin');
   eco.cash-=cost;
+  const gtBefore = grillTier(), dtBefore = decorTier();
   def.action();
+  refreshUpgradeVisuals();
+  if(id === 'speed') applySkates();
+  // Make tier jumps feel like an event, not a silent number change.
+  if(grillTier() > gtBefore) showToast(`🔥 Grill upgraded: ${GRILL_TIER_NAMES[grillTier()]}!`, 2600);
+  else if(decorTier() > dtBefore) showToast(['','🪴 Plants added','🖼️ Wall art hung','🎵 Jukebox installed','💡 Neon & string lights on','💐 Fresh flowers on every table','✨ Gold trim — the fanciest diner in town'][decorTier()], 2600);
+  else if(id === 'speed') showToast(`🛼 Skates Lv.${upg.speedLv} — ${upg.speedLv>=5?'golden wheels!':upg.speedLv>=3?'glow wheels!':'zoom!'}`, 2200);
   updateCashUI();
   document.getElementById('shop-cash-display').textContent='$'+eco.cash.toFixed(2);
   updateShop(); updateStationVisuals(); saveGame();

@@ -20,10 +20,31 @@ function rebuildPlayerMesh(){
   pHatBody = parts.hat ? parts.hat.body : null;
   pHatTop  = parts.hat ? parts.hat.top  : null;
   if(upg && upg.burgerCrown) applyCrown();
+  applySkates();
   // The held item hangs off pMesh, not the character, so it survives a rebuild.
   if(typeof updateHolding === 'function' && player && player.holding) updateHolding();
 }
 
+// Roller Skates upgrade, worn on the character's feet; flashier with each level.
+let pSkates = null;
+function applySkates(){
+  if(pSkates){ pMesh.remove(pSkates); pSkates = null; }
+  const lv = (upg && upg.speedLv) || 0;
+  if(lv <= 0) return;
+  const t = lv >= 5 ? 2 : lv >= 3 ? 1 : 0;
+  pSkates = bake('skates|'+t, ()=>{
+    const g = new THREE.Group();
+    const boot = t===2 ? MP('#ffca28',140) : t===1 ? M('#1e88e5') : M('#e53935');
+    const wheel = t===0 ? M('#fafafa') : ME(t===2 ? '#fff176' : '#18ffff');
+    for(const fx of [-.25,.25]){
+      addMesh(g, GRBox(.32,.14,.6,.06), boot, fx,.17,.05);
+      addMesh(g, GBox(.08,.04,.56), MP('#9e9e9e',90), fx,.09,.05, 0,0,0,false);
+      for(const wz of [-.18,.28]) addMesh(g, GCyl(.075,.09,12), wheel, fx,.075,wz, 0,0,Math.PI/2,false);
+    }
+    return g;
+  });
+  pMesh.add(pSkates);
+}
 function applyCrown(){
   if(!upg.burgerCrown) return;
   if(pHatBody) pHatBody.material = M('#FFD700');

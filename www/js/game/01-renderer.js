@@ -5,6 +5,12 @@
 // ─────────────────────────────────────────────────────────────
 const canvas = document.getElementById('gameCanvas');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+// Colour pipeline: lighting is computed in linear space, tone-mapped with ACES
+// (soft highlight roll-off, richer mid-tones) and output as sRGB. Material
+// factories below convert authored sRGB hex colours to linear to match.
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -85,8 +91,11 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#87CEEB'); 
-scene.fog = new THREE.Fog('#87CEEB', 50, 110);
+// Background is a clear colour (not tone-mapped/encoded); fog is shaded, so it
+// takes the linear version of the same colour to blend into it seamlessly.
+const SKY = '#8fd3f4';
+scene.background = new THREE.Color(SKY);
+scene.fog = new THREE.Fog(new THREE.Color(SKY).convertSRGBToLinear(), 60, 130);
 
 let frustumSize = 26;
 const camera = new THREE.OrthographicCamera(1,1,1,1,1,1000);
@@ -101,15 +110,33 @@ function resize(){
 window.addEventListener('resize', resize);
 resize();
 
-const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffffff, 0.5);
-sun.position.set(25,50,25); sun.castShadow=true;
+// Warm afternoon key light, cool sky fill, warm bounce from the ground.
+const hemi = new THREE.HemisphereLight(new THREE.Color('#d8ecff').convertSRGBToLinear(), new THREE.Color('#8a6d4a').convertSRGBToLinear(), 0.62);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(new THREE.Color('#ffe9c9').convertSRGBToLinear(), 1.75);
+sun.position.set(22,50,30); sun.castShadow=true;
 sun.shadow.mapSize.set(1024,1024);
-sun.shadow.camera.left=-60; sun.shadow.camera.right=60;
-sun.shadow.camera.top=60; sun.shadow.camera.bottom=-60;
-sun.shadow.bias=-0.001; scene.add(sun);
-const fillLight = new THREE.DirectionalLight(0x88bbff, 0.2);
-fillLight.position.set(-15,20,-10); scene.add(fillLight);
+// The shadow frustum follows the camera (see fitSunToView) instead of covering
+// the whole 120x120 world, so the same map gives ~3x sharper shadows.
+sun.shadow.camera.left=-36; sun.shadow.camera.right=36;
+sun.shadow.camera.top=36; sun.shadow.camera.bottom=-36;
+sun.shadow.camera.near=1; sun.shadow.camera.far=140;
+sun.shadow.bias=-0.0008; sun.shadow.normalBias=0.02; scene.add(sun); scene.add(sun.target);
+const fillLight = new THREE.DirectionalLight(new THREE.Color('#9ec9ff').convertSRGBToLinear(), 0.3);
+fillLight.position.set(-20,18,-12); scene.add(fillLight);
+const SUN_OFFSET = new THREE.Vector3(22,50,30);
+function fitSunToView(x, z){
+  // Cover what the camera can see: its width, and its height stretched by the
+  // 45° tilt onto the ground, plus margin for tall objects' shadows.
+  const sc = sun.shadow.camera;
+  const half = Math.ceil(Math.max(camera.right - camera.left, (camera.top - camera.bottom) * 1.45) / 2 + 8);
+  if(sc.right !== half){ sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half; sc.updateProjectionMatrix(); }
+  // Snap to shadow texels so moving the camera doesn't make edges shimmer.
+  const q = (half * 2) / sun.shadow.mapSize.x;
+  x = Math.round(x/q)*q; z = Math.round(z/q)*q;
+  sun.position.set(x + SUN_OFFSET.x, SUN_OFFSET.y, z + SUN_OFFSET.z);
+  sun.target.position.set(x, 0, z);
+}
 
 // ─────────────────────────────────────────────────────────────
 //  MATERIALS
@@ -130,7 +157,7 @@ const M = (c,o)=>{
   const key = c + '|' + (o===undefined?'':o);
   let m = _matCache.get(key);
   if(!m){
-    m = new THREE.MeshLambertMaterial({color:c});
+    m = new THREE.MeshLambertMaterial({color:new THREE.Color(c).convertSRGBToLinear()});
     if(o!==undefined){ m.transparent=true; m.opacity=o; }
     m._shared = true; _matCache.set(key, m);
   }
@@ -139,13 +166,13 @@ const M = (c,o)=>{
 const MB = c => {
   const key = 'B|' + c;
   let m = _matCache.get(key);
-  if(!m){ m = new THREE.MeshBasicMaterial({color:c}); m._shared = true; _matCache.set(key, m); }
+  if(!m){ m = new THREE.MeshBasicMaterial({color:new THREE.Color(c).convertSRGBToLinear()}); m._shared = true; _matCache.set(key, m); }
   return m;
 };
 // A deliberately UNIQUE material, for the few meshes whose colour/opacity is
 // mutated in place (the placement ghost, trail particles). Callers own these and
 // are responsible for disposing them.
-const MU = (c,o)=>{ const m=new THREE.MeshLambertMaterial({color:c});
+const MU = (c,o)=>{ const m=new THREE.MeshLambertMaterial({color:new THREE.Color(c).convertSRGBToLinear()});
   if(o!==undefined){ m.transparent=true; m.opacity=o; } return m; };
 
 const _geoCache = new Map();

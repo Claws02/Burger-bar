@@ -581,57 +581,65 @@ function buildBeachRestaurantScene(){
   });
 }
 
+// The Home Screen preview shows the player's REAL bar -- every upgrade, robot
+// and decor tier -- drawn by the main renderer through a window in the Home
+// Screen overlay, with a slowly orbiting showcase camera. It used to be a
+// separate hand-built mock-up in its own WebGL context; one less context matters
+// on iOS, where WebKit evicts contexts under memory pressure.
+const homeShowcase = { on:false, cam:null, yaw:0, drag:null, vel:0, bound:false };
 function initRestaurantRenderer(){
-  const canvas = document.getElementById('home-restaurant-canvas');
-  if(!canvas || rp.renderer) return;
-
-  // Size renderer to match wrap dimensions
+  homeShowcase.on = true;
+  if(!homeShowcase.cam) homeShowcase.cam = new THREE.PerspectiveCamera(36, 1, 0.5, 400);
   const wrap = document.getElementById('home-restaurant-wrap');
-  const pw = (wrap ? wrap.offsetWidth  : 0) || window.innerWidth;
-  const ph = (wrap ? wrap.offsetHeight : 0) || Math.round(window.innerHeight * 0.46);
-
-  rp.renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
-  rp.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
-  rp.renderer.setSize(pw, ph, false);
-  rp.renderer.shadowMap.enabled = true;
-  rp.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-  rp.scene = new THREE.Scene();
-
-  // Isometric-ish camera angle matching in-game view
-  rp.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-  rp.camera.position.set(0, 12, 26);
-  rp.camera.lookAt(0, 3, 0);
-
-  buildRestaurantScene(rp.storeIdx);
-  // Defer resize to after first paint so wrap has real dimensions
-  requestAnimationFrame(()=>{ resizeRestaurantCanvas(); });
-  initRestaurantSwipe();
-  updateStoreDots();
+  if(wrap && !homeShowcase.bound){
+    homeShowcase.bound = true;
+    wrap.addEventListener('pointerdown', e=>{ homeShowcase.drag = e.clientX; homeShowcase.vel = 0; });
+    window.addEventListener('pointermove', e=>{
+      if(homeShowcase.drag === null) return;
+      const dx = e.clientX - homeShowcase.drag; homeShowcase.drag = e.clientX;
+      homeShowcase.yaw = Math.max(-1.1, Math.min(1.1, homeShowcase.yaw - dx * 0.006));
+      homeShowcase.vel = -dx * 0.006;
+    });
+    window.addEventListener('pointerup', ()=>{ homeShowcase.drag = null; });
+  }
 }
-
-function resizeRestaurantCanvas(){
-  if(!rp.renderer) return;
+// Draw the showcase into the preview window. Called from the main loop while
+// the Home Screen is up; returns false if there is nothing to draw into.
+function renderHomeShowcase(){
   const wrap = document.getElementById('home-restaurant-wrap');
-  if(!wrap) return;
-  // Use getBoundingClientRect for accurate size after layout
-  const rect = wrap.getBoundingClientRect();
-  const w = Math.max(Math.round(rect.width),  window.innerWidth);
-  const h = Math.max(Math.round(rect.height), Math.round(window.innerHeight * 0.46));
-  rp.renderer.setSize(w, h, false);
-  rp.camera.aspect = w / h;
-  rp.camera.updateProjectionMatrix();
+  if(!homeShowcase.on || !wrap || !homeShowcase.cam) return false;
+  const r = wrap.getBoundingClientRect();
+  if(r.width < 2 || r.height < 2) return false;
+  // Gentle idle sway; a drag takes over and then eases back.
+  if(homeShowcase.drag === null){
+    homeShowcase.yaw += homeShowcase.vel; homeShowcase.vel *= 0.92;
+    const idle = Math.sin(performance.now() / 4200) * 0.35;
+    homeShowcase.yaw += (idle - homeShowcase.yaw) * 0.01;
+  }
+  const b = bounds, cx = (b.l + b.r) / 2, cz = (b.t + b.b) / 2;
+  const span = Math.max(b.r - b.l, b.b - b.t);
+  const cam = homeShowcase.cam;
+  cam.aspect = r.width / r.height;
+  // Fit the bar's width (narrow portrait windows need to back off further).
+  const R = span * (cam.aspect < 1 ? 1.9 / cam.aspect : 1.6) + 6;
+  cam.position.set(cx + Math.sin(homeShowcase.yaw) * R, R * 0.62, cz + Math.cos(homeShowcase.yaw) * R);
+  cam.lookAt(cx, 0, cz + span * 0.06);
+  cam.updateProjectionMatrix();
+  fitSunToView(cx, cz);
+  const H = window.innerHeight;
+  renderer.setViewport(r.left, H - r.bottom, r.width, r.height);
+  renderer.setScissor(r.left, H - r.bottom, r.width, r.height);
+  renderer.setScissorTest(true);
+  renderer.render(scene, cam);
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, window.innerWidth, H);
+  return true;
 }
 
-function runRestaurantAnim(){
-  rp.animId = requestAnimationFrame(runRestaurantAnim);
-  if(!rp.renderer || !rp.scene) return;
-  // Pan camera slightly left/right for life
-  const t = Date.now() / 1000;
-  rp.camera.position.x = Math.sin(t * 0.12) * 1.2;
-  rp.camera.lookAt(0, 3, 0);
-  rp.renderer.render(rp.scene, rp.camera);
-}
+function resizeRestaurantCanvas(){}
+
+// The showcase is drawn by the main loop (renderHomeShowcase); no extra rAF loop.
+function runRestaurantAnim(){}
 
 function stopRestaurantAnim(){
   if(rp.animId){ cancelAnimationFrame(rp.animId); rp.animId = null; }
@@ -723,6 +731,7 @@ function recycleCanvas(id){
 function releaseHomeRenderers(){
   stopHomeAnim();
   let released = false;
+  homeShowcase.on = false;
   for(const holder of [hc, rp]){
     if(!holder || !holder.renderer) continue;
     try{
