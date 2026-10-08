@@ -1,0 +1,13 @@
+{
+  "name": "burger-bar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Burger Bar — a 3D cooking & restaurant tycoon game (Three.js, Capacitor iOS).",
+  "scripts": {
+    "test": "node tests/run.js",
+    "smoke": "node tools/smoke.js .smoke",
+    "perf": "STEPS=tools/perf-steps.js node tools/smoke.js .smoke/perf",
+    "serve": "npx http-server www -c-1 -p 8000"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1976D2">
+<meta name="description" content="Burger Bar — a fast, fun 3D cooking & restaurant tycoon game. Grill, serve, upgrade and build your food empire!">
+<meta property="og:title" content="Burger Bar">
+<meta property="og:description" content="Grill, serve, upgrade and build your food empire in this 3D cooking tycoon game!">
+<meta property="og:type" content="website">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Burger Bar</title>
+
+
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<!-- ── BRANDED LOADING / SPLASH SCREEN ── -->
+<div id="boot-splash">
+  <svg class="cl-emblem" viewBox="0 0 120 120" width="116" height="116" aria-hidden="true">
+    <circle cx="60" cy="60" r="46" fill="none" stroke="#FFC107" stroke-width="12" stroke-dasharray="10 8" stroke-linecap="round"/>
+    <circle cx="60" cy="60" r="37" fill="#10151f" stroke="#FFC107" stroke-width="2"/>
+    <path d="M48 82 C43 60 45 43 52 35 C55 50 55 67 53 83 Z" fill="#FFC107"/>
+    <path d="M60 84 C57 60 58 41 60 31 C63 43 63 66 64 84 Z" fill="#FFD54F"/>
+    <path d="M72 82 C77 60 75 43 68 35 C65 50 65 67 67 83 Z" fill="#FFC107"/>
+  </svg>
+  <div class="cl-word"><span style="color:#FFC107;">CLAW</span><span style="color:#fff;">Engineering</span></div>
+  <div class="cl-tag">PRESENTS</div>
+  <div class="cl-bar"><div class="cl-bar-fill"></div></div>
+  <div class="cl-load">Loading…</div>
+</div>
+<div id="gc">
+  <canvas id="gameCanvas"></canvas>
+  <div id="floating-ui"></div>
+
+  <!-- ══ HOME SCREEN (Golf Battle style) ══ -->
+  <div id="home-screen">
+
+    <!-- PASTEL CLOUDS -->
+    <svg class="home-cloud c1" width="140" height="56" viewBox="0 0 140 56"><ellipse cx="70" cy="38" rx="60" ry="20" fill="rgba(255,255,255,.9)"/><ellipse cx="44" cy="30" rx="34" ry="25" fill="rgba(255,255,255,.9)"/><ellipse cx="94" cy="28" rx="28" ry="22" fill="rgba(255,255,255,.9)"/></svg>
+    <svg class="home-cloud c2" width="100" height="44" viewBox="0 0 100 44"><ellipse cx="50" cy="29" rx="44" ry="16" fill="rgba(255,255,255,.8)"/><ellipse cx="30" cy="23" rx="25" ry="19" fill="rgba(255,255,255,.8)"/><ellipse cx="68" cy="21" rx="21" ry="17" fill="rgba(255,255,255,.8)"/></svg>
+    <svg class="home-cloud c3" width="75" height="36" viewBox="0 0 75 36"><ellipse cx="38" cy="24" rx="34" ry="14" fill="rgba(255,255,255,.75)"/><ellipse cx="22" cy="18" rx="20" ry="16" fill="rgba(255,255,255,.75)"/></svg>
+
+    <!-- RESTAURANT PREVIEW CANVAS (swipeable, shows actual in-game exterior) -->
+    <div id="home-restaurant-wrap">
+      <canvas id="home-restaurant-canvas"></canvas>
+      <!-- store name + dots indicator -->
+      <div id="home-store-label">
+        <span id="home-store-name">Burger Bar #1</span>
+        <div id="home-store-dots" style="display:none;"></div>
+      </div>
+      <!-- swipe hint arrows — hidden in single-bar mode -->
+      <div id="home-swipe-left"  style="display:none;" onclick="homeSwipeStore(-1)">&#8249;</div>
+      <div id="home-swipe-right" style="display:none;" onclick="homeSwipeStore(1)">&#8250;</div>
+    </div>
+
+        <!-- TOP STATS BAR (Golf Battle style) -->
+    <div id="home-topbar">
+      <div id="home-topbar-title">🍔 BURGER BAR</div>
+      <div id="home-topbar-stats">
+        <div class="hstat">💰 <span id="home-cash">$0.00</span></div>
+        <div class="hstat">⭐ <span id="home-rating">0.0</span></div>
+        <div id="home-day-badge">📅 Day <span id="home-day">0</span></div>
+      </div>
+    </div>
+
+    <!-- CHEF (left-center, sitting on the grass — rendered as actual 3D) -->
+    <div id="home-chef-svg-wrap">
+      <canvas id="home-chef-canvas" width="200" height="300" style="display:block;"></canvas>
+      <div id="home-spin-hint">↔ drag to spin</div>
+      <div id="home-nametag">Burger Bar #1</div>
+    </div>
+
+    <!-- SKINS — top right, small wide -->
+    <div id="home-btn-skins">
+      <button class="hbtn-wide hbtn-skins" onclick="showSkinsShop()">
+        <span class="btn-icon">👕</span>
+        <span class="btn-label">Skins<span class="btn-sub">Customize</span></span>
+      </button>
+    </div>
+
+    <!-- SHOP — top right below skins, small wide -->
+    <div id="home-btn-shop">
+      <button class="hbtn-wide hbtn-shop" onclick="showShop()">
+        <span class="btn-icon">🛒</span>
+        <span class="btn-label">Shop<span class="btn-sub">Upgrades</span></span>
+      </button>
+    </div>
+
+    <!-- ACHIEVEMENTS SHOWCASE — right side, under Shop -->
+    <div id="home-achv-panel" onclick="showAchievements()">
+      <div class="home-achv-title" id="home-achv-title">🏆 ACHIEVEMENTS</div>
+      <div id="home-achv-list"></div>
+    </div>
+
+    <!-- PLAY — just below screen center -->
+    <div id="home-btn-play">
+      <button class="hbtn-play" onclick="homePlaySelected()">
+        ▶&nbsp; PLAY DAY <span id="home-next-day">1</span>
+      </button>
+    </div>
+
+    <!-- EDIT — small square, left of PLAY -->
+    <div id="home-btn-edit">
+      <button class="hbtn-square hbtn-edit" onclick="startEditMode()">
+        <span class="btn-icon">✏️</span>Edit
+      </button>
+    </div>
+
+    <!-- PRACTICE — small square, right of PLAY -->
+    <div id="home-btn-practice">
+      <button class="hbtn-square hbtn-practice" onclick="showPractice()">
+        <span class="btn-icon">📖</span>Practice
+      </button>
+    </div>
+
+    <!-- STORES — bottom left, small square -->
+    <div id="home-btn-stores">
+      <button class="hbtn-square hbtn-stores" id="home-stores-btn" onclick="showStores()">
+        <span class="btn-icon">🏪</span>Stores
+      </button>
+    </div>
+
+    <!-- SETTINGS — top left, small square -->
+    <div style="position:absolute;top:78px;left:10px;z-index:6;">
+      <button class="hbtn-square" style="background:linear-gradient(135deg,#546E7A,#37474F);box-shadow:0 5px 0 #1c262b;" onclick="showSettings()">
+        <span class="btn-icon">⚙️</span>Settings
+      </button>
+    </div>
+
+    <div style="position:absolute;bottom:6px;right:8px;color:rgba(255,255,255,.3);font-size:9px;font-weight:700;pointer-events:none;z-index:5;">v1.0</div>
+  </div>
+
+  <div id="ui-layer">
+    <div id="top-hud">
+      <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: 0</span></div>
+      <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span><span id="streak-wrap"><span id="streak-x">🔥 x1</span><span id="streak-bar"><span id="streak-fill"></span></span></span></div>
+    </div>
+    <div id="goals-hud">
+      <button id="goals-btn" onclick="toggleGoalsPanel()">
+        <span id="goals-btn-ico">🎯</span>
+        <span id="goals-btn-count">0/3</span>
+        <span id="goals-btn-caret">▾</span>
+      </button>
+      <div id="goals-panel">
+        <div id="goals-panel-head">TODAY'S GOALS</div>
+        <div id="goals-panel-list"></div>
+      </div>
+    </div>
+    <div id="touch-overlay"></div>
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <div id="action-btn">✋</div>
+    <div id="act-label" style="position:fixed;display:none;transform:translate(-50%,-50%);background:rgba(0,0,0,.78);color:#fff;font-size:12px;font-weight:900;padding:4px 12px;border-radius:14px;pointer-events:none;z-index:7;white-space:nowrap;border:1.5px solid rgba(255,255,255,.25);"></div>
+    <div id="touch-hint">Left thumb · move &nbsp;&nbsp; Right thumb · act</div>
+    <div id="role-tooltip"></div>
+  </div>
+
+  <div id="pause-btn" onclick="togglePause()">⏸</div>
+
+  <div id="sink-hold-ui">
+    <div id="sink-hold-label">Hold to wash...</div>
+    <div id="sink-hold-bar"><div id="sink-hold-fill"></div></div>
+  </div>
+
+  <div id="notif-toast"></div>
+  <div id="station-hint" style="position:fixed;bottom:175px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;font-size:13px;font-weight:900;padding:5px 16px;border-radius:16px;display:none;pointer-events:none;z-index:20;white-space:nowrap;border:1.5px solid rgba(255,255,255,.25);"></div>
+
+  <!-- PAUSE SCREEN (slide-up panel) -->
+  <div id="pause-screen">
+    <div id="pause-backdrop" onclick="togglePause()"></div>
+    <div id="pause-panel">
+      <div id="pause-title">⏸ PAUSED</div>
+      <div class="pause-btn-row">
+        <button class="pbtn pbtn-resume" onclick="togglePause()">▶ RESUME</button>
+        <button class="pbtn pbtn-sound" id="sound-toggle-btn" onclick="toggleSound()">🔊 Sound</button>
+      </div>
+      <div class="pause-btn-row">
+        <button class="pbtn pbtn-sound" onclick="showSettings()">⚙️ Settings</button>
+        <button class="pbtn pbtn-sound" onclick="showPractice()">📖 How to Play</button>
+      </div>
+      <button class="pbtn pbtn-quit" onclick="showQuitConfirm()">🚪 Quit to Menu</button>
+      <!-- Quit confirmation slides up over the panel -->
+      <div id="quit-confirm">
+        <h3>⚠️ Quit to Menu?</h3>
+        <p>Your progress this day will be saved, but the day won't count.</p>
+        <div class="pause-btn-row" style="margin-top:8px;">
+          <button class="pbtn pbtn-sound" onclick="hideQuitConfirm()">← Stay</button>
+          <button class="pbtn pbtn-quit" style="width:auto;flex:1;" onclick="quitToMenu()">Yes, Quit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRACTICE / TUTORIAL SCREEN -->
+  <div id="practice-screen">
+    <div id="practice-backdrop" onclick="closePractice()"></div>
+    <div id="practice-panel">
+      <div id="practice-title">📖 HOW TO COOK</div>
+      <div id="practice-subtitle" id="practice-subtitle-text">Learn the workflow step by step</div>
+      <div id="practice-flow"></div>
+      <div id="practice-steps"></div>
+      <button class="btn-green" id="practice-close" onclick="closePractice()">GOT IT ✓</button>
+    </div>
+  </div>
+
+  <!-- FIRST-RUN INTRO CAROUSEL -->
+  <div id="intro-screen">
+    <button class="intro-skip" onclick="endIntro()">Skip ✕</button>
+    <div class="intro-card">
+      <div class="intro-shot" id="intro-shot"></div>
+      <div class="intro-dots" id="intro-dots"></div>
+      <div class="intro-title" id="intro-title"></div>
+      <div class="intro-desc" id="intro-desc"></div>
+      <div class="intro-nav">
+        <button class="intro-back" id="intro-back" onclick="introPrev()">← Back</button>
+        <button class="intro-next" id="intro-next" onclick="introNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKINS SHOP -->
+  <div id="skins-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:480px;margin-bottom:14px;">
+      <h1 style="font-size:26px;margin:0;color:#ec407a;">👕 CHEF SKINS</h1>
+      <div style="background:rgba(255,193,7,.15);border:2px solid #ffc107;border-radius:14px;padding:6px 14px;font-size:17px;font-weight:900;">💰 <span id="skins-cash">$0</span></div>
+    </div>
+    <div id="char-section">
+      <div class="char-head">
+        <span class="char-title">🎭 Who's cooking?</span>
+        <button id="char-random-btn" onclick="randomCharacter()">🎲 Surprise me</button>
+      </div>
+      <div id="char-row"></div>
+      <div class="char-note">Characters change your cook's body. Skins below change their colours — any skin works on any character.</div>
+    </div>
+    <div class="skin-grid" id="skin-grid"></div>
+    <button class="btn-green" onclick="closeSkinsShop()" style="margin-top:14px;">BACK</button>
+  </div>
+
+  <!-- MULTI-STORE SCREEN -->
+  <div id="stores-screen">
+    <h1 style="font-size:26px;margin:0 0 16px;color:#ab47bc;">🏪 YOUR EMPIRE</h1>
+    <div id="stores-list" style="width:100%;max-width:480px;"></div>
+    <button class="btn-green" onclick="closeStores()" style="margin-top:14px;">BACK</button>
+  </div>
+
+  <!-- ACHIEVEMENTS SCREEN -->
+  <div id="achievements-screen" class="overlay" style="z-index:11;">
+    <h1 style="font-size:26px;margin:0 0 6px;color:#ffca28;">🏆 ACHIEVEMENTS</h1>
+    <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px;">Hit milestones to earn cash & skins</div>
+    <div id="achievements-list" style="width:100%;max-width:480px;max-height:60vh;overflow-y:auto;"></div>
+    <button class="btn-green" onclick="closeAchievements()" style="margin-top:14px;">BACK</button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="settings-screen" class="overlay" style="z-index:12;">
+    <h1 style="font-size:26px;margin:0 0 18px;color:#90caf9;">⚙️ SETTINGS</h1>
+    <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;">
+      <div style="background:rgba(255,255,255,.06);border-radius:14px;padding:14px 16px;">
+        <div style="font-weight:900;font-size:14px;margin-bottom:8px;">🔊 Volume <span id="set-vol-val" style="float:right;color:#90caf9;">80%</span></div>
+        <input id="set-vol" type="range" min="0" max="100" value="80" style="width:100%;" oninput="setVolume(this.value)">
+      </div>
+      <button class="upg-item" id="set-music-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleMusic()">
+        <span style="font-weight:900;font-size:14px;">🎵 Background Music</span>
+        <span id="set-music-state" style="color:#66BB6A;font-weight:900;">ON</span>
+      </button>
+      <button class="upg-item" id="set-cb-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleColorblind()">
+        <span style="font-weight:900;font-size:14px;">👁️ Colorblind-friendly bars</span>
+        <span id="set-cb-state" style="color:#888;font-weight:900;">OFF</span>
+      </button>
+      <button class="upg-item" id="set-tag-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleOrderTags()">
+        <span style="font-weight:900;font-size:14px;">🔤 Order text labels</span>
+        <span id="set-tag-state" style="color:#888;font-weight:900;">OFF</span>
+      </button>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Adds a word under each order icon instead of emoji alone.</div>
+      <button class="upg-item" id="set-big-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleBigText()">
+        <span style="font-weight:900;font-size:14px;">🔎 Larger text</span>
+        <span id="set-big-state" style="color:#888;font-weight:900;">OFF</span>
+      </button>
+      <button class="upg-item" id="set-diff-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleDifficulty()">
+        <span style="font-weight:900;font-size:14px;">🎯 Difficulty</span>
+        <span id="set-diff-state" style="color:#90caf9;font-weight:900;">NORMAL</span>
+      </button>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Casual: customers wait longer, +15% tips, and the store never closes.</div>
+      <div class="pause-btn-row">
+        <button class="pbtn pbtn-sound" onclick="exportSave()">📤 Export Save</button>
+        <button class="pbtn pbtn-sound" onclick="importSave()">📥 Import Save</button>
+      </div>
+      <button class="btn-red" onclick="showResetConfirm()" style="width:100%;">🗑️ Reset All Progress</button>
+    </div>
+    <button class="btn-green" onclick="closeSettings()" style="margin-top:18px;">BACK</button>
+    <div style="margin-top:10px;color:rgba(255,255,255,.3);font-size:11px;">Burger Bar · v1.0</div>
+  </div>
+
+  <!-- RESET CONFIRMATION — type-to-confirm so it can't be triggered by accident -->
+  <div id="reset-confirm-screen" class="overlay" style="z-index:14;display:none;">
+    <div style="width:100%;max-width:360px;background:rgba(30,16,16,.96);border:2px solid #b71c1c;border-radius:18px;padding:22px 20px;text-align:center;">
+      <div style="font-size:40px;margin-bottom:6px;">⚠️</div>
+      <h2 style="font-size:20px;margin:0 0 8px;color:#ff5252;">Reset ALL Progress?</h2>
+      <p style="font-size:13px;line-height:1.5;color:rgba(255,255,255,.7);margin:0 0 16px;">
+        This permanently deletes your save — cash, day, upgrades, robots, skins,
+        achievements and records. <b style="color:#ff8a80;">This cannot be undone.</b>
+        Consider <b>Export Save</b> first.
+      </p>
+      <p style="font-size:12px;color:rgba(255,255,255,.55);margin:0 0 8px;">Type <b style="color:#fff;letter-spacing:1px;">RESET</b> to confirm:</p>
+      <input id="reset-confirm-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
+             placeholder="RESET"
+             oninput="validateResetInput()"
+             style="width:100%;box-sizing:border-box;text-align:center;font-family:inherit;font-weight:900;font-size:18px;letter-spacing:2px;padding:10px;border-radius:12px;border:2px solid #555;background:#1a1a1a;color:#fff;text-transform:uppercase;">
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button class="btn-green" style="flex:1;margin:0;" onclick="closeResetConfirm()">CANCEL</button>
+        <button id="reset-confirm-btn" class="btn-red" style="flex:1;margin:0;opacity:.45;pointer-events:none;" onclick="doReset()">DELETE</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-hud">
+    EDIT MODE — face item + act to move/cycle role<br>
+    <button id="finish-edit-btn" onclick="saveEditMode()">DONE ✓</button>
+  </div>
+
+  <div id="expand-picker">
+    <div style="font-size:22px;font-weight:900;color:#ffc107;margin-bottom:8px;">CHOOSE EXPANSION DIRECTION</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;">Each wing adds floor space + a connecting doorway</div>
+    <button class="expand-option" id="exp-left"  onclick="confirmExpand('left')">◀ Left Wing</button>
+    <button class="expand-option" id="exp-right" onclick="confirmExpand('right')">Right Wing ▶</button>
+    <button class="expand-option" id="exp-back"  onclick="confirmExpand('back')">Back Extension ▲</button>
+    <button class="expand-option" style="background:none;border-color:rgba(255,255,255,.15);font-size:14px;color:rgba(255,255,255,.4);" onclick="closeExpandPicker()">Cancel</button>
+  </div>
+
+  <!-- START MENU (legacy, kept hidden, redirected to home) -->
+  <div id="start-screen" class="overlay" style="display:none;"></div>
+
+  <!-- EVENT POPUPS -->
+  <div id="alert-popup" class="overlay" style="z-index: 25; background:rgba(0,0,0,0.85);">
+    <h1 id="alert-title" style="font-size:36px;margin:0;color:#F44336;">WARNING</h1>
+    <p id="alert-desc" style="font-size:16px;text-align:center;max-width:440px;margin-top:18px;"></p>
+    <button class="btn-green" onclick="document.getElementById('alert-popup').style.display='none'">GOT IT</button>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div id="results-screen" class="overlay">
+    <div style="width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:0;">
+      <div id="res-day-lbl" style="font-size:13px;letter-spacing:3px;color:rgba(255,255,255,.4);text-transform:uppercase;opacity:0;transition:opacity .4s;">Day Complete</div>
+      <div id="res-title" style="font-size:42px;font-weight:900;color:#ffc107;margin:4px 0 16px;opacity:0;transform:scale(.75);transition:opacity .4s,transform .4s;">✦ RESULTS ✦</div>
+      <div style="background:rgba(0,0,0,.4);border-radius:16px;padding:18px 24px;width:100%;margin-bottom:12px;text-align:center;">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">Today's Rating</div>
+        <div id="res-stars-row" style="display:flex;justify-content:center;gap:8px;margin-bottom:8px;"></div>
+        <div id="res-rating-num" style="font-size:24px;font-weight:900;color:#ffc107;opacity:0;transition:opacity .4s;">⭐ 0.0</div>
+        <div id="res-coach" style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,.72);margin-top:6px;opacity:0;transition:opacity .4s;min-height:15px;"></div>
+      </div>
+      <div style="background:rgba(0,0,0,.4);border-radius:16px;padding:18px 24px;width:100%;margin-bottom:16px;text-align:center;">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">Cash Earned</div>
+        <div id="res-cash-earned" style="font-size:34px;font-weight:900;color:#66BB6A;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s;">+$0.00</div>
+        <div id="res-total-row" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;opacity:0;transition:opacity .4s;font-size:15px;">
+          <span id="res-prev" style="color:rgba(255,255,255,.6);">$0.00</span>
+          <span style="color:#ffc107;font-weight:900;">+</span>
+          <span id="res-earn-sm" style="color:#66BB6A;font-weight:900;">$0.00</span>
+          <span style="color:#ffc107;font-weight:900;">=</span>
+          <span id="res-new-total" style="font-size:24px;font-weight:900;color:#fff;">$0.00</span>
+        </div>
+      </div>
+      <div id="res-goals-box" style="background:rgba(0,0,0,.4);border-radius:16px;padding:14px 20px;width:100%;margin-bottom:16px;opacity:0;transition:opacity .4s;display:none;">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">🎯 Daily Goals</div>
+        <div id="res-goals-list" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
+      <button class="btn-green" id="res-next-btn" onclick="showStartMenu()" style="opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;pointer-events:none;">CONTINUE →</button>
+    </div>
+  </div>
+
+  <!-- SHOP SCREEN -->
+  <div id="shop-screen" class="overlay">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:520px;margin-bottom:10px;">
+      <h1 style="font-size:28px;margin:0;color:#4CAF50;">UPGRADE SHOP</h1>
+      <div style="background:rgba(102,187,106,.18);border:2px solid #4CAF50;border-radius:14px;padding:7px 16px;font-size:20px;font-weight:900;">💰 <span id="shop-cash-display">$0.00</span></div>
+    </div>
+    <div class="shop-wrap">
+      <div id="shop-menu-panel" style="display:none;"></div>
+      <div class="shop-tabs" id="shop-tabs"></div>
+      <div id="shop-items"></div>
+    </div>
+    <button class="btn-green" onclick="closeShop()" style="margin-top:10px;">BACK TO MENU ▶</button>
+    <button class="btn-blue" onclick="startEditMode()">REORGANIZE</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover-screen" class="overlay">
+    <h1 style="font-size:46px;margin:0;color:#F44336;text-shadow:0 3px 0 #B71C1C;">STORE CLOSED!</h1>
+    <p style="font-size:16px;text-align:center;max-width:440px;background:rgba(0,0,0,.45);padding:18px;border-radius:14px;margin-top:18px;">
+      Rating dropped below 2.0★ — the health inspector shut you down.<br><br>
+      <b>Days Survived: <span id="fail-days">0</span></b>
+    </p>
+    <button class="btn-green" onclick="localStorage.removeItem('burgerBoss_save');location.reload()">RESTART</button>
+  </div>
+</div>
+
+<script src="js/boot.js"></script>
+</body>
+</html>

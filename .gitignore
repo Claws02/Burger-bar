@@ -1,0 +1,10 @@
+node_modules/
+.smoke/
+.tmpweb/
+ios/App/Pods/
+ios/App/App/public/
+ios/App/output/
+ios/DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
