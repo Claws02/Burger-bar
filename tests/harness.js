@@ -47,6 +47,9 @@ function boot(opts = {}){
   vm.createContext(sandbox);
 
   if(opts.save) dom.localStorage.setItem('burgerBoss_save', JSON.stringify(opts.save));
+  // Most tests are about other systems; the first-shift tutorial (which holds
+  // arrivals) only runs where a test asks for it.
+  if(!opts.tutorial) dom.localStorage.setItem('burgerBoss_firstShiftDone', '1');
 
   // The script ends with a call to animate(); our rAF stub only *records* the
   // callback, so exactly one frame runs at boot and tests drive the rest.

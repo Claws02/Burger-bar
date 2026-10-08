@@ -12,7 +12,7 @@
   var GAME_FILES = [
     '00-settings-audio', '01-renderer', '01a-modelkit', '02-world', '03-items', '04-state-save',
     '05-player', '06-shop-edit', '07-progress', '07a-adaptive', '08-home', '08a-characters', '09-menus-dayflow',
-    '10-customers', '11-actions', '12-robots', '13-hud-input', '14-main'
+    '10-customers', '11-actions', '12-robots', '13-hud-input', '13a-tutorial', '14-main'
   ];
   var PRELUDE = ['js/vendor/capacitor.js', 'js/native.js'];
   var queue = ['js/vendor/three.min.js'].concat(GAME_FILES.map(function(f){ return 'js/game/' + f + '.js'; }));

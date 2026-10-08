@@ -18,7 +18,9 @@ function spawnGroup(){
     else if(eco.day >= 12 && r >= vip && r < vip + 0.15) type = 'heavy';
   }
 
-  const size = type === 'heavy' ? 1 : (Math.random()>.55?2:1);
+  const lesson = tutorialWantsSimpleGuest();   // the tutorial's one plain-burger guest
+  if(lesson) type = 'normal';
+  const size = lesson || type === 'heavy' ? 1 : (Math.random()>.55?2:1);
   const sx = doorX()+(Math.random()-.5)*2, sz = bounds.b+12;
   
   // Past the day-length cap, customers get gradually less forgiving. This is
@@ -40,7 +42,8 @@ function spawnGroup(){
      let orderType;
      {
        orderType = 'burger_on_tray';
-       if(menuFriesActive() && Math.random() < 0.22) {
+       if(lesson) {}
+       else if(menuFriesActive() && Math.random() < 0.22) {
          orderType = 'fries_on_tray';
        } else if(menuComboActive()) {
          const r = Math.random();

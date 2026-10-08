@@ -62,6 +62,7 @@ function showStartMenu(){
   });
   document.getElementById('top-hud').style.display='none';
   document.getElementById('pause-btn').style.display='none';
+  abortTutorial();
   { const th = document.getElementById('touch-hint'); if(th) th.style.display='none'; }
   { const gh = document.getElementById('goals-hud');
     if(gh){ gh.style.display = 'none'; gh.classList.remove('open'); }
@@ -777,6 +778,7 @@ function executeDayStart() {
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
   saveGame();
   if(heatNote) setTimeout(()=>{ try{ showToast(heatNote, 3200); }catch(e){} }, 900);
+  if(tutorialShouldStart()) startTutorial();
   // NOTE: day-milestone heads-ups (Busy Hours/VIP, new unlocks, etc.) are no
   // longer shown here at the START of a day — they're queued at the END of the
   // previous day (see queueNextDayHeadsUp) so the player can prepare first.

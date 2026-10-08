@@ -218,6 +218,7 @@ function animate(){
         }
       }
       updateRush(ds);
+      updateTutorial(ds);
       if(stats.spawnTimer>0) stats.spawnTimer-=ds;
       if(stats.groupsLeft>0&&stats.spawnTimer<=0){ 
         // After day 10: spawn up to maxSimultaneous groups at once when timer fires
@@ -253,7 +254,7 @@ function animate(){
           const qi = g._qi || 0;
           g.target.set(doorX() + (qi % 2 === 0 ? -1.0 : 1.0), 0, bounds.b - 2 + qi * 2.5); // Line out the door
           moveToTarget(g,ds); 
-          g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
+          g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0) * (tutorialActive() ? 0 : 1);
           
           if(g.waitPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; }
           else if(qi===0){
@@ -274,7 +275,7 @@ function animate(){
           }
         }
         else if(g.state==='ordering'){
-          g.foodPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0);
+          g.foodPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0) * (tutorialActive() ? 0 : 1);
           if(g.foodPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; g.tbl.group=null; g.tbl.served=0; }
         }
         else if(g.state==='eating'){

@@ -873,6 +873,75 @@ t('the goals previewed on the Home Screen are the goals the shift uses', () => {
   eq(g.run('return JSON.stringify(dailyGoals.map(d=>d.desc));'), preview, 'goals changed between preview and play:');
 });
 
+section('10. First-shift tutorial');
+
+// Walk the player to a station and press ACT there.
+function actAt(g, type){
+  g.run(`const s = Object.values(stations).find(x=>x.type==='${type}' && (${type==='table'} ? (x.group||x.dirtyTrays>0) : true));
+    player.pos.set(s.x, 0, s.z + (s.d||2)/2 + 1.2); player.dir = Math.PI; handleAction();`);
+}
+
+t('Day 1 runs the tutorial and it walks the whole loop to completion', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 0; executeDayStart();');
+  ok(g.run('return tutorialActive();'), 'tutorial did not start on Day 1');
+  g.frame(30);
+  eq(g.run('return groups.length;'), 0, 'customers arrived before any cooking:');
+  actAt(g, 'fridge');  g.frame(2);
+  actAt(g, 'grill');   g.frame(2);
+  ok(g.run('return tut.step;') >= 2, 'grilling did not advance the tutorial');
+  g.frame(4);
+  eq(g.run('return groups.length;'), 1, 'the lesson guest did not arrive:');
+  eq(g.run('return JSON.stringify(groups[0].orders);'), '["burger_on_tray"]', 'lesson guest order:');
+  actAt(g, 'trayrack'); g.frame(2);
+  g.run(`Object.values(stations).filter(s=>s.type==='grill').forEach(s=>s.slots.forEach(sl=>{ if(sl){ sl.state='cooked'; sl.burnTimer=0; } }));`);
+  actAt(g, 'grill'); g.frame(2);
+  eq(g.run('return player.holding;'), 'burger_on_tray');
+  // Let the guest walk in and sit (patience is frozen during the lesson).
+  for(let i=0;i<60 && g.run("return !(groups[0] && groups[0].state==='ordering');");i++) g.frame(20);
+  ok(g.run('return groups[0].waitPatience === groups[0].maxWait;'), 'guest lost patience during the lesson');
+  actAt(g, 'table'); g.frame(2);
+  ok(g.run('return tut.step;') >= 5, 'serving did not advance the tutorial');
+  for(let i=0;i<40 && g.run("return !Object.values(stations).some(s=>s.type==='table'&&s.dirtyTrays>0);");i++) g.frame(20);
+  actAt(g, 'table'); g.frame(2);
+  eq(g.run('return player.holding;'), 'dirty_tray');
+  g.run(`const s=Object.values(stations).find(x=>x.type==='sink'); player.pos.set(s.x,0,s.z+2);
+         startSinkHold(s); for(let i=0;i<400;i++) updateSinkHold(1);`);
+  eq(g.run('return player.holding;'), 'tray', 'washing did not produce a clean tray:');
+  actAt(g, 'trayrack'); g.frame(2);
+  ok(!g.run('return tutorialActive();'), 'tutorial did not finish');
+  eq(g.dom.localStorage.getItem('burgerBoss_firstShiftDone'), '1');
+  ok(g.run('return stats.spawnTimer < 1e6;'), 'the rest of the day was never released');
+});
+
+t('doing steps out of order never strands the tutorial', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 0; executeDayStart();');
+  actAt(g, 'trayrack'); g.frame(2);   // tray first: steps 1-2 still pending
+  eq(g.run('return tut.step;'), 0);
+  g.run("player.holding = null; Object.values(stations).find(s=>s.type==='grill').slots[0]={state:'cooked',progress:200,burnTimer:0};");
+  g.frame(2);
+  ok(g.run('return tut.step;') >= 2, 'food already on the grill should skip ahead');
+});
+
+t('skip ends it and releases customers; quitting mid-lesson does not count as done', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 0; executeDayStart(); showStartMenu();');
+  ok(!g.run('return tutorialActive();'), 'tutorial still running on the menu');
+  ok(g.dom.localStorage.getItem('burgerBoss_firstShiftDone') !== '1', 'quitting marked the tutorial done');
+  g.run('eco.day = 0; executeDayStart(); skipTutorial();');
+  ok(!g.run('return tutorialActive();'));
+  ok(g.run('return stats.spawnTimer < 1e6;'), 'skipping did not release the day');
+});
+
+t('a mid-career player never gets the tutorial unasked, but can replay it', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 14; executeDayStart();');
+  ok(!g.run('return tutorialActive();'), 'tutorial forced on a Day-15 player');
+  g.run('showStartMenu(); replayTutorial(); executeDayStart();');
+  ok(g.run('return tutorialActive();'), 'replay did not run on the next shift');
+});
+
 // ── summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(60)}`);
 console.log(`  ${pass} passed, ${fail} failed`);

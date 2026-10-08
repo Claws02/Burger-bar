@@ -100,7 +100,7 @@ function handleAction(){
     }
   }
   else if(type==='trayrack'){
-    if(player.holding==='tray'){ player.holding=null; t.cleanTrays++; ok=true; }
+    if(player.holding==='tray'){ player.holding=null; t.cleanTrays++; stats.traysReturned=(stats.traysReturned||0)+1; ok=true; }
     else if(!player.holding && t.cleanTrays > 0){ player.holding='tray'; t.cleanTrays--; ok=true; }
     else if(player.holding==='cooked' && t.cleanTrays > 0){ player.holding='burger_on_tray'; t.cleanTrays--; ok=true; }
     else if(player.holding==='fries' && t.cleanTrays > 0){ player.holding='fries_on_tray'; t.cleanTrays--; ok=true; }
@@ -233,6 +233,7 @@ function updateSinkHold(ds){
   document.getElementById('sink-hold-fill').style.width=(pct*100)+'%';
   if(pct >= 1){
     player.holding='tray';
+    stats.traysWashed = (stats.traysWashed||0) + 1;
     showToast('🍽️ Tray washed!', 1200);
     playSound('sizzle');
     updateHolding(); updateStationVisuals();

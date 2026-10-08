@@ -134,6 +134,11 @@
   </div>
 
   <div id="ui-layer">
+    <div id="tut-card" role="status" aria-live="polite">
+      <div class="tut-top"><span id="tut-step">Step 1</span><span id="tut-dots"></span><button id="tut-skip" onclick="skipTutorial()">Skip</button></div>
+      <div class="tut-body"><div id="tut-icon">🧊</div><div><div id="tut-title"></div><div id="tut-text"></div></div></div>
+    </div>
+    <div id="tut-edge">➤</div>
     <div id="rush-banner" aria-live="polite">🔥 LUNCH RUSH! <span>+25% tips</span></div>
     <div id="top-hud">
       <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: 0</span></div>
@@ -284,6 +289,10 @@
         <span id="set-diff-state" style="color:#90caf9;font-weight:900;">NORMAL</span>
       </button>
       <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Casual: customers wait longer, +15% tips, and the store never closes.</div>
+      <button class="upg-item" id="set-tut-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="replayTutorial()">
+        <span style="font-weight:900;font-size:14px;">🎓 Replay first-shift tutorial</span>
+        <span style="color:#90caf9;font-weight:900;">NEXT SHIFT</span>
+      </button>
       <button class="upg-item" id="set-hap-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleHaptics()">
         <span style="font-weight:900;font-size:14px;">📳 Vibration</span>
         <span id="set-hap-state" style="color:#66BB6A;font-weight:900;">ON</span>
