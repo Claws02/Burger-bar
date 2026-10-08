@@ -152,24 +152,24 @@ function animate(){
 
       let needVis=false;
       for(const k in stations){ const s=stations[k];
-        if(s.type!=='grill' && s.type!=='beachgrill' && s.type!=='fryer') continue;
-        // Fries cook at a fixed rate (no grill upgrade); grill/beachgrill use the
+        if(s.type!=='grill' && s.type!=='fryer') continue;
+        // Fries cook at a fixed rate (no grill upgrade); the grill uses the
         // Turbo Grill multiplier.
         const cookRate = s.type==='fryer' ? 0.6 : upg.grillMult;
         s.slots.forEach(sl=>{
           if(!sl) return;
-          if(sl.state === 'raw' || sl.state === 'raw_fish' || sl.state === 'raw_fries') {
+          if(sl.state === 'raw' || sl.state === 'raw_fries') {
             sl.progress += cookRate*ds;
             if(sl.progress >= 200){
-              sl.state = s.type==='beachgrill' ? 'cooked_fish' : s.type==='fryer' ? 'fries' : 'cooked';
+              sl.state = s.type==='fryer' ? 'fries' : 'cooked';
               sl.burnTimer=0; needVis=true; playSound('sizzle');
             }
-          } else if (sl.state === 'cooked' || sl.state === 'cooked_fish' || sl.state === 'fries') {
+          } else if (sl.state === 'cooked' || sl.state === 'fries') {
             // Burn window is fixed (independent of cook speed) so upgrading the
             // grill makes cooking faster WITHOUT making food burn faster.
             sl.burnTimer += ds;
             if(sl.burnTimer >= 300) {
-              sl.state = s.type==='beachgrill' ? 'charred_fish' : s.type==='fryer' ? 'burnt_fries' : 'charred';
+              sl.state = s.type==='fryer' ? 'burnt_fries' : 'charred';
               needVis=true; playSound('error');
             }
           }
@@ -267,12 +267,7 @@ function animate(){
             const stars=tot>.8?5:tot>.6?4:tot>.4?3:tot>.2?2:1;
             
             let rawCash;
-            if(isSeafood()){
-              // Seafood items worth slightly more base
-              rawCash = g.size * 19 * (stars/5);
-              const comboCount = g.orders.filter(o=>o==='taco_chowder_basket'||o==='taco_lemonade_basket').length;
-              rawCash += comboCount * 6 * (stars/5);
-            } else {
+            {
               rawCash = g.size * 16 * (stars/5);
               const sodaCount = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
               rawCash += sodaCount * 7 * (stars/5);
@@ -329,10 +324,7 @@ function animate(){
                 g.foodPatience = g.maxFood;
                 g.tbl.group = g; 
                 let orderType;
-                if(isSeafood()){
-                  const r=Math.random();
-                  orderType=r<0.5?'taco_in_basket':r<0.75?'chowder_in_basket':'lemonade_in_basket';
-                } else {
+                {
                   orderType='burger_on_tray';
                   if(menuFriesActive() && Math.random()<0.22){orderType='fries_on_tray';}
                   else if(menuComboActive()){const r=Math.random();if(r<0.25)orderType='soda_on_tray';else if(r<0.70)orderType='burger_soda_on_tray';}

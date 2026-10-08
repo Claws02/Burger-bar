@@ -37,7 +37,7 @@ const SINGLE_BAR_MODE = true;
 
 function defStore(id, name, type='burger') {
   return {
-    id, name, type,            // 'burger' | 'seafood'
+    id, name, type,            // 'burger' (old saves may hold a parked 'seafood' store)
     eco: defEco(), upg: defUpg(), gStats: defGS(),
     wings: [], layout: null,
     passivePerDay: 0,
@@ -45,8 +45,6 @@ function defStore(id, name, type='burger') {
   };
 }
 
-// Helper: is the active store a seafood restaurant?
-function isSeafood(){ return (stores[activeStoreIdx]?.type === 'seafood'); }
 
 // MENU: which optional item categories the player is currently serving. Combos
 // require owning the Soda Fountain AND leaving them switched on in the Menu, so

@@ -38,15 +38,7 @@ function spawnGroup(){
 
   for(let i=0; i<size; i++) {
      let orderType;
-     if(isSeafood()){
-       // Seafood Shack orders
-       const r = Math.random();
-       if(r < 0.35)      orderType = 'taco_in_basket';
-       else if(r < 0.55) orderType = 'chowder_in_basket';
-       else if(r < 0.70) orderType = 'lemonade_in_basket';
-       else if(r < 0.85) orderType = 'taco_chowder_basket';
-       else              orderType = 'taco_lemonade_basket';
-     } else {
+     {
        orderType = 'burger_on_tray';
        if(menuFriesActive() && Math.random() < 0.22) {
          orderType = 'fries_on_tray';
@@ -162,11 +154,10 @@ function randomLook(vip){
 // signature changed are rebuilt.
 function stationVisualSig(s){
   switch(s.type){
-    case 'grill': case 'fryer': case 'beachgrill':
+    case 'grill': case 'fryer':
       return s.slots ? s.slots.map(sl=>sl?sl.state:'-').join(',') : '';
-    case 'counter': case 'assembly': return s.item || '';
+    case 'counter': return s.item || '';
     case 'trayrack': case 'sink': return String(Math.min(s.cleanTrays||0, 15));
-    case 'basketrack': return String(Math.min(s.cleanBaskets||0, 8));
     case 'table': {
       if(s.served>0){
         const g=s.group;
@@ -213,23 +204,13 @@ function updateStationVisuals(force){
         for(let i=0;i<seats;i++){
           const served = mask ? mask[i] : (i < s.served);
           if(!served) continue;
-          const itemName = (s.group && s.group.orders[i]) ? s.group.orders[i] : (isSeafood()?'taco_in_basket':'burger_on_tray');
+          const itemName = (s.group && s.group.orders[i]) ? s.group.orders[i] : 'burger_on_tray';
           const m=itemMesh(itemName); m.position.set(s.x-.9+shown*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
           shown++;
         }
       } else if(s.dirtyTrays>0) for(let i=0;i<s.dirtyTrays;i++){
-        const m=itemMesh(isSeafood()?'dirty_basket':'dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+        const m=itemMesh('dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
       }
-    }
-    // Seafood station visuals
-    if(s.type==='beachgrill'&&s.slots) s.slots.forEach((sl,i)=>{
-      if(!sl) return;
-      const m=itemMesh(sl.state==='cooked'?'cooked_fish':sl.state==='charred_fish'?'charred_fish':'raw_fish');
-      m.position.set(s.x-0.6+i*1.2, gY, s.z+0.2); scene.add(m); s.visuals.push(m);
-    });
-    if(s.type==='assembly' && s.item){ const m=itemMesh(s.item); m.position.set(s.x,cY,s.z); scene.add(m); s.visuals.push(m); }
-    if(s.type==='basketrack') for(let i=0;i<Math.min(s.cleanBaskets,8);i++){
-      const p=itemMesh('basket'); p.position.set(s.x,2.95+i*.1,s.z); scene.add(p); s.visuals.push(p);
     }
   }
 }

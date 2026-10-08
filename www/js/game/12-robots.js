@@ -49,7 +49,7 @@ function updateRobots(ds){
     }
 
     if(bot.state==='idle' && !(bot._actionCooldown > 0)){
-      if(bot.role==='chef' && !isSeafood()){
+      if(bot.role==='chef'){
         if(bot.holding === 'charred') {
             const trash = Object.values(stations).find(s => s.type === 'trash');
             if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
@@ -112,19 +112,7 @@ function updateRobots(ds){
         }
       } 
       else if(bot.role==='busser'){
-        if(isSeafood()){
-          // Seafood busser: dirty_basket → sink → basketrack
-          if(bot.holding==='dirty_basket'){
-            const sink=Object.values(stations).find(s=>s.type==='sink');
-            if(sink){bot.target=sink;bot.state='moving';}
-          } else if(bot.holding==='basket'){
-            const rack=Object.values(stations).find(s=>s.type==='basketrack');
-            if(rack){bot.target=rack;bot.state='moving';}
-          } else if(!bot.holding){
-            const t=Object.values(stations).find(s=>s.type==='table'&&s.dirtyTrays>0);
-            if(t){bot.target=t;bot.state='moving';}
-          }
-        } else {
+        {
           if(bot.holding === 'dirty_tray') {
               const sink = Object.values(stations).find(s => s.type === 'sink');
               if(sink) { bot.target = sink; bot.state = 'moving'; }
@@ -134,67 +122,6 @@ function updateRobots(ds){
           } else if(!bot.holding) {
               const t = Object.values(stations).find(s => s.type === 'table' && s.dirtyTrays > 0);
               if(t) { bot.target = t; bot.state = 'moving'; }
-          }
-        }
-      } 
-      else if(bot.role==='chef' && isSeafood()){
-        // Seafood chef: cooler → beachgrill → assembly
-        if(bot.holding==='charred_fish'){
-          const trash=Object.values(stations).find(s=>s.type==='trash');
-          if(trash&&trash.contents<4){bot.target=trash;bot.state='moving';}
-        } else if(bot.holding==='cooked_fish'){
-          const asm=Object.values(stations).find(s=>s.type==='assembly'&&!s.item);
-          if(asm){bot.target=asm;bot.state='moving';}
-          else { const trash=Object.values(stations).find(s=>s.type==='trash'); if(trash&&trash.contents<4){bot.target=trash;bot.state='moving';} }
-        } else if(bot.holding==='raw_fish'){
-          const bg=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.includes(null));
-          if(bg){bot.target=bg;bot.state='moving';}
-        } else if(!bot.holding){
-          const bgCharred=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.some(sl=>sl&&sl.state==='charred_fish'));
-          if(bgCharred){bot.target=bgCharred;bot.state='moving';}
-          else {
-            const bgCooked=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.some(sl=>sl&&sl.state==='cooked_fish'));
-            if(bgCooked){bot.target=bgCooked;bot.state='moving';}
-            else {
-              const bgEmpty=Object.values(stations).find(s=>s.type==='beachgrill'&&s.slots.includes(null));
-              if(bgEmpty){const cooler=Object.values(stations).find(s=>s.type==='cooler');if(cooler){bot.target=cooler;bot.state='moving';}}
-            }
-          }
-        }
-      }
-      else if(bot.role==='waiter' && isSeafood()){
-        // Seafood waiter: assembly/chowder/lemonade → basket rack → table
-        let foundTarget=false;
-        if(bot.holding && bot.holding!=='basket'){
-          const t=Object.values(stations).find(s=>s.type==='table'&&s.group&&s.group.state==='ordering'&&s.group.unservedOrders.includes(bot.holding));
-          if(t){bot.target=t;bot.state='moving';foundTarget=true;}
-          if(!foundTarget){const rack=Object.values(stations).find(s=>s.type==='basketrack');if(rack){bot.target=rack;bot.state='moving';foundTarget=true;}}
-        } else if(bot.holding==='basket'){
-          const needsFood=Object.values(stations).filter(s=>s.type==='table'&&s.group&&s.group.state==='ordering'&&s.group.unservedOrders.length>0);
-          for(const t of needsFood){
-            const order=t.group.unservedOrders[0];
-            if(order.includes('taco')){
-              const asm=Object.values(stations).find(s=>s.type==='assembly'&&s.item==='fish_taco');
-              if(asm){bot.target=asm;bot.state='moving';foundTarget=true;break;}
-            }
-            if(order.includes('chowder')){
-              const cp=Object.values(stations).find(s=>s.type==='chowderpot');
-              if(cp){bot.target=cp;bot.state='moving';foundTarget=true;break;}
-            }
-            if(order.includes('lemonade')){
-              const ls=Object.values(stations).find(s=>s.type==='lemonadestation');
-              if(ls){bot.target=ls;bot.state='moving';foundTarget=true;break;}
-            }
-          }
-          if(!foundTarget){const rack=Object.values(stations).find(s=>s.type==='basketrack');if(rack){bot.target=rack;bot.state='moving';}}
-        } else if(!bot.holding){
-          const needsFood=Object.values(stations).filter(s=>s.type==='table'&&s.group&&s.group.state==='ordering'&&s.group.unservedOrders.length>0);
-          for(const t of needsFood){
-            const order=t.group.unservedOrders[0];
-            const readyBasket=Object.values(stations).find(s=>s.type==='basketrack'&&(s.item===order));
-            if(readyBasket){bot.target=readyBasket;bot.state='moving';foundTarget=true;break;}
-            const rack=Object.values(stations).find(s=>s.type==='basketrack'&&s.cleanBaskets>0);
-            if(rack){bot.target=rack;bot.state='moving';foundTarget=true;break;}
           }
         }
       }
@@ -437,38 +364,7 @@ function updateRobots(ds){
       const t = bot.target;
       let actionDone = false;
 
-      if(bot.role === 'chef' && isSeafood()) {
-          // Seafood chef actions
-          if(t.type==='cooler' && !bot.holding){ bot.holding='raw_fish'; actionDone=true; }
-          else if(t.type==='beachgrill'){
-            if(bot.holding==='raw_fish'){ const i=t.slots.indexOf(null); if(i!==-1){t.slots[i]={state:'raw_fish',progress:0,burnTimer:0};bot.holding=null;actionDone=true;} }
-            else if(!bot.holding){
-              const ci=t.slots.findIndex(s=>s&&s.state==='charred_fish'); if(ci!==-1){bot.holding='charred_fish';t.slots[ci]=null;actionDone=true;}
-              else { const ci2=t.slots.findIndex(s=>s&&s.state==='cooked_fish'); if(ci2!==-1){bot.holding='cooked_fish';t.slots[ci2]=null;actionDone=true;} }
-            }
-          }
-          else if(t.type==='assembly'){ if(bot.holding==='cooked_fish'&&!t.item){t.item='fish_taco';bot.holding=null;actionDone=true;} }
-          else if(t.type==='trash' && bot.holding==='charred_fish' && t.contents<4){ t.contents++;bot.holding=null;actionDone=true; }
-      }
-      else if(bot.role === 'busser' && isSeafood()){
-          if(t.type==='table'&&!bot.holding&&t.dirtyTrays>0){ t.dirtyTrays--;bot.holding='dirty_basket';actionDone=true; }
-          else if(t.type==='sink'&&bot.holding==='dirty_basket'){ bot.holding='basket';bot.timer=80-(lvl*12);bot.state='washing';actionDone=true; }
-          else if(t.type==='basketrack'&&bot.holding==='basket'){ t.cleanBaskets++;bot.holding=null;actionDone=true; }
-      }
-      else if(bot.role==='waiter' && isSeafood()){
-          if(t.type==='basketrack'&&!bot.holding&&t.cleanBaskets>0){ t.cleanBaskets--;bot.holding='basket';actionDone=true; }
-          else if(t.type==='assembly'&&bot.holding==='basket'&&t.item==='fish_taco'){ t.item=null;bot.holding='taco_in_basket';actionDone=true; }
-          else if(t.type==='chowderpot'&&bot.holding==='basket'){ bot.holding='chowder_in_basket';actionDone=true; }
-          else if(t.type==='lemonadestation'&&bot.holding==='basket'){ bot.holding='lemonade_in_basket';actionDone=true; }
-          else if(t.type==='basketrack'&&bot.holding&&bot.holding!=='basket'){ t.item=bot.holding;bot.holding=null;actionDone=true; }
-          else if(t.type==='table'){
-            if(t.group&&t.group.state==='ordering'&&bot.holding){
-              if(serveHeldToGroup(t, bot.holding)){ bot.holding=null; actionDone=true; }
-            }
-          }
-          else if(t.type==='trash'&&bot.holding&&t.contents<4){ t.contents++;bot.holding=bot.holding.includes('basket')?'basket':null;actionDone=true; }
-      }
-      else if(bot.role === 'chef') {
+      if(bot.role === 'chef') {
           if(t.type === 'fridge' && !bot.holding) { bot.holding = 'raw'; actionDone = true; }
           else if(t.type === 'grill') {
               if(bot.holding === 'raw') {

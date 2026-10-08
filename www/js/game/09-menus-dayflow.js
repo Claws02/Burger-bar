@@ -419,27 +419,13 @@ const PRACTICE_STEPS = {
     { vis:[{i:'🍽️',l:'Tray',h:1},{a:1},{i:'🥤',l:'Fountain'},{a:1},{i:'🍔🥤',l:'Combo',h:1}], icon:'🥤', title:`Bonus — Soda Fountain`, desc:`After Day 5 you can unlock a Soda Fountain. Customers may order soda or a burger+soda combo. Use the tray + soda fountain to assemble a combo before serving.` },
     { vis:[{i:'🤖',l:'Chef'},{i:'🛎️',l:'Waiter'},{i:'🧹',l:'Busser'}], icon:'🤖', title:`Robots Help You!`, desc:`Buy robots from the Shop. Set their role in Edit Mode: Chef cooks patties, Waiter serves food, Busser cleans trays. Robots level up each day!` },
   ],
-  seafood: [
-    { icon:'🐟', title:`Step 1 — Grab Raw Fish`, desc:`Walk to the Cooler (blue station) and press ACT to pick up a raw fish fillet. It refills automatically — unlimited supply!` },
-    { icon:'🔥', title:`Step 2 — Grill the Fish`, desc:`Carry raw fish to the Beach Grill and press ACT to place it on the grill. Watch the progress bar — green means cooking, orange means done. Pick it up before it turns black (charred)!` },
-    { icon:'🌮', title:`Step 3 — Make a Fish Taco`, desc:`Bring the cooked fish to the Assembly Station and press ACT. It auto-wraps into a fish taco using the shells on the counter.` },
-    { icon:'🍲', title:`Chowder — Easy!`, desc:`The Chowder Pot is always ready. Press ACT empty-handed to ladle out a bowl of clam chowder anytime — no cooking required.` },
-    { icon:'🍋', title:`Lemonade — Easy Too!`, desc:`Press ACT at the Lemonade Station while empty-handed to pour a cup of lemonade instantly.` },
-    { icon:'🧺', title:`Step 4 — Basket the Order`, desc:`Carry any food item (taco, chowder, or lemonade) to the Basket Rack and press ACT. The food auto-goes into a wicker basket, ready to serve. For COMBO orders, place two items in one basket.` },
-    { icon:'🛎️', title:`Step 5 — Serve the Table`, desc:`Carry the filled basket to a table with waiting customers. Look for the 🌮🍲🍋 bubbles above their heads. Press ACT to serve them!` },
-    { icon:'🚿', title:`Clean Up — Dirty Baskets`, desc:`After customers eat, dirty baskets appear. Pick them up, take to the Sink and hold ACT for 3 seconds to wash, then return the clean basket to the Basket Rack.` },
-    { icon:'🤖', title:`Robots Work Here Too!`, desc:`Same robots as the Burger Bar — just with new jobs. Chef grills fish + makes tacos, Waiter fills baskets + serves, Busser washes dirty baskets.` },
-  ],
 };
 
 // A picture of the line. Text alone never made clear that the loop CLOSES --
 // that dirty trays have to come back round to the rack before you can plate
 // again -- so the return path is drawn explicitly.
-function practiceFlowSVG(type){
-  const seafood = type === 'seafood';
-  const nodes = seafood
-    ? [['🧊','Cooler'],['🔥','Grill'],['🌮','Assemble'],['🧺','Basket'],['🛎️','Serve']]
-    : [['🧊','Fridge'],['🔥','Grill'],['🍱','Trays'],['🍔','Build'],['🛎️','Serve']];
+function practiceFlowSVG(){
+  const nodes = [['🧊','Fridge'],['🔥','Grill'],['🍱','Trays'],['🍔','Build'],['🛎️','Serve']];
   const xs = [34, 106, 178, 250, 322];
   let n = '';
   nodes.forEach(([ico, lbl], i) => {
@@ -450,8 +436,8 @@ function practiceFlowSVG(type){
     if(i < nodes.length - 1)
       n += `<path class="pf-arrow" d="M${xs[i]+20} 30 H${xs[i+1]-22}" marker-end="url(#pfArrow)"/>`;
   });
-  // Wash loop: Serve -> Sink -> back to the tray/basket rack.
-  const wash = seafood ? 'Wash baskets' : 'Wash trays';
+  // Wash loop: Serve -> Sink -> back to the tray rack.
+  const wash = 'Wash trays';
   n += `<path class="pf-arrow-loop" d="M322 50 V82 H196" marker-end="url(#pfArrowC)"/>` +
        `<circle class="pf-node pf-node-cool" cx="178" cy="82" r="15"/>` +
        `<text x="178" y="87" text-anchor="middle" font-size="14">🚿</text>` +
@@ -492,19 +478,17 @@ function stepVisual(step){
 }
 
 function showPractice(){
-  // Use the currently-viewed store type (may differ from active store)
-  const viewedType = (STORE_COLORS[rp.storeIdx] || {}).type || 'burger';
-  const steps = viewedType === 'seafood' ? PRACTICE_STEPS.seafood : PRACTICE_STEPS.burger;
-  const sub = viewedType === 'seafood' ? `Seafood Shack — Beach cooking guide` : `Burger Bar — Cooking guide`;
+  const steps = PRACTICE_STEPS.burger;
+  const sub = `Burger Bar — Cooking guide`;
   const container = document.getElementById('practice-steps');
   const subtitleEl = document.getElementById('practice-subtitle-text') || document.getElementById('practice-subtitle');
   if(subtitleEl) subtitleEl.textContent = sub;
   const flow = document.getElementById('practice-flow');
-  if(flow) flow.innerHTML = practiceFlowSVG(viewedType);
+  if(flow) flow.innerHTML = practiceFlowSVG();
   container.innerHTML = '';
   steps.forEach((step, i) => {
     const div = document.createElement('div');
-    div.className = 'practice-step' + (isSeafood() ? ' seafood' : '');
+    div.className = 'practice-step';
     div.innerHTML = `
       <div class="pstep-icon">${step.icon}</div>
       <div class="pstep-body">
@@ -676,7 +660,6 @@ function openNewStore(){
   eco.cash -= 3000;
   const newId = stores.length;
   const storeTypes = [
-    {name:'Seafood Shack',    type:'seafood'},
     {name:'Downtown Diner',   type:'burger'},
     {name:'Westside Grill',   type:'burger'},
     {name:'East End Kitchen', type:'burger'},
@@ -777,13 +760,6 @@ function executeDayStart() {
     if(s.type==='sink')    s.cleanTrays=0;
     if(s.type==='trayrack') { s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; traysAssigned = true; }
     if(s.type==='table')   { s.group=null; s.served=0; s.dirtyTrays=0; }
-    // seafood resets
-    if(s.type==='beachgrill')  s.slots=[null,null];
-    if(s.type==='assembly')    s.item=null;
-    if(s.type==='chowderpot')  { s.chowderReady=true; s.cooldown=0; }
-    if(s.type==='lemonadestation') s.item=null;
-    if(s.type==='basketrack')  { if(!traysAssigned){ s.cleanBaskets=eco.totalTrays; traysAssigned=true; } else s.cleanBaskets=0; }
-    if(s.type==='cooler')      s.item=null;
   }
 
   player.holding=null; updateHolding();

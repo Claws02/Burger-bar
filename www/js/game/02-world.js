@@ -12,79 +12,7 @@ function buildWorld(){
   const dcx = (baseBounds.l+baseBounds.r)/2;
   const bz = b.t;
 
-  if(isSeafood()){
-    // ── BEACH WORLD ──────────────────────────────────────────
-    scene.background = new THREE.Color('#87CEEB');
-    scene.fog = new THREE.Fog('#b3e5fc', 50, 120);
-
-    // Deep ocean behind restaurant (extends far back)
-    addMesh(worldGrp, GBox(200,1,100), M('#0277bd'), 0,-1, b.t-30, 0,0,0,false);
-    // Shallow ocean (lighter, closer)
-    addMesh(worldGrp, GBox(200,.3,30), M('#4fc3f7'), 0,-.6, b.t-12, 0,0,0,false);
-    // Wave foam strips
-    for(let i=0;i<4;i++) addMesh(worldGrp, GBox(120,.08,1.2), M('#e3f2fd',.6), 0,-.1, b.t-4-i*5, 0,0,0,false);
-
-    // Sandy beach ground (all around)
-    addMesh(worldGrp, GBox(200,.5,200), M('#f9e4b7'), 0,-.76,0, 0,0,0,false);
-    // Darker wet sand near water
-    addMesh(worldGrp, GBox(200,.3,12), M('#e0c882'), 0,-.55, b.t-6, 0,0,0,false);
-
-    // Boardwalk planks in front of restaurant
-    addMesh(worldGrp, GBox(rW+sw*2,.35,rD+sw*2), M('#8d6e63'), cx,-.18,cz, 0,0,0,false);
-    for(let xi=b.l-sw;xi<b.r+sw;xi+=1.4)
-      addMesh(worldGrp, GBox(.06,.06,rD+sw*2), M('#6d4c41'), xi,.1,cz, 0,0,0,false);
-
-    // Ocean road → replace with sandy path
-    addMesh(worldGrp, GBox(100,.1,10), M('#e0c882'), cx,-.2, b.b+sw+5, 0,0,0,false);
-
-    // Palm trees instead of regular trees
-    const palmPos=[
-      {x:b.l-7,z:b.t-4},{x:b.r+7,z:b.t-4},
-      {x:b.l-9,z:cz-4}, {x:b.r+9,z:cz-4},
-      {x:b.l-8,z:b.b+3},{x:b.r+8,z:b.b+3},
-    ];
-    for(const tp of palmPos){
-      const lean = (tp.x<0 ? 1:-1)*0.15;
-      addMesh(worldGrp, GCyl(.25,.35,6,8), M('#8d6e63'), tp.x,3,tp.z, 0,0,lean);
-      addMesh(worldGrp, GSph(.5,6), M('#1b5e20'), tp.x+lean*8,6.5,tp.z);
-      // Fronds
-      for(let f=0;f<5;f++){
-        const ang=(f/5)*Math.PI*2;
-        addMesh(worldGrp, GBox(2.5,.12,.3), M('#2e7d32'),
-          tp.x+Math.cos(ang)*1.5, 6.5, tp.z+Math.sin(ang)*1.5, 0,ang+.3,0.35);
-      }
-    }
-
-    // Beach umbrella tables outside
-    for(const px of [dcx-9, dcx+9]){
-      addMesh(worldGrp, GCyl(.08,.08,3,6), M('#9e9e9e'), px,1.5,b.b+4);
-      addMesh(worldGrp, GCone(2,.5,8), M('#e53935'), px,3.3,b.b+4);
-      addMesh(worldGrp, GCyl(1.1,.12,16), M('#eeeeee'), px,.5,b.b+4);
-      // Lounge chairs
-      addMesh(worldGrp, GBox(1.2,.2,2), M('#f9e4b7'), px,.15,b.b+5.5, 0.25,0,0);
-    }
-
-    // Surfboards leaning on wall
-    for(const sx of [-2,2]){
-      addMesh(worldGrp, GBox(.4,2.2,.12), M(sx<0?'#ff5722':'#1976D2'), cx+sx*3,.9,bz-.2, -0.15,0,sx>0?.1:-.1);
-    }
-
-    // Seagulls (white cones in sky)
-    [[cx-12,14,bz-20],[cx+10,16,bz-25],[cx-5,13,bz-18]].forEach(([x,y,z])=>{
-      addMesh(worldGrp, GBox(.9,.1,.08), M('#fff'), x,y,z, 0,0,.4);
-      addMesh(worldGrp, GBox(.9,.1,.08), M('#fff'), x+.7,y+.2,z, 0,0,-.4);
-    });
-
-    // Sign — SEAFOOD SHACK thatched style
-    addMesh(worldGrp, GBox(rW*.6,1.8,.28), M('#0277bd'), cx,4.1,bz-.35);
-    ['S','E','A','F','O','O','D',' ','S','H','A','C','K'].forEach((l,i)=>{
-      if(l===' ') return;
-      addMesh(worldGrp, GBox(.42,.9,.14), M('#ffffff'), cx-4.0+i*.62,4.1,bz-.22);
-    });
-    addMesh(worldGrp, GBox(.18,2.4,.18), M('#8d6e63'), cx-rW*.28, 3.2, bz-.35);
-    addMesh(worldGrp, GBox(.18,2.4,.18), M('#8d6e63'), cx+rW*.28, 3.2, bz-.35);
-
-  } else {
+  {
     buildBurgerWorld(b, rW, rD, cx, cz, sw, dcx, bz);
     // Scenery never moves: collapse it to one mesh per material.
     bakeInPlace(worldGrp);
@@ -235,27 +163,20 @@ function buildRoom(){
   const b = bounds;
   const w = b.r - b.l, d = b.b - b.t;
   const cx = (b.r + b.l) / 2, cz = (b.b + b.t) / 2;
-  const sea = isSeafood();
-
-  if(sea){
-    addMesh(roomGrp, GBox(w,.25,d), M('#e0c882'), cx,.05,cz, 0,0,0,false);
-    for(let xi=0;xi<w;xi+=1.5) addMesh(roomGrp, GBox(.05,.01,d), M('#4fc3f7'), b.l+xi,.18,cz, 0,0,0,false);
-  } else {
-    // Classic diner checkerboard, one tile = 2.5 world units.
-    addMesh(roomGrp, GBox(w,.2,d), M('#3a3f47'), cx,.0,cz, 0,0,0,false);
-    addMesh(roomGrp, GPlane(w,d,3.2), MT('checker', TEX.checker, 256), cx,.11,cz, 0,0,0,false);
-  }
+  // Classic diner checkerboard.
+  addMesh(roomGrp, GBox(w,.2,d), M('#3a3f47'), cx,.0,cz, 0,0,0,false);
+  addMesh(roomGrp, GPlane(w,d,3.2), MT('checker', TEX.checker, 256), cx,.11,cz, 0,0,0,false);
 
   const wH=2.8, wT=0.55, doorHalfW = 2.5;
-  const dt = sea ? 0 : decorTier();
+  const dt = decorTier();
   _roomDecorTier = dt;
-  const outerMat = sea ? matWallOut : MT('dinerwall', TEX.dinerwall, 256);
-  const kitchMat = sea ? matWallKitch : MT('subway', TEX.subway, 256);
-  const capMat = sea ? matWallCap : (dt >= 6 ? MP('#ffca28',140) : CHROME());
+  const outerMat = MT('dinerwall', TEX.dinerwall, 256);
+  const kitchMat = MT('subway', TEX.subway, 256);
+  const capMat = dt >= 6 ? MP('#ffca28',140) : CHROME();
   function wallSeg(x,y,z,sw,sh,sd,isK){
-    const geo = sea ? GBox(sw,sh,sd) : GWall(sw,sh,sd, isK ? 4 : 3);
+    const geo = GWall(sw,sh,sd, isK ? 4 : 3);
     addMesh(roomGrp, geo, isK?kitchMat:outerMat, x,y,z);
-    addMesh(roomGrp, sea ? GBox(sw+.08,.2,sd+.08) : GRBox(sw+.1,.2,sd+.1,.08), capMat, x,y+sh/2+.1,z);
+    addMesh(roomGrp, GRBox(sw+.1,.2,sd+.1,.08), capMat, x,y+sh/2+.1,z);
   }
 
   const edges = [];
@@ -290,24 +211,19 @@ function buildRoom(){
     if(e.type === 'maindoor') {
       // Glass double doors in chrome frames, propped open.
       const pw = doorHalfW-.2, ph=wH-.1;
-      addMesh(roomGrp, GRBox(doorHalfW*2+wT*.6,.24,wT+.05,.06), sea?matFrameDark:CHROME(), ecx, wH, e.fixed);
+      addMesh(roomGrp, GRBox(doorHalfW*2+wT*.6,.24,wT+.05,.06), CHROME(), ecx, wH, e.fixed);
       for(const side of [-1,1]){
         const dg = new THREE.Group(); dg.position.set(ecx+side*(doorHalfW-.05), 0, e.fixed); dg.rotation.y = side*-.55;
-        addMesh(dg, GRBox(pw,ph,.12,.05), sea?M('#8D6E63',.9):MP('#b3e5fc',120,.45), -side*pw/2, ph/2, 0, 0,0,0,false);
-        addMesh(dg, GBox(.08,ph,.16), sea?matFrameDark:CHROME(), -side*.04, ph/2, 0, 0,0,0,false);
-        addMesh(dg, GBox(.06,.9,.2), sea?matFrameDark:CHROME(), -side*(pw-.25), 1.3, 0, 0,0,0,false);
+        addMesh(dg, GRBox(pw,ph,.12,.05), MP('#b3e5fc',120,.45), -side*pw/2, ph/2, 0, 0,0,0,false);
+        addMesh(dg, GBox(.08,ph,.16), CHROME(), -side*.04, ph/2, 0, 0,0,0,false);
+        addMesh(dg, GBox(.06,.9,.2), CHROME(), -side*(pw-.25), 1.3, 0, 0,0,0,false);
         roomGrp.add(dg);
       }
-      if(!sea) addMesh(roomGrp, GRBox(doorHalfW*2-.4,.04,2.2,.1), M('#8e1b1b'), ecx,.14, e.fixed-1.6, 0,0,0,false); // door mat
+      addMesh(roomGrp, GRBox(doorHalfW*2-.4,.04,2.2,.1), M('#8e1b1b'), ecx,.14, e.fixed-1.6, 0,0,0,false); // door mat
     }
   }
 
-  if(sea){
-    for(let xi=0;xi<w;xi+=1) for(let yi=0;yi<2;yi++)
-      addMesh(roomGrp, GBox(.82,.82,.05), M('#ffffff'), b.l+xi+.5, .5+yi*.88+.18, b.t-wT+.32, 0,0,0,false);
-  } else {
-    buildDinerDecor(b, wT, dt);
-  }
+  buildDinerDecor(b, wT, dt);
   bakeInPlace(roomGrp);
 }
 
@@ -592,7 +508,6 @@ function buildTable(){
 // whose model changed so callers can celebrate them.
 let _roomDecorTier = -1;
 function refreshUpgradeVisuals(){
-  if(isSeafood()) return [];
   const gt = grillTier(), tv = decorTier() >= 5 ? 1 : 0;
   const changed = [];
   for(const k in stations){
@@ -660,62 +575,6 @@ function buildRobot(role, lvl){
 
 
 
-// ── SEAFOOD STATION BUILDERS ──────────────────────────────────
-function buildCooler(){
-  const g=new THREE.Group();
-  addMesh(g, GBox(3,2.8,2), M('#b3e5fc'), 0,1.4,0);
-  addMesh(g, GBox(3.1,0.18,2.1), M('#e1f5fe'), 0,2.89,0);
-  addMesh(g, GBox(2.6,0.6,1.6), M('#0288d1'), 0,2.4,0);
-  addMesh(g, GBox(2.4,0.1,1.4), M('#80d8ff'), 0,2.72,0, 0,0,0,false);
-  return g;
-}
-function buildBeachGrill(){
-  const g=new THREE.Group();
-  addMesh(g, GBox(3.2,2.6,2.2), M('#37474f'), 0,1.3,0);
-  addMesh(g, GBox(2.8,0.18,1.5), M('#ff8f00'), 0,2.62,0.2, 0,0,0,false);
-  addMesh(g, GBox(3.3,1.8,0.4), M('#263238'), 0,3.7,-1.05);
-  addMesh(g, GCyl(.18,2.8,8), M('#9e9e9e'), 0,5.1,-1.05);
-  for(let i=-1;i<=1;i+=.4) addMesh(g, GBox(2.8,.06,.06), M('#555'), i,2.7,.2, 0,Math.PI/2,0,false);
-  return g;
-}
-function buildAssemblyStation(w,d){
-  const g=new THREE.Group();
-  addMesh(g, GBox(w,2.8,d), M('#795548'), 0,1.4,0);
-  addMesh(g, GBox(w+.18,.18,d+.18), M('#f9e4b7'), 0,2.89,0);
-  addMesh(g, GBox(w+.32,.09,d+.32), M('#d4b483'), 0,2.98,0);
-  // Taco shell rack on top
-  addMesh(g, GBox(0.5,0.3,0.3), M('#ffd54f'), -0.6,3.1,0);
-  addMesh(g, GBox(0.5,0.3,0.3), M('#ffd54f'),  0.6,3.1,0);
-  return g;
-}
-function buildChowderPot(){
-  const g=new THREE.Group();
-  addMesh(g, GBox(2.2,2.8,1.8), M('#37474f'), 0,1.4,0);
-  addMesh(g, new THREE.CylinderGeometry(0.65,0.55,0.9,14), M('#5d4037'), 0,3.1,0);
-  addMesh(g, new THREE.CylinderGeometry(0.62,0.62,0.08,14), M('#fff8e1'), 0,3.56,0, 0,0,0,false);
-  addMesh(g, GBox(0.12,0.5,0.12), M('#9e9e9e'), 0.5,3.35,0);
-  return g;
-}
-function buildLemonadeStation(){
-  const g=new THREE.Group();
-  addMesh(g, GBox(2,2.8,2), M('#f9a825'), 0,1.4,0);
-  addMesh(g, GBox(2.1,0.18,2.1), M('#fff9c4'), 0,2.89,0);
-  // Pitcher
-  addMesh(g, new THREE.CylinderGeometry(0.3,0.24,0.7,12), M('#fff176'), 0,3.25,0);
-  addMesh(g, GCyl(0.32,0.06,12), M('#f9a825'), 0,3.62,0, 0,0,0,false);
-  // Lemon slices
-  addMesh(g, new THREE.CylinderGeometry(0.2,0.2,0.06,8), M('#ffee58'), -0.35,3.65,0.2, 0,0,0,false);
-  return g;
-}
-function buildBasketRack(w,d){
-  const g=new THREE.Group();
-  addMesh(g, GBox(w,2.8,d), M('#6d4c41'), 0,1.4,0);
-  addMesh(g, GBox(w+.1,.1,d+.1), M('#8d6e63'), 0,2.85,0);
-  return g;
-}
-
-
-
 const stations = {};
 // ── Static station batch ─────────────────────────────────────────────────────
 // Stations don't move outside Edit Mode, so all of them (robots excepted) are
@@ -768,13 +627,6 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='dumpster')mesh=buildDumpster();
   if(type==='table')   mesh=buildTable();
   if(type==='robot')   mesh=buildRobot(opts.role||'busser', getRobotLevel({hiredDay:opts.hiredDay}));
-  // seafood stations
-  if(type==='cooler')           mesh=buildCooler();
-  if(type==='beachgrill')       mesh=buildBeachGrill();
-  if(type==='assembly')         mesh=buildAssemblyStation(w,d);
-  if(type==='chowderpot')       mesh=buildChowderPot();
-  if(type==='lemonadestation')  mesh=buildLemonadeStation();
-  if(type==='basketrack')       mesh=buildBasketRack(w,d);
   mesh.position.set(x,0,z);
   stGrp.add(mesh);
   const s={id,type,x,z,w,d,mesh,visuals:[],...opts};
@@ -786,13 +638,6 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='trash')   s.contents=0; 
   if(type==='table')   { s.r=2.2; s.group=null; s.served=0; s.dirtyTrays=0; }
   if(type==='robot')   { s.role=opts.role||'busser'; s.state='idle'; s.pos=new THREE.Vector3(x,0,z); s.target=null; s.holding=null; s.timer=0; s._actionCooldown=0; }
-  // seafood
-  if(type==='beachgrill')      s.slots=[null,null];
-  if(type==='assembly')        s.item=null;
-  if(type==='chowderpot')      { s.chowderReady=true; s.cooldown=0; } // always has chowder
-  if(type==='lemonadestation') s.item=null;
-  if(type==='basketrack')      s.cleanBaskets=4;
-  if(type==='cooler')          s.item=null; // unlimited raw fish (refills auto)
   stations[id]=s; return s;
 }
 function removeStation(id){
@@ -804,19 +649,7 @@ function removeStation(id){
 }
 
 function initStations(){
-  if(isSeafood()){
-    // Seafood Shack layout
-    addStation('cooler0',   'cooler',      -8,  -8,  3,   2);
-    addStation('bgrill0',   'beachgrill',   0,  -8.5,3.2, 2);
-    addStation('assembly0', 'assembly',     6,  -8.5,2.2, 1.8);
-    addStation('chowder0',  'chowderpot',  -3.5,-8.5,2.2, 1.8);
-    addStation('lemonade0', 'lemonadestation', 9,-8.5,2, 2);
-    addStation('basketrack0','basketrack', -5.5,-8,  1.8, 1.8);
-    addStation('sink0','sink',-8,3,1.8,1.8);
-    addStation('trash0','trash', 8, 4, 2, 2);
-    addStation('dumpster0','dumpster', 0, bounds.b+20, 4, 3);
-    addStation('table0','table',0,4,5,5);
-  } else {
+  {
     addStation('fridge','fridge',-8,-8,3,3);
     addStation('sink0','sink',-4.5,-8.5,1.8,1.8);
     addStation('rack0','trayrack',-2.2,-8.5,1.8,1.8); 

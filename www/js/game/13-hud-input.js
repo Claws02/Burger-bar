@@ -11,11 +11,6 @@ function orderTag(o){
     case 'soda_on_tray':        return 'SODA';
     case 'burger_soda_on_tray': return 'COMBO';
     case 'fries_on_tray':       return 'FRIES';
-    case 'taco_in_basket':      return 'TACO';
-    case 'chowder_in_basket':   return 'CHOWDER';
-    case 'lemonade_in_basket':  return 'LEMONADE';
-    case 'taco_chowder_basket': return 'TACO+CHWD';
-    case 'taco_lemonade_basket':return 'TACO+LMN';
     default: return '';
   }
 }
@@ -93,11 +88,11 @@ function drawFloatUI(){
     let stinkPenalty = false;
     for(const k in stations){
       const s=stations[k];
-      if(s.type==='grill' || s.type==='beachgrill' || s.type==='fryer') {
+      if(s.type==='grill' || s.type==='fryer') {
         s.slots.forEach((sl,i)=>{ if(!sl) return;
           const p=scrXYZ(s.x-0.6+i*1.2,5,s.z); if(p.z>=1) return;
-          const isCooked = sl.state==='cooked'||sl.state==='cooked_fish'||sl.state==='fries';
-          const isBurnt = sl.state==='charred'||sl.state==='charred_fish'||sl.state==='burnt_fries';
+          const isCooked = sl.state==='cooked'||sl.state==='fries';
+          const isBurnt = sl.state==='charred'||sl.state==='burnt_fries';
           if(isBurnt) return;
           const col = isCooked ? '#FF9800' : '#4CAF50';
           const pct = isCooked ? ((sl.burnTimer||0)/300*100) : (sl.progress/200*100);
@@ -156,10 +151,7 @@ function drawFloatUI(){
          if (seatServed) icon = '✔️';
          else {
            const order = t.group.orders[i];
-           if(isSeafood()){
-             icon = order==='chowder_in_basket'?'🍲':order==='lemonade_in_basket'?'🍋':
-                    order==='taco_chowder_basket'?'🌮🍲':order==='taco_lemonade_basket'?'🌮🍋':'🌮';
-           } else {
+           {
              icon = order==='burger_soda_on_tray'?'🍔🥤':order==='soda_on_tray'?'🥤':order==='fries_on_tray'?'🍟':'🍔';
            }
          }

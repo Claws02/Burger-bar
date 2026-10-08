@@ -8,19 +8,7 @@
 function actionPromptFor(t){
   if(!t) return '';
   const h = player.holding, ty = t.type;
-  if(isSeafood()){
-    if(ty==='cooler')          return !h?'Grab fish':'';
-    if(ty==='beachgrill')      return h==='raw_fish'?'Place on grill':(!h?'Take fish':'');
-    if(ty==='assembly')        return h==='cooked_fish'?'Make taco':((!h&&t.item)?'Pick up':((h&&!t.item)?'Place down':''));
-    if(ty==='chowderpot')      return !h?'Ladle chowder':'';
-    if(ty==='lemonadestation') return !h?'Pour lemonade':'';
-    if(ty==='basketrack')      return (h&&h!=='basket')?'Put in basket':((!h&&t.cleanBaskets>0)?'Take basket':'');
-    if(ty==='sink')            return h==='dirty_basket'?'Hold to wash':'';
-    if(ty==='trash')           return (t.contents>=4&&!h)?'Bag trash':(h?'Toss':'');
-    if(ty==='dumpster')        return h==='trash_bag'?'Dump bag':'';
-    if(ty==='table')           return (h&&t.group&&t.group.state==='ordering')?'Serve!':((!h&&t.dirtyTrays>0)?'Clear table':'');
-    return '';
-  }
+  
   if(ty==='fridge')        return !h?'Grab patty':'';
   if(ty==='grill')         return h==='raw'?'Place on grill':(!h?'Take burger':((h==='tray'||h==='soda_on_tray')?'Plate burger':''));
   if(ty==='fryer'){
@@ -41,7 +29,7 @@ function actionPromptFor(t){
 // the first not-yet-served seat whose order matches what's being delivered.
 // Keeps the per-seat servedMask, the unservedOrders list, and the table's
 // served count all in sync. Returns true if an order was actually fulfilled.
-// Used by the player and both (burger/seafood) robot-waiter paths so the seat
+// Used by the player and the robot-waiter path so the seat
 // that gets the ✔️ is always the one whose order you delivered.
 function serveHeldToGroup(t, holding){
   const g = t.group;
@@ -54,7 +42,7 @@ function serveHeldToGroup(t, holding){
   const ui = g.unservedOrders.indexOf(holding); if(ui !== -1) g.unservedOrders.splice(ui, 1);
   t.served++;
   // Track combo meals served today (for daily goals).
-  if(holding==='burger_soda_on_tray' || holding==='taco_chowder_basket' || holding==='taco_lemonade_basket')
+  if(holding==='burger_soda_on_tray')
     stats.combosServed = (stats.combosServed||0) + 1;
   if(g.unservedOrders.length === 0){ g.eatTimer = 200; g.state = 'eating'; }
   return true;
@@ -100,66 +88,7 @@ function handleAction(){
   const type=t.type; let ok=false;
 
   // ── SEAFOOD PLAYER ACTIONS ─────────────────────────────────
-  if(isSeafood()){
-    if(type==='cooler' && !player.holding){
-      player.holding='raw_fish'; ok=true;
-    }
-    else if(type==='beachgrill'){
-      if(player.holding==='raw_fish'){
-        const i=t.slots.indexOf(null);
-        if(i!==-1){ t.slots[i]={state:'raw_fish',progress:0,burnTimer:0}; player.holding=null; ok=true; }
-      } else if(!player.holding){
-        const ci=t.slots.findIndex(s=>s&&s.state==='charred_fish');
-        if(ci!==-1){ player.holding='charred_fish'; t.slots[ci]=null; ok=true; }
-        else {
-          const ci2=t.slots.findIndex(s=>s&&s.state==='cooked_fish');
-          if(ci2!==-1){ player.holding='cooked_fish'; t.slots[ci2]=null; ok=true; }
-        }
-      }
-    }
-    else if(type==='assembly'){
-      // cooked fish → taco. Also acts as staging counter.
-      if(player.holding==='cooked_fish' && !t.item){
-        t.item='fish_taco'; player.holding=null; ok=true; playSound('sizzle');
-      } else if(!player.holding && t.item){
-        player.holding=t.item; t.item=null; ok=true;
-      } else if(player.holding && player.holding!=='cooked_fish' && !t.item){
-        t.item=player.holding; player.holding=null; ok=true;
-      }
-    }
-    else if(type==='chowderpot'){
-      if(!player.holding){ player.holding='chowder'; ok=true; playSound('sizzle'); }
-    }
-    else if(type==='lemonadestation'){
-      if(!player.holding){ player.holding='lemonade'; ok=true; playSound('sizzle'); }
-    }
-    else if(type==='basketrack'){
-      if(player.holding==='basket'){ player.holding=null; t.cleanBaskets++; ok=true; }
-      else if(!player.holding && t.cleanBaskets>0){ player.holding='basket'; t.cleanBaskets--; ok=true; }
-      // Smart basket assembly: if holding food item, auto-grab a basket and combine
-      else if(player.holding==='fish_taco' && t.cleanBaskets>0){ player.holding='taco_in_basket'; t.cleanBaskets--; ok=true; }
-      else if(player.holding==='chowder' && t.cleanBaskets>0){ player.holding='chowder_in_basket'; t.cleanBaskets--; ok=true; }
-      else if(player.holding==='lemonade' && t.cleanBaskets>0){ player.holding='lemonade_in_basket'; t.cleanBaskets--; ok=true; }
-      // Combine two items already in basket
-      else if(player.holding==='taco_in_basket' && t.item==='chowder'){ player.holding='taco_chowder_basket'; t.item=null; ok=true; }
-      else if(player.holding==='taco_in_basket' && t.item==='lemonade'){ player.holding='taco_lemonade_basket'; t.item=null; ok=true; }
-    }
-    else if(type==='sink'){
-      if(player.holding==='dirty_basket'){ startSinkHold(t); return; }
-    }
-    else if(type==='trash'){
-      const seafoodWaste=['raw_fish','cooked_fish','charred_fish','fish_taco','chowder','lemonade','basket','taco_in_basket','chowder_in_basket','lemonade_in_basket'];
-      if(t.contents>=4 && !player.holding){ player.holding='trash_bag'; t.contents=0; ok=true; }
-      else if(seafoodWaste.includes(player.holding) && t.contents<4){
-        player.holding=player.holding.includes('basket')?'basket':null; t.contents++; ok=true; playSound('error');
-      }
-    }
-    else if(type==='dumpster'){
-      if(player.holding==='trash_bag'){ player.holding=null; ok=true; playSound('dump'); }
-    }
-    if(ok){ updateHolding(); updateStationVisuals(); }
-    return;
-  }
+  
 
   // ── BURGER PLAYER ACTIONS ──────────────────────────────────
   if(type==='fridge'&&!player.holding){ player.holding='raw'; ok=true; }
@@ -251,10 +180,7 @@ function handleAction(){
     else if(t.item==='fries' && player.holding==='tray'){ t.item=null; player.holding='fries_on_tray'; ok=true; }
   }
   else if(type==='table'){
-    const seafoodItems=['taco_in_basket','chowder_in_basket','lemonade_in_basket','taco_chowder_basket','taco_lemonade_basket'];
-    const heldIsFood = isSeafood()
-      ? seafoodItems.includes(player.holding)
-      : player.holding && (player.holding.includes('burger') || player.holding.includes('soda') || player.holding.includes('fries'));
+    const heldIsFood = player.holding && (player.holding.includes('burger') || player.holding.includes('soda') || player.holding.includes('fries'));
     if(player.holding && heldIsFood && t.group && t.group.state==='ordering'){
       if(serveHeldToGroup(t, player.holding)){ player.holding=null; ok=true; }
       else {
@@ -265,7 +191,7 @@ function handleAction(){
         spawnFloater(new THREE.Vector3(t.x, 2.4, t.z), 'Nobody ordered that!', '#EF5350');
       }
     } else if(!player.holding && t.dirtyTrays>0){
-      player.holding = isSeafood() ? 'dirty_basket' : 'dirty_tray';
+      player.holding = 'dirty_tray';
       t.dirtyTrays--; ok=true;
     }
   }
@@ -299,20 +225,15 @@ function updateSinkHold(ds){
   if(!sinkHoldActive) return;
   // Check player is still at the sink
   const t = getClosest();
-  if(!t || t !== sinkHoldTarget || (player.holding !== 'dirty_tray' && player.holding !== 'dirty_basket')){
+  if(!t || t !== sinkHoldTarget || player.holding !== 'dirty_tray'){
     cancelSinkHold(); return;
   }
   sinkHoldProgress += ds / 60; // ds is in frames; TARGET=1/60
   const pct = Math.min(1, sinkHoldProgress / SINK_HOLD_TIME);
   document.getElementById('sink-hold-fill').style.width=(pct*100)+'%';
   if(pct >= 1){
-    if(player.holding==='dirty_basket'){
-      player.holding='basket';
-      showToast('🧺 Basket cleaned!', 1200);
-    } else {
-      player.holding='tray';
-      showToast('🍽️ Tray washed!', 1200);
-    }
+    player.holding='tray';
+    showToast('🍽️ Tray washed!', 1200);
     playSound('sizzle');
     updateHolding(); updateStationVisuals();
     cancelSinkHold();
