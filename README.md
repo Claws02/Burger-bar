@@ -1,99 +1,98 @@
 # 🍔 Burger Bar
 
-A fast, fun **3D cooking & restaurant tycoon** game that runs entirely in the
-browser — built with [Three.js](https://threejs.org/) in a single `index.html`,
-mobile-first, with no build step.
+A 3D cooking & restaurant tycoon game for iPhone (and the web). Grill burgers,
+serve impatient customers, earn stars and tips, and grow a tiny diner into a
+staffed, neon-lit Day-20 machine.
 
-Grill burgers (or grill fish at the Seafood Shack), serve impatient customers,
-earn cash & star ratings, then reinvest in faster gear, more tables, robot staff
-and new store locations as you build a food empire.
+Built with [Three.js](https://threejs.org/) r128 and plain JavaScript (no
+bundler), wrapped for iOS with [Capacitor](https://capacitorjs.com/) 8.
 
-## Play
-
-Just open `index.html` in any modern browser, or host the folder on any static
-web host (GitHub Pages, itch.io, Netlify, etc.).
+## Layout
 
 ```
-# quick local server
-python3 -m http.server 8000
-# then visit http://localhost:8000
+www/                    the game — Capacitor's web dir, also a static website
+  index.html            markup only
+  css/game.css          all styles (safe-area aware; launch polish at the end)
+  js/boot.js            loader: Capacitor bridge → Three.js → game files, in order
+  js/native.js          iOS bridge: save mirror to UserDefaults, haptics, splash, lifecycle
+  js/vendor/            three.min.js (r128), capacitor.js — shipped in the bundle
+  js/game/*.js          the game, as ordered classic scripts sharing one scope
+  fonts/, icons/        Nunito (OFL), PWA / apple-touch icons
+ios/                    Xcode project (Swift Package Manager, no CocoaPods)
+store/                  App Store icon (1024, opaque) and 6.9" screenshots
+tests/                  headless test suite (real game code, stubbed THREE + DOM)
+tools/                  browser smoke/perf runs, art + screenshot renderers, checks
+docs/                   architecture, audits, App Store release guide
+archive/                the parked multi-map build (incl. the removed Seafood Shack)
 ```
 
-> The game loads Three.js from a CDN with automatic fallback across multiple
-> CDNs. For fully offline play, drop a local `three.min.js` (r128) next to
-> `index.html` and point the loader at it.
+The game files load in the order listed in `www/js/boot.js` (`GAME_FILES`).
+Code that runs at load time may only call functions from the same or an
+earlier file; `npm run check` enforces that.
 
-## Controls
+| File | What lives there |
+|------|------------------|
+| `00-settings-audio` | settings, synthesized SFX + ambience + adaptive music, haptics |
+| `01-renderer` | renderer, colour pipeline, lights, quality tiers, shared materials/geometry |
+| `01a-modelkit` | rounded boxes, canvas textures, signage, `bake()` mesh merging |
+| `02-world` | scenery, room + decor tiers, station models, upgrade tiers, station batching |
+| `03-items` | food/tray models (baked) |
+| `04-state-save` | game data, save/load with backup recovery |
+| `05-player` … `06-shop-edit` | player, collision, edit mode, shop |
+| `07-progress` | achievements, daily goals |
+| `07a-adaptive` | **Kitchen Heat** adaptive difficulty, lunch rushes |
+| `08-home` | home screen chef + live bar showcase |
+| `08a-characters` | the 12 player characters on one rig (walk cycle, carry pose, skins, crown) |
+| `09-menus-dayflow` | menus, settings, day start/end, results |
+| `09a-gamecenter` | Game Center leaderboards (score sync), achievements flag |
+| `10-customers` … `12-robots` | customers, actions, robot AI |
+| `13-hud-input` | pooled floating UI, touch/keyboard input |
+| `13a-tutorial` | hands-on first-shift tutorial |
+| `14-main` | boot sequence and main loop |
 
-- **Move:** left thumb drag (virtual joystick) or `WASD` / arrow keys
-- **Act:** right thumb button or `Spacebar` (pick up, place, cook, serve, wash)
-- The button shows a contextual prompt for what it will do.
+## Run it
 
-## Core loop
+```bash
+npm install            # Capacitor packages (only needed for iOS)
+npm run serve          # http://localhost:8000 — or open www/index.html
+```
 
-1. Customers arrive each **day** and sit at tables.
-2. Run the line: **Fridge → Grill → Tray → Counter (assemble) → Table (serve)**.
-3. Bus dirty trays → **Sink** (hold to wash) → **Tray Rack**.
-4. Serve fast for more **stars** and bigger **tips** (build a serve streak!).
-5. Spend cash in the **Shop**; rearrange with **Edit Mode**.
-6. Hire **robots** (Chef / Waiter / Busser), open new **stores**, earn passive income.
+## Test it
 
-> **Single-bar focus:** the game currently runs in **single-bar mode** — only
-> **Burger Bar #1** is active so we can master one bar's cook/deliver loop first.
-> The Seafood Shack and franchise reskins are parked in
-> [`archive/`](archive/) and the multi-store empire is temporarily disabled. See
-> [`ARCHITECTURE.md`](ARCHITECTURE.md) for the complete first-bar design and how
-> to re-enable the other maps.
+```bash
+npm test               # load-order check + 66 headless tests
+npm run test:native    # simulated iOS bridge: save restore/mirror, splash, haptics
+npm run perf           # Day-20 full-restaurant run in headless Chromium
+npm run visual         # screenshot tour (landscape) → .smoke/visual
+npm run portrait       # screenshot tour (portrait)  → .smoke/portrait
+node tools/render-audio.js  # offline render of all sounds → store/audio-preview.wav
+STEPS=tools/char-lineup.js node tools/smoke.js .smoke/chars  # character lineup
+```
 
-## Features
+## Ship it (iOS)
 
-- The **Burger Bar** cook/serve line (fridge → grill → tray → counter → table)
-- A dozen **characters** — the classic human chef plus animals (cat, bear,
-  penguin, frog, dino, bunny) and objects (burger, toaster, robot, avocado,
-  mug) — with a 🎲 *Surprise me* roll. Characters are body shapes; the 12
-  unlockable **skins** recolour whichever one you pick.
-- **Achievements** with cash & skin rewards, plus lifetime **records**
-- **Daily goals** visible while you play, from a button in the top-left
-- **Settings**: volume, background music, colorblind-friendly bars,
-  order text labels, larger text,
-  Casual difficulty, and save export/import
-- Installable as a **PWA** (web app manifest + icons included)
-- Saves locally via `localStorage` (with backup codes for transfer)
+```bash
+npm run ios:sync       # copy www/ into the Xcode project
+npm run ios:open       # open in Xcode (macOS)
+```
 
-## Project layout
+Full checklist, metadata and privacy answers: [`docs/APP_STORE.md`](docs/APP_STORE.md).
 
-| File | Purpose |
-|------|---------|
-| `index.html` | The entire game (markup, styles, and code) |
-| `ARCHITECTURE.md` | Complete first-bar architecture: stations, cook/deliver recipes, economy, achievements |
-| `archive/` | Parked multi-map build + notes (see single-bar mode) |
-| `manifest.json` | PWA web app manifest |
-| `icon.svg` | App / favicon icon |
-| `PROPOSAL.md` | Design review, roadmap, and implementation status |
-| `AUDIT.md` | Full technical & design audit: bugs, the crash root-cause, architecture |
-| `tests/` | Headless test suite (`node tests/run.js`) — no build step, no network |
+## How the game gets harder
 
-## Development notes
+- **The day number** sets the baseline: more customers per day up to 28, then
+  more simultaneous arrivals and tighter patience. New mechanics arrive one at a
+  time (combos, VIPs on Day 8, busy hours on Day 10, big appetites on Day 12, fries on Day 11).
+- **Kitchen Heat** follows the player. Each consecutive calendar day played
+  warms the kitchen: shorter patience, quicker arrivals, extra arrival slots, more
+  VIPs, lunch rushes, and stiffer daily goals — and every point of heat also
+  raises tips. Miss days and it cools off; the first shift or two back are
+  eased in with extra patience and softer goals. Recent performance nudges heat
+  up or down so a struggling daily player isn't buried. Never applies on the
+  tutorial days; Casual halves it. Tuning: `HEAT` in `07a-adaptive.js`.
 
-- All gameplay lives in one inert `<script type="text/gamejs">` block that the
-  in-page loader executes once Three.js and the DOM are ready.
-- **Run the test suite** (no install, no network, no browser needed):
-  ```
-  node tests/run.js
-  ```
-  It boots the *real* game script from `index.html` in a Node `vm` against a
-  stubbed Three.js + DOM (`tests/harness.js`), then drives simulated days frame
-  by frame. The Three.js stub counts every geometry and material created vs.
-  disposed, which is what turns "does it leak GPU memory" into a number.
+## Docs
 
-  Covers: GPU-resource disposal, an exhaustive robot state-machine sweep
-  (every role × every held item), the tray economy, day pacing, and the
-  player-feedback layer. A full staffed day is driven end to end.
-
-  To A/B against another revision:
-  ```
-  git show <rev>:index.html > /tmp/old.html
-  BURGERBAR_INDEX=/tmp/old.html node tests/run.js
-  ```
-
-- See [`AUDIT.md`](AUDIT.md) for the full technical and design audit.
+- [`docs/APP_STORE.md`](docs/APP_STORE.md) — release checklist, store listing, privacy
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — stations, state machines, economy, save format
+- [`docs/AUDIT.md`](docs/AUDIT.md) — the earlier technical & design audit

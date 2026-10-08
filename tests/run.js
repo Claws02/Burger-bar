@@ -3,15 +3,13 @@
 const { boot, counters } = require('./harness.js');
 
 let pass=0, fail=0; const failures=[];
-function t(name, fn){
-  try { fn(); console.log('  \x1b[32mPASS\x1b[0m ' + name); pass++; }
-  catch(e){ console.log('  \x1b[31mFAIL\x1b[0m ' + name + '\n         ' + e.message);
-    fail++; failures.push(name); }
-}
+// Tests are queued and run in order at the end, awaiting async ones.
+const queue = [];
+function t(name, fn){ queue.push({ name, fn }); }
 function eq(a,b,m){ if(a!==b) throw new Error(`${m||''} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); }
 function ok(c,m){ if(!c) throw new Error(m||'expected truthy'); }
 function lte(a,b,m){ if(!(a<=b)) throw new Error(`${m||''} expected <= ${b}, got ${a}`); }
-function section(s){ console.log('\n\x1b[1m'+s+'\x1b[0m'); }
+function section(s){ queue.push({ section: s }); }
 
 // Build a late-game bar: 8 tables, 4 grills, fryer, 4 counters, 20 trays, 8 robots.
 function lateGame(g){
@@ -83,6 +81,7 @@ t('entering gameplay releases the Home Screen WebGL contexts', () => {
   g.run('eco.day=1; executeDayStart();');
   eq(g.run('return !!hc.renderer;'), false, 'home chef renderer still holding a WebGL context:');
   eq(g.run('return !!rp.renderer;'), false, 'restaurant preview renderer still holding a WebGL context:');
+  eq(g.run('return homeShowcase.on;'), false, 'home showcase still drawing during gameplay:');
 });
 
 t('returning to the Home Screen rebuilds its renderers', () => {
@@ -103,7 +102,7 @@ t('the home chef survives repeated home <-> gameplay cycles', () => {
     g.run('showStartMenu();');
     ok(g.run('return !!hc.renderer;'), `home chef renderer missing after cycle ${c}`);
     ok(g.run('return !!hc.mesh;'),     `home chef mesh missing after cycle ${c}`);
-    ok(g.run('return !!rp.renderer;'), `restaurant preview missing after cycle ${c}`);
+    ok(g.run('return homeShowcase.on;'), `restaurant preview missing after cycle ${c}`);
   }
   const last = g.run('return document.getElementById("home-chef-canvas")._uid || 0;');
   ok(last !== first, 'the chef canvas element was reused after its WebGL context was destroyed');
@@ -138,6 +137,14 @@ t('spawning and despawning customers costs no GPU memory', () => {
   eq(after - base, 0, `geometry retained after spawn/despawn of 40 customers:`);
 });
 
+t('baked model caches stay bounded however many customers visit', () => {
+  const g = boot(); lateGame(g);
+  g.run(`gameState='playing'; stats.groupsLeft=9999;`);
+  const before = g.run('return _bakeCache.size;');
+  g.run('for(let i=0;i<500;i++){ spawnGroup(); } groups.forEach(x=>discard(scene,x.mesh)); groups.length=0;');
+  eq(g.run('return _bakeCache.size;'), before, 'new bakes after boot prewarm:');
+});
+
 t('a full simulated day does not grow unboundedly', () => {
   const g = boot(); lateGame(g);
   g.run('executeDayStart();');
@@ -166,10 +173,11 @@ t('drawFloatUI still publishes HUD when a table is behind the camera', () => {
     // Force a LATER table in iteration order to sit behind the camera.
     tbls[tbls.length-1].z = camera.position.z + 500;
     tbls[tbls.length-1].group = grp;
-    floatUI.innerHTML = '__SENTINEL__';
   `);
   g.run('drawFloatUI();');
-  ok(g.run('return floatUI.innerHTML;') !== '__SENTINEL__',
+  // The overlay is a pool of reused nodes; the visible table must still get
+  // its patience bar even though a later table sits behind the camera.
+  ok(g.run(`return floatUI.children.filter(c => !c._hidden && /fbar/.test(c.className)).length;`) > 0,
      'drawFloatUI returned early and never published the overlay');
 });
 
@@ -497,6 +505,16 @@ t('a wrong plate at a table is reported, not silently ignored', () => {
      'serving the wrong plate produced no feedback at all');
 });
 
+t('the overlay reuses its nodes instead of rebuilding them each frame', () => {
+  const g = boot(); lateGame(g);
+  g.run('executeDayStart();'); fillBar(g);
+  g.run('drawFloatUI(); drawFloatUI();');
+  const n1 = g.run('return floatUI.children.length;');
+  g.run('for(let i=0;i<120;i++) drawFloatUI();');
+  eq(g.run('return floatUI.children.length;'), n1, 'overlay node count grew:');
+  ok(n1 > 0, 'nothing was drawn');
+});
+
 t('matching seats are highlighted while carrying a plate', () => {
   const g = boot();
   g.run(`eco.day=2; executeDayStart();
@@ -665,9 +683,308 @@ t('a character with no chef hat does not break the crown or skins', () => {
   ok(g.run('return !!pCharGroup;'), 'applying a skin to a hatless character broke the player mesh');
 });
 
-// ── summary ─────────────────────────────────────────────────────────────────
+t('every character has a full rig (arms, legs, head) and walks without error', () => {
+  const g = boot();
+  const ids = g.run('return CHARACTERS.map(c=>c.id);');
+  for(const id of ids){
+    g.run(`cosm.character='${id}'; rebuildPlayerMesh();`);
+    ok(g.run('return !!(pArmL && pArmR && pLegL && pLegR && pHead && pBody);'), `${id} rig is missing parts`);
+    g.run('player.holding="burger_on_tray"; player.wobble=1; animatePlayerRig(true, 1); player.holding=null; animatePlayerRig(false, 1);');
+  }
+});
+
+t('the Golden Crown is part of the character model', () => {
+  const g = boot();
+  const before = g.run('return _bakeCache.size;');
+  g.run("cosm.character='human'; upg.burgerCrown=true; applyCrown();");
+  ok(g.run('return [..._bakeCache.keys()].some(k => /^ch\|human\|[^|]+\|1\|/.test(k));'), 'no crowned model was built');
+  ok(g.run('return _bakeCache.size;') > before, 'crown did not change the model');
+});
+
+section('7. Adaptive difficulty (Kitchen Heat)');
+
+// Play one shift on a given calendar date with a given performance (0..1).
+function shift(g, date, perf){
+  g.run(`window.__fakeToday='${date}'; adaptStartShift(); adaptEndShift(${perf});`);
+}
+
+t('consecutive calendar days build a streak and heat', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  ['2026-01-01','2026-01-02','2026-01-03','2026-01-04','2026-01-05'].forEach(d => shift(g, d, 0.7));
+  eq(g.run('return adapt.playStreak;'), 5, 'streak:');
+  ok(g.run('return adapt.heat;') >= 2.5, 'five straight days should warm the kitchen');
+  ok(g.run('return heatPatienceMult();') < 1, 'heat should tighten patience');
+  ok(g.run('return heatTipMult();') > 1, 'heat should also pay more');
+});
+
+t('several shifts on the same day do not inflate the streak', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  for(let i=0;i<4;i++) shift(g, '2026-02-10', 0.7);
+  eq(g.run('return adapt.playStreak;'), 1);
+});
+
+t('missing days cools the kitchen and eases the player back in', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  for(let d=1; d<=8; d++) shift(g, `2026-03-0${d}`.replace(/-0(\d\d)$/,'-$1'), 0.95);
+  const hot = g.run('return effectiveHeat();');
+  const hotPatience = g.run('return heatPatienceMult();');
+  g.run(`window.__fakeToday='2026-03-20'; adaptStartShift();`);   // 11 days off
+  eq(g.run('return adapt.playStreak;'), 1, 'streak should reset after a break:');
+  ok(g.run('return adapt.easeShifts;') >= 2, 'a long break should ease in over several shifts');
+  ok(g.run('return effectiveHeat();') < hot, 'heat should drop after a break');
+  ok(g.run('return heatPatienceMult();') > 1 && g.run('return heatPatienceMult();') > hotPatience,
+     'the first shift back should be more forgiving than baseline');
+  // Easing fades out over the next shifts.
+  g.run('adaptEndShift(0.8);'); shift(g, '2026-03-21', 0.8); shift(g, '2026-03-22', 0.8);
+  eq(g.run('return adapt.easeShifts;'), 0, 'easing should finish:');
+});
+
+t('a struggling daily player is not pushed harder', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  for(let d=10; d<=16; d++) shift(g, `2026-04-${d}`, 0.35);
+  const weak = g.run('return adapt.heat;');
+  const g2 = boot();
+  g2.run('eco.day = 20;');
+  for(let d=10; d<=16; d++) shift(g2, `2026-04-${d}`, 0.95);
+  ok(g2.run('return adapt.heat;') > weak + 2, `skilled heat ${g2.run('return adapt.heat;')} vs struggling ${weak}`);
+});
+
+t('heat never touches the tutorial days', () => {
+  const g = boot();
+  g.run('adapt.heat = 10; eco.day = 2;');
+  eq(g.run('return effectiveHeat();'), 0);
+  eq(g.run('return heatPatienceMult();'), 1);
+  eq(g.run('return planRushes(20).length;'), 0);
+});
+
+t('a hot kitchen schedules lunch rushes and a rush speeds spawns + tips', () => {
+  const g = boot();
+  g.run('eco.day = 20; adapt.heat = 8; adapt.easeShifts = 0;');
+  eq(g.run('return planRushes(24).length;'), 2);
+  g.run(`executeDayStart(); stats.rushAt=[stats.groupsLeft]; updateRush(1);`);
+  ok(g.run('return rushActive();'), 'rush should start at its trigger point');
+  ok(g.run('return rushSpawnMult();') < 1 && g.run('return rushTipMult();') > 1);
+  g.run('updateRush(HEAT.RUSH_FRAMES + 1);');
+  ok(!g.run('return rushActive();'), 'rush should end');
+});
+
+t('heat state survives a save/reload', () => {
+  const g = boot();
+  g.run(`eco.day = 9; adapt.playStreak = 4; adapt.skill = 1.5; adapt.lastPlayDate='2026-05-01'; saveGame();`);
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  const g2 = boot({ save });
+  eq(g2.run('return adapt.playStreak;'), 4);
+  eq(g2.run('return adapt.lastPlayDate;'), '2026-05-01');
+});
+
+t('a full day at high heat still runs to results', () => {
+  const g = boot(); lateGame(g);
+  g.run(`adapt.heat = 9; adapt.lastPlayDate = null; eco.day = 19; executeDayStart();`);
+  for(let i=0;i<400 && g.get('gameState')==='playing';i++) g.frame(60);
+  ok(['playing','results','gameover'].includes(g.get('gameState')), 'state: ' + g.get('gameState'));
+});
+
+section('8. Save safety');
+
+t('a corrupt save is recovered from the backup instead of wiped', () => {
+  const g = boot();
+  g.run(`eco.day = 7; eco.cash = 321; saveGame(); eco.day = 8; saveGame();`);
+  const good = g.dom.localStorage.getItem('burgerBoss_save');
+  const bak  = g.dom.localStorage.getItem('burgerBoss_save_bak');
+  ok(bak && bak !== good, 'saving should keep the previous save as a backup');
+  const g2 = boot();
+  g2.dom.localStorage.setItem('burgerBoss_save', good.slice(0, good.length >> 1)); // truncated write
+  g2.dom.localStorage.setItem('burgerBoss_save_bak', bak);
+  g2.run('loadSave();');
+  eq(g2.run('return eco.day;'), 7, 'should restore the backup:');
+  ok(g2.dom.localStorage.getItem('burgerBoss_save_corrupt'), 'the bad save should be kept for support');
+});
+
+t('reset erases the backup too', () => {
+  const g = boot();
+  g.run(`saveGame(); saveGame(); eco.day=3; saveGame();`);
+  g.run(`document.getElementById('reset-confirm-input').value='RESET'; location.reload=function(){}; doReset();`);
+  ok(!g.dom.localStorage.getItem('burgerBoss_save_bak'), 'backup survived a reset');
+});
+
+t('graphics quality cycles and can be applied without a renderer error', () => {
+  const g = boot();
+  g.run('toggleGraphics(); toggleGraphics(); toggleGraphics();');
+  eq(g.run('return settings.graphics;'), 'auto');
+  g.run('settings.graphics="low"; applyQuality();');
+  eq(g.run('return qualityTier;'), 'low');
+});
+
+section('9. Daily goals scale with the player');
+
+t('serve/combo goals never exceed what the day can offer (days 1-100, max heat, any rating)', () => {
+  const g = boot();
+  for(const r of [2.5, 3.5, 4.8]){
+  g.run(`gStats.lifeGroups = 100; gStats.lifeStars = ${r} * 100;`);
+  g.run(`adapt.heat = 10; adapt.playStreak = 9; adapt.skill = 3; adapt.lastPlayDate = null; settings.difficulty='normal';`);
+  const bad = g.run(`
+    const out = [];
+    for(let d=1; d<=100; d++){
+      const cap = plannedGroupCount(d);
+      for(const p of dailyGoalPool(d)){
+        if((p.metric==='groups' || p.metric==='combos') && p.goal > cap) out.push(d+':'+p.id+'='+p.goal+'>'+cap);
+      }
+    }
+    return out;`);
+  eq(bad.length, 0, `rating ${r}: impossible goals: ` + bad.slice(0,5).join(', '));
+  }
+});
+
+t('a hot kitchen gets harder (and better-paid) goals than a cold one', () => {
+  const g = boot();
+  const pick = heat => g.run(`window.__fakeToday='2026-06-02'; adapt.lastPlayDate='2026-06-02';
+    adapt.playStreak=1; adapt.skill=${heat}; adapt.easeShifts=0;
+    const p = dailyGoalPool(20); return {earn:p.find(x=>x.id==='earn').goal, pay:p.find(x=>x.id==='earn').reward,
+      serve:p.find(x=>x.id==='serve').goal, streak:p.find(x=>x.id==='streak').goal};`);
+  const cold = pick(0), hot = pick(3);
+  ok(hot.earn > cold.earn && hot.pay > cold.pay, `earn ${cold.earn}->${hot.earn}, pay ${cold.pay}->${hot.pay}`);
+  ok(hot.serve >= cold.serve && hot.streak >= cold.streak, 'serve/streak goals should not get easier');
+});
+
+t('a returning player gets softer goals on the ease-in shift', () => {
+  const g = boot();
+  const r = g.run(`window.__fakeToday='2026-07-20'; adapt.lastPlayDate='2026-07-01'; adapt.playStreak=6; adapt.skill=2;
+    const back = dailyGoalPool(20);
+    adapt.lastPlayDate='2026-07-19';
+    const daily = dailyGoalPool(20);
+    return {back: back.find(x=>x.id==='earn').goal, daily: daily.find(x=>x.id==='earn').goal,
+            walk: back.find(x=>x.id==='nowalk').goal};`);
+  ok(r.back < r.daily, `ease-in earn goal ${r.back} should be below the daily-player goal ${r.daily}`);
+  eq(r.walk, 1, 'ease-in shift should allow a walkout:');
+});
+
+t('the goals previewed on the Home Screen are the goals the shift uses', () => {
+  const g = boot();
+  g.run(`window.__fakeToday='2026-08-11'; adapt.lastPlayDate='2026-08-10'; adapt.playStreak=4; adapt.skill=1.5;
+         eco.day = 14; showStartMenu();`);
+  const preview = g.run('return JSON.stringify(dailyGoals.map(d=>d.desc));');
+  g.run('executeDayStart();');
+  eq(g.run('return JSON.stringify(dailyGoals.map(d=>d.desc));'), preview, 'goals changed between preview and play:');
+});
+
+section('10. First-shift tutorial');
+
+// Walk the player to a station and press ACT there.
+function actAt(g, type){
+  g.run(`const s = Object.values(stations).find(x=>x.type==='${type}' && (${type==='table'} ? (x.group||x.dirtyTrays>0) : true));
+    player.pos.set(s.x, 0, s.z + (s.d||2)/2 + 1.2); player.dir = Math.PI; handleAction();`);
+}
+
+t('Day 1 runs the tutorial and it walks the whole loop to completion', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 0; executeDayStart();');
+  ok(g.run('return tutorialActive();'), 'tutorial did not start on Day 1');
+  g.frame(30);
+  eq(g.run('return groups.length;'), 0, 'customers arrived before any cooking:');
+  actAt(g, 'fridge');  g.frame(2);
+  actAt(g, 'grill');   g.frame(2);
+  ok(g.run('return tut.step;') >= 2, 'grilling did not advance the tutorial');
+  g.frame(4);
+  eq(g.run('return groups.length;'), 1, 'the lesson guest did not arrive:');
+  eq(g.run('return JSON.stringify(groups[0].orders);'), '["burger_on_tray"]', 'lesson guest order:');
+  actAt(g, 'trayrack'); g.frame(2);
+  g.run(`Object.values(stations).filter(s=>s.type==='grill').forEach(s=>s.slots.forEach(sl=>{ if(sl){ sl.state='cooked'; sl.burnTimer=0; } }));`);
+  actAt(g, 'grill'); g.frame(2);
+  eq(g.run('return player.holding;'), 'burger_on_tray');
+  // Let the guest walk in and sit (patience is frozen during the lesson).
+  for(let i=0;i<60 && g.run("return !(groups[0] && groups[0].state==='ordering');");i++) g.frame(20);
+  ok(g.run('return groups[0].waitPatience === groups[0].maxWait;'), 'guest lost patience during the lesson');
+  actAt(g, 'table'); g.frame(2);
+  ok(g.run('return tut.step;') >= 5, 'serving did not advance the tutorial');
+  for(let i=0;i<40 && g.run("return !Object.values(stations).some(s=>s.type==='table'&&s.dirtyTrays>0);");i++) g.frame(20);
+  actAt(g, 'table'); g.frame(2);
+  eq(g.run('return player.holding;'), 'dirty_tray');
+  g.run(`const s=Object.values(stations).find(x=>x.type==='sink'); player.pos.set(s.x,0,s.z+2);
+         startSinkHold(s); for(let i=0;i<400;i++) updateSinkHold(1);`);
+  eq(g.run('return player.holding;'), 'tray', 'washing did not produce a clean tray:');
+  actAt(g, 'trayrack'); g.frame(2);
+  ok(!g.run('return tutorialActive();'), 'tutorial did not finish');
+  eq(g.dom.localStorage.getItem('burgerBoss_firstShiftDone'), '1');
+  ok(g.run('return stats.spawnTimer < 1e6;'), 'the rest of the day was never released');
+});
+
+t('doing steps out of order never strands the tutorial', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 0; executeDayStart();');
+  actAt(g, 'trayrack'); g.frame(2);   // tray first: steps 1-2 still pending
+  eq(g.run('return tut.step;'), 0);
+  g.run("player.holding = null; Object.values(stations).find(s=>s.type==='grill').slots[0]={state:'cooked',progress:200,burnTimer:0};");
+  g.frame(2);
+  ok(g.run('return tut.step;') >= 2, 'food already on the grill should skip ahead');
+});
+
+t('skip ends it and releases customers; quitting mid-lesson does not count as done', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 0; executeDayStart(); showStartMenu();');
+  ok(!g.run('return tutorialActive();'), 'tutorial still running on the menu');
+  ok(g.dom.localStorage.getItem('burgerBoss_firstShiftDone') !== '1', 'quitting marked the tutorial done');
+  g.run('eco.day = 0; executeDayStart(); skipTutorial();');
+  ok(!g.run('return tutorialActive();'));
+  ok(g.run('return stats.spawnTimer < 1e6;'), 'skipping did not release the day');
+});
+
+t('a mid-career player never gets the tutorial unasked, but can replay it', () => {
+  const g = boot({ tutorial: true });
+  g.run('eco.day = 14; executeDayStart();');
+  ok(!g.run('return tutorialActive();'), 'tutorial forced on a Day-15 player');
+  g.run('showStartMenu(); replayTutorial(); executeDayStart();');
+  ok(g.run('return tutorialActive();'), 'replay did not run on the next shift');
+});
+
+section('11. Game Center');
+
+// A fake native plugin that records submissions and can be told to fail.
+function withFakeGC(g, fail){
+  g.run(`window.__gcCalls = []; window.__gcFail = ${!!fail};
+    window.NativeBridge = { gameCenter: {
+      signIn: () => Promise.resolve({ authenticated: true, playerName: 'Tester' }),
+      submitScore: o => { window.__gcCalls.push(o.leaderboardId + '=' + o.score);
+        return Promise.resolve(window.__gcFail ? { submitted:false } : { submitted:true }); },
+      showLeaderboard: () => Promise.resolve(), reportAchievement: () => Promise.resolve({}) } };`);
+}
+const settle = () => new Promise(r => setImmediate(r));
+
+t('is inert in the browser (no native bridge)', () => {
+  const g = boot();
+  g.run('gcSync(); showLeaderboards(); updateGcButton();');
+  eq(g.run('return document.getElementById("home-btn-ranks").style.display;'), 'none');
+});
+
+t('submits improvements once, and retries what Apple did not confirm', async () => {
+  const g = boot(); withFakeGC(g, true);
+  g.run('eco.day = 12; records.bestDayCash = 345.6; records.totalServed = 80; adapt.bestStreak = 4;');
+  await g.run('return gcSignIn();'); await settle();
+  eq(g.run('return __gcCalls.length;'), 4, 'all four boards submitted:');
+  ok(g.run('return __gcCalls.includes("bb.best_day_earnings=345");'), 'earnings should be whole dollars');
+  g.run('gcSync();'); await settle();
+  eq(g.run('return __gcCalls.length;'), 8, 'unconfirmed scores should be retried:');
+  g.run('__gcFail = false; gcSync();'); await settle(); await settle();
+  g.run('__gcCalls.length = 0; gcSync();'); await settle();
+  eq(g.run('return __gcCalls.length;'), 0, 'confirmed scores were resubmitted:');
+  g.run('eco.day = 13; gcSync();'); await settle();
+  eq(g.run('return __gcCalls.join();'), 'bb.days_in_business=13', 'only the improved board:');
+});
+
+// ── run + summary ───────────────────────────────────────────────────────────
+(async () => {
+for(const q of queue){
+  if(q.section){ console.log('\n\x1b[1m'+q.section+'\x1b[0m'); continue; }
+  try { await q.fn(); console.log('  \x1b[32mPASS\x1b[0m ' + q.name); pass++; }
+  catch(e){ console.log('  \x1b[31mFAIL\x1b[0m ' + q.name + '\n         ' + e.message);
+    fail++; failures.push(q.name); }
+}
 console.log(`\n${'─'.repeat(60)}`);
 console.log(`  ${pass} passed, ${fail} failed`);
 if(fail){ console.log('  failing: ' + failures.join(', ')); }
 console.log(`${'─'.repeat(60)}\n`);
 process.exit(fail ? 1 : 0);
+})();

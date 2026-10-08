@@ -1,0 +1,33 @@
+{
+  "name": "burger-bar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Burger Bar \u2014 a 3D cooking & restaurant tycoon game (Three.js, Capacitor iOS).",
+  "scripts": {
+    "test": "node tools/check-load-order.js && node tests/run.js",
+    "smoke": "node tools/smoke.js .smoke",
+    "perf": "STEPS=tools/perf-steps.js node tools/smoke.js .smoke/perf",
+    "serve": "npx http-server www -c-1 -p 8000",
+    "check": "node tools/check-load-order.js",
+    "visual": "STEPS=tools/visual-steps.js node tools/smoke.js .smoke/visual",
+    "portrait": "STEPS=tools/portrait-steps.js node tools/smoke.js .smoke/portrait",
+    "ios:sync": "node tools/sync-vendor.js && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "test:native": "node tools/native-sim.js",
+    "art": "node tools/render-art.js",
+    "screenshots": "node tools/store-shots.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}

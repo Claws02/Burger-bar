@@ -1,4 +1,4 @@
-// Boots the REAL Burger Bar game script (extracted verbatim from index.html)
+// Boots the REAL Burger Bar game scripts (www/js/game/*.js, in boot.js order)
 // inside a Node vm with stubbed THREE + DOM. Nothing here reimplements game
 // logic -- tests run against shipping code.
 
@@ -8,22 +8,26 @@ const vm = require('vm');
 const { THREE, counters, resetCounters } = require('./stub-three.js');
 const { install } = require('./stub-dom.js');
 
-// Allows pointing the harness at another build (e.g. a pre-fix revision) for
-// A/B comparison: BURGERBAR_INDEX=/tmp/old.html node tests/run.js
-const INDEX = process.env.BURGERBAR_INDEX || path.join(__dirname, '..', 'index.html');
+// Game sources: the ordered list of classic scripts declared in www/js/boot.js.
+// Each file is run as its OWN vm script, exactly as the browser loads them, so a
+// load-time call into a later file fails here just as it would on device.
+const WWW = process.env.BURGERBAR_WWW || path.join(__dirname, '..', 'www');
 
-function extractGameScript(html){
-  const start = html.indexOf('<script type="text/gamejs"');
-  if(start === -1) throw new Error('game script block not found in index.html');
-  const bodyStart = html.indexOf('>', start) + 1;
-  const end = html.indexOf('</script>', bodyStart);
-  if(end === -1) throw new Error('unterminated game script block');
-  return html.slice(bodyStart, end);
+function gameFiles(){
+  const boot = fs.readFileSync(path.join(WWW, 'js', 'boot.js'), 'utf8');
+  const m = boot.match(/GAME_FILES\s*=\s*\[([\s\S]*?)\]/);
+  if(!m) throw new Error('GAME_FILES list not found in boot.js');
+  return m[1].match(/'([^']+)'/g).map(q => q.slice(1, -1));
 }
+function readSources(){
+  return gameFiles().map(f => ({ name: f + '.js',
+    code: fs.readFileSync(path.join(WWW, 'js', 'game', f + '.js'), 'utf8') }));
+}
+// The real index.html markup, for the DOM stub.
+function readIndex(){ return fs.readFileSync(path.join(WWW, 'index.html'), 'utf8'); }
 
 function boot(opts = {}){
-  const html = fs.readFileSync(INDEX, 'utf8');
-  const src  = extractGameScript(html);
+  const sources = readSources();
   const dom  = install();
   resetCounters();
 
@@ -43,10 +47,13 @@ function boot(opts = {}){
   vm.createContext(sandbox);
 
   if(opts.save) dom.localStorage.setItem('burgerBoss_save', JSON.stringify(opts.save));
+  // Most tests are about other systems; the first-shift tutorial (which holds
+  // arrivals) only runs where a test asks for it.
+  if(!opts.tutorial) dom.localStorage.setItem('burgerBoss_firstShiftDone', '1');
 
   // The script ends with a call to animate(); our rAF stub only *records* the
   // callback, so exactly one frame runs at boot and tests drive the rest.
-  vm.runInContext(src, sandbox, { filename:'index.html#game-code' });
+  for(const f of sources) vm.runInContext(f.code, sandbox, { filename: f.name });
 
   const api = {
     ctx: sandbox, dom, counters,
@@ -68,4 +75,4 @@ function boot(opts = {}){
   return api;
 }
 
-module.exports = { boot, extractGameScript, counters, resetCounters };
+module.exports = { boot, readSources, readIndex, counters, resetCounters };
