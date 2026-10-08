@@ -13,8 +13,9 @@ function spawnGroup(){
   let type = 'normal';
   {
     const r = Math.random();
-    if(eco.day >= 8 && r < 0.15) type = 'vip';
-    else if(eco.day >= 12 && r >= 0.15 && r < 0.30) type = 'heavy';
+    const vip = heatVipChance();
+    if(eco.day >= 8 && r < vip) type = 'vip';
+    else if(eco.day >= 12 && r >= vip && r < vip + 0.15) type = 'heavy';
   }
 
   const size = type === 'heavy' ? 1 : (Math.random()>.55?2:1);
@@ -23,7 +24,7 @@ function spawnGroup(){
   // Past the day-length cap, customers get gradually less forgiving. This is
   // what replaces "more groups" as the late-game difficulty lever (floor 0.7x).
   const lateSqueeze = Math.max(0.7, 1 - Math.max(0, eco.day - 28) * 0.005);
-  const dpm = diffPatienceMult() * lateSqueeze;
+  const dpm = diffPatienceMult() * lateSqueeze * heatPatienceMult();
   const g = {
     id:Math.random(), size, type, state:'approach_door', stoodUp: false,
     waitPatience: 1800 * upg.patienceMult * dpm * (type==='vip'?0.5:1.0),
@@ -88,9 +89,34 @@ function moveToTarget(g,scale){
 // ─────────────────────────────────────────────────────────────
 //  STATION VISUALS
 // ─────────────────────────────────────────────────────────────
-function updateStationVisuals(){
+// What a station's item visuals depend on, as a string. Robots and the player
+// call updateStationVisuals() on almost every action, and it used to tear down
+// and rebuild the items on EVERY station each time; now only stations whose
+// signature changed are rebuilt.
+function stationVisualSig(s){
+  switch(s.type){
+    case 'grill': case 'fryer': case 'beachgrill':
+      return s.slots ? s.slots.map(sl=>sl?sl.state:'-').join(',') : '';
+    case 'counter': case 'assembly': return s.item || '';
+    case 'trayrack': case 'sink': return String(Math.min(s.cleanTrays||0, 15));
+    case 'basketrack': return String(Math.min(s.cleanBaskets||0, 8));
+    case 'table': {
+      if(s.served>0){
+        const g=s.group;
+        return 's'+s.served+'|'+(g ? g.orders.join(',')+'|'+(g.servedMask||[]).join(',') : '');
+      }
+      return 'd'+(s.dirtyTrays||0);
+    }
+    default: return '';
+  }
+}
+function updateStationVisuals(force){
   for(const k in stations){
     const s=stations[k];
+    // Position is part of the signature: edit mode moves stations.
+    const sig = stationVisualSig(s) + '@' + s.x + ',' + s.z;
+    if(!force && s._visSig === sig) continue;
+    s._visSig = sig;
     s.visuals.forEach(v=>discard(scene, v)); s.visuals=[];
     const gY=3.1, cY=3.0, tY=2.2;
     if(s.type==='grill'&&s.slots) s.slots.forEach((sl,i)=>{

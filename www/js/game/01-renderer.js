@@ -4,10 +4,58 @@
 //  RENDERER + SCENE
 // ─────────────────────────────────────────────────────────────
 const canvas = document.getElementById('gameCanvas');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+// ── Graphics quality ─────────────────────────────────────────────────────────
+// settings.graphics: 'auto' (default) | 'high' | 'low'. Auto starts at 'med' and
+// steps down -- never up -- when sustained gameplay frame time says the device is
+// struggling; the learned tier is remembered so it doesn't re-learn every launch.
+const QUALITY_TIERS = {
+  high: { pr: 2,   shadows: true,  shadowSize: 2048 },
+  med:  { pr: 1.5, shadows: true,  shadowSize: 1024 },
+  low:  { pr: 1,   shadows: false, shadowSize: 512  },
+};
+let qualityTier = null;
+function wantedQualityTier(){
+  const g = settings.graphics || 'auto';
+  if(g === 'high' || g === 'low') return g;
+  return QUALITY_TIERS[settings.autoTier] ? settings.autoTier : 'med';
+}
+function applyQuality(tier){
+  tier = tier || wantedQualityTier();
+  if(tier === qualityTier) return;
+  const q = QUALITY_TIERS[tier];
+  const shadowChange = !qualityTier || QUALITY_TIERS[qualityTier].shadows !== q.shadows;
+  qualityTier = tier;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pr));
+  renderer.shadowMap.enabled = q.shadows;
+  if(typeof sun !== 'undefined'){
+    sun.castShadow = q.shadows;
+    if(sun.shadow.mapSize.x !== q.shadowSize){
+      sun.shadow.mapSize.set(q.shadowSize, q.shadowSize);
+      if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; }
+    }
+  }
+  // Toggling shadows changes shader programs; flag every material to recompile.
+  if(shadowChange) scene.traverse(o=>{ const m=o.material; if(m) (Array.isArray(m)?m:[m]).forEach(x=>x.needsUpdate=true); });
+  if(typeof resize === 'function') resize();
+}
+// Frame-time watchdog for 'auto'. Fed from the main loop during gameplay only.
+const perfWatch = { acc:0, n:0 };
+function perfSample(ms){
+  if((settings.graphics || 'auto') !== 'auto' || ms > 100) return; // ignore hitches/tab switches
+  perfWatch.acc += ms; perfWatch.n++;
+  if(perfWatch.n < 240) return;
+  const avg = perfWatch.acc / perfWatch.n; perfWatch.acc = 0; perfWatch.n = 0;
+  if(avg > 24 && qualityTier !== 'low'){
+    const down = qualityTier === 'high' ? 'med' : 'low';
+    settings.autoTier = down; saveSettings(); applyQuality(down);
+    console.info('Graphics auto-lowered to', down, '(avg frame', avg.toFixed(1), 'ms)');
+  }
+}
 
 // ── WebGL context-loss handling ──
 // On mobile, backgrounding the tab can drop the GL context, leaving a black

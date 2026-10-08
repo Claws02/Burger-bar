@@ -64,6 +64,7 @@
       <div id="home-topbar-stats">
         <div class="hstat">💰 <span id="home-cash">$0.00</span></div>
         <div class="hstat">⭐ <span id="home-rating">0.0</span></div>
+        <div class="hstat hstat-streak" id="home-streak" style="display:none;"></div>
         <div id="home-day-badge">📅 Day <span id="home-day">0</span></div>
       </div>
     </div>
@@ -136,6 +137,7 @@
   </div>
 
   <div id="ui-layer">
+    <div id="rush-banner" aria-live="polite">🔥 LUNCH RUSH! <span>+25% tips</span></div>
     <div id="top-hud">
       <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: 0</span></div>
       <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span><span id="streak-wrap"><span id="streak-x">🔥 x1</span><span id="streak-bar"><span id="streak-fill"></span></span></span></div>
@@ -285,6 +287,15 @@
         <span id="set-diff-state" style="color:#90caf9;font-weight:900;">NORMAL</span>
       </button>
       <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Casual: customers wait longer, +15% tips, and the store never closes.</div>
+      <button class="upg-item" id="set-hap-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleHaptics()">
+        <span style="font-weight:900;font-size:14px;">📳 Vibration</span>
+        <span id="set-hap-state" style="color:#66BB6A;font-weight:900;">ON</span>
+      </button>
+      <button class="upg-item" id="set-gfx-btn" style="border:none;cursor:pointer;width:100%;text-align:left;color:#fff;font-family:inherit;" onclick="toggleGraphics()">
+        <span style="font-weight:900;font-size:14px;">✨ Graphics</span>
+        <span id="set-gfx-state" style="color:#90caf9;font-weight:900;">AUTO</span>
+      </button>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin:-6px 2px 0;">Auto adjusts to your device. Battery Saver turns off shadows and renders at lower resolution.</div>
       <div class="pause-btn-row">
         <button class="pbtn pbtn-sound" onclick="exportSave()">📤 Export Save</button>
         <button class="pbtn pbtn-sound" onclick="importSave()">📥 Import Save</button>
@@ -351,6 +362,7 @@
         <div id="res-stars-row" style="display:flex;justify-content:center;gap:8px;margin-bottom:8px;"></div>
         <div id="res-rating-num" style="font-size:24px;font-weight:900;color:#ffc107;opacity:0;transition:opacity .4s;">⭐ 0.0</div>
         <div id="res-coach" style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,.72);margin-top:6px;opacity:0;transition:opacity .4s;min-height:15px;"></div>
+      <div id="res-heat" class="res-heat"></div>
       </div>
       <div style="background:rgba(0,0,0,.4);border-radius:16px;padding:18px 24px;width:100%;margin-bottom:16px;text-align:center;">
         <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px;">Cash Earned</div>

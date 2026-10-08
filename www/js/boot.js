@@ -11,7 +11,7 @@
   'use strict';
   var GAME_FILES = [
     '00-settings-audio', '01-renderer', '02-world', '03-items', '04-state-save',
-    '05-player', '06-shop-edit', '07-progress', '08-home', '09-menus-dayflow',
+    '05-player', '06-shop-edit', '07-progress', '07a-adaptive', '08-home', '09-menus-dayflow',
     '10-customers', '11-actions', '12-robots', '13-hud-input', '14-main'
   ];
   var queue = ['js/vendor/three.min.js'].concat(GAME_FILES.map(function(f){ return 'js/game/' + f + '.js'; }));
@@ -28,11 +28,24 @@
     var sp = document.getElementById('boot-splash'); if(sp) sp.remove();
     if(detail) console.error('Boot failed:', detail);
   }
+  // Keep the last few runtime errors on the device (Settings > Export Save
+  // bundles nothing private; this is only for diagnosing player reports).
+  function logError(msg){
+    try {
+      var k = 'burgerBoss_errlog', log = JSON.parse(localStorage.getItem(k) || '[]');
+      log.push({ t: new Date().toISOString(), m: String(msg).slice(0, 300) });
+      while(log.length > 20) log.shift();
+      localStorage.setItem(k, JSON.stringify(log));
+    } catch(_){}
+  }
+  window.BurgerLogError = logError;
   window.addEventListener('error', function(e){
+    logError((e && e.message) + ' @ ' + (e && e.filename || '').split('/').pop() + ':' + (e && e.lineno));
     // Errors thrown while a game file is first evaluated mean the game never
     // finished booting; surface that instead of a frozen splash.
     if(!window._gameBooted) fail(e && (e.error || e.message));
   });
+  window.addEventListener('unhandledrejection', function(e){ logError('promise: ' + (e && e.reason)); });
 
   function next(i){
     if(i >= queue.length){ window._gameBooted = true; return; }

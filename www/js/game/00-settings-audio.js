@@ -9,7 +9,7 @@ function loadSettings(){
     const raw = localStorage.getItem('burgerBoss_settings');
     if(raw) settings = Object.assign(settings, JSON.parse(raw));
   } catch(e){}
-  try{ applyBigText(); }catch(e){}
+  // applyBigText() lives in 09-menus-dayflow.js; 14-main.js applies it at boot.
 }
 function saveSettings(){
   try { localStorage.setItem('burgerBoss_settings', JSON.stringify(settings)); } catch(e){}
@@ -42,7 +42,10 @@ function initAudio() {
 window.addEventListener('pointerdown', initAudio, {once: true});
 window.addEventListener('keydown', initAudio, {once: true});
 
+// Game events that also deserve a tap on the hand (fires even when muted).
+const SOUND_HAPTICS = { coin:'light', serve:'success', error:'warning', dump:'medium', rush:'heavy', daycomplete:'success' };
 function playSound(type) {
+  if (SOUND_HAPTICS[type]) haptic(SOUND_HAPTICS[type]);
   if (!audioCtx || audioCtx.state !== 'running') return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -65,12 +68,16 @@ function playSound(type) {
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
     osc.start(t); osc.stop(t + 0.2);
   } else if (type === 'sizzle') {
-    const bufSize = audioCtx.sampleRate * 0.2; 
-    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    // One cached noise buffer; this used to allocate a fresh one per sizzle.
+    if(!playSound._noise){
+      const bufSize = audioCtx.sampleRate * 0.2;
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+      playSound._noise = buf;
+    }
     const noise = audioCtx.createBufferSource();
-    noise.buffer = buf;
+    noise.buffer = playSound._noise;
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'highpass'; filter.frequency.value = 1000;
     noise.connect(filter); filter.connect(gain);
@@ -92,6 +99,19 @@ function playSound(type) {
     gain.gain.setValueAtTime(0.18, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.22);
     osc.start(t); osc.stop(t + 0.22);
+  } else if (type === 'rush') {
+    // Two quick rising whoops: the lunch rush is on.
+    [0, 0.18].forEach(off => {
+      const o = audioCtx.createOscillator(), g2 = audioCtx.createGain();
+      o.connect(g2); g2.connect(sfxGain || audioCtx.destination);
+      o.type = 'square';
+      o.frequency.setValueAtTime(440, t + off);
+      o.frequency.exponentialRampToValueAtTime(990, t + off + 0.15);
+      g2.gain.setValueAtTime(0.0001, t + off);
+      g2.gain.linearRampToValueAtTime(0.09, t + off + 0.02);
+      g2.gain.exponentialRampToValueAtTime(0.005, t + off + 0.16);
+      o.start(t + off); o.stop(t + off + 0.17);
+    });
   } else if (type === 'daycomplete') {
     // Little ascending fanfare on day-complete (chord arpeggio).
     const notes = [523, 659, 784, 1047];
@@ -147,3 +167,23 @@ function stopMusic(){
   if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
 }
 
+
+// ─────────────────────────────────────────────────────────────
+//  HAPTICS
+// ─────────────────────────────────────────────────────────────
+// Native Taptic feedback through Capacitor's Haptics plugin when running as the
+// iOS app; navigator.vibrate on Android browsers; silently nothing elsewhere.
+// Respects the Settings toggle. style: 'light' | 'medium' | 'heavy' | 'success' | 'error'.
+function haptic(style){
+  if(settings.haptics === false) return;
+  try {
+    const H = window.NativeBridge && window.NativeBridge.haptics;
+    if(H){
+      if(style === 'success' || style === 'error' || style === 'warning')
+        H.notification({ type: style.toUpperCase() });
+      else H.impact({ style: (style || 'light').toUpperCase() });
+      return;
+    }
+    if(navigator.vibrate) navigator.vibrate(style === 'heavy' || style === 'error' ? 30 : 12);
+  } catch(e){}
+}

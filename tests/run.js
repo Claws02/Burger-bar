@@ -166,10 +166,11 @@ t('drawFloatUI still publishes HUD when a table is behind the camera', () => {
     // Force a LATER table in iteration order to sit behind the camera.
     tbls[tbls.length-1].z = camera.position.z + 500;
     tbls[tbls.length-1].group = grp;
-    floatUI.innerHTML = '__SENTINEL__';
   `);
   g.run('drawFloatUI();');
-  ok(g.run('return floatUI.innerHTML;') !== '__SENTINEL__',
+  // The overlay is a pool of reused nodes; the visible table must still get
+  // its patience bar even though a later table sits behind the camera.
+  ok(g.run(`return floatUI.children.filter(c => !c._hidden && /fbar/.test(c.className)).length;`) > 0,
      'drawFloatUI returned early and never published the overlay');
 });
 
@@ -497,6 +498,16 @@ t('a wrong plate at a table is reported, not silently ignored', () => {
      'serving the wrong plate produced no feedback at all');
 });
 
+t('the overlay reuses its nodes instead of rebuilding them each frame', () => {
+  const g = boot(); lateGame(g);
+  g.run('executeDayStart();'); fillBar(g);
+  g.run('drawFloatUI(); drawFloatUI();');
+  const n1 = g.run('return floatUI.children.length;');
+  g.run('for(let i=0;i<120;i++) drawFloatUI();');
+  eq(g.run('return floatUI.children.length;'), n1, 'overlay node count grew:');
+  ok(n1 > 0, 'nothing was drawn');
+});
+
 t('matching seats are highlighted while carrying a plate', () => {
   const g = boot();
   g.run(`eco.day=2; executeDayStart();
@@ -663,6 +674,124 @@ t('a character with no chef hat does not break the crown or skins', () => {
   g.run("cosm.character='coffee'; upg.burgerCrown=true; rebuildPlayerMesh(); applyCrown();");
   g.run("applyChefSkin('gold');");
   ok(g.run('return !!pCharGroup;'), 'applying a skin to a hatless character broke the player mesh');
+});
+
+section('7. Adaptive difficulty (Kitchen Heat)');
+
+// Play one shift on a given calendar date with a given performance (0..1).
+function shift(g, date, perf){
+  g.run(`window.__fakeToday='${date}'; adaptStartShift(); adaptEndShift(${perf});`);
+}
+
+t('consecutive calendar days build a streak and heat', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  ['2026-01-01','2026-01-02','2026-01-03','2026-01-04','2026-01-05'].forEach(d => shift(g, d, 0.7));
+  eq(g.run('return adapt.playStreak;'), 5, 'streak:');
+  ok(g.run('return adapt.heat;') >= 2.5, 'five straight days should warm the kitchen');
+  ok(g.run('return heatPatienceMult();') < 1, 'heat should tighten patience');
+  ok(g.run('return heatTipMult();') > 1, 'heat should also pay more');
+});
+
+t('several shifts on the same day do not inflate the streak', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  for(let i=0;i<4;i++) shift(g, '2026-02-10', 0.7);
+  eq(g.run('return adapt.playStreak;'), 1);
+});
+
+t('missing days cools the kitchen and eases the player back in', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  for(let d=1; d<=8; d++) shift(g, `2026-03-0${d}`.replace(/-0(\d\d)$/,'-$1'), 0.95);
+  const hot = g.run('return effectiveHeat();');
+  const hotPatience = g.run('return heatPatienceMult();');
+  g.run(`window.__fakeToday='2026-03-20'; adaptStartShift();`);   // 11 days off
+  eq(g.run('return adapt.playStreak;'), 1, 'streak should reset after a break:');
+  ok(g.run('return adapt.easeShifts;') >= 2, 'a long break should ease in over several shifts');
+  ok(g.run('return effectiveHeat();') < hot, 'heat should drop after a break');
+  ok(g.run('return heatPatienceMult();') > 1 && g.run('return heatPatienceMult();') > hotPatience,
+     'the first shift back should be more forgiving than baseline');
+  // Easing fades out over the next shifts.
+  g.run('adaptEndShift(0.8);'); shift(g, '2026-03-21', 0.8); shift(g, '2026-03-22', 0.8);
+  eq(g.run('return adapt.easeShifts;'), 0, 'easing should finish:');
+});
+
+t('a struggling daily player is not pushed harder', () => {
+  const g = boot();
+  g.run('eco.day = 20;');
+  for(let d=10; d<=16; d++) shift(g, `2026-04-${d}`, 0.35);
+  const weak = g.run('return adapt.heat;');
+  const g2 = boot();
+  g2.run('eco.day = 20;');
+  for(let d=10; d<=16; d++) shift(g2, `2026-04-${d}`, 0.95);
+  ok(g2.run('return adapt.heat;') > weak + 2, `skilled heat ${g2.run('return adapt.heat;')} vs struggling ${weak}`);
+});
+
+t('heat never touches the tutorial days', () => {
+  const g = boot();
+  g.run('adapt.heat = 10; eco.day = 2;');
+  eq(g.run('return effectiveHeat();'), 0);
+  eq(g.run('return heatPatienceMult();'), 1);
+  eq(g.run('return planRushes(20).length;'), 0);
+});
+
+t('a hot kitchen schedules lunch rushes and a rush speeds spawns + tips', () => {
+  const g = boot();
+  g.run('eco.day = 20; adapt.heat = 8; adapt.easeShifts = 0;');
+  eq(g.run('return planRushes(24).length;'), 2);
+  g.run(`executeDayStart(); stats.rushAt=[stats.groupsLeft]; updateRush(1);`);
+  ok(g.run('return rushActive();'), 'rush should start at its trigger point');
+  ok(g.run('return rushSpawnMult();') < 1 && g.run('return rushTipMult();') > 1);
+  g.run('updateRush(HEAT.RUSH_FRAMES + 1);');
+  ok(!g.run('return rushActive();'), 'rush should end');
+});
+
+t('heat state survives a save/reload', () => {
+  const g = boot();
+  g.run(`eco.day = 9; adapt.playStreak = 4; adapt.skill = 1.5; adapt.lastPlayDate='2026-05-01'; saveGame();`);
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  const g2 = boot({ save });
+  eq(g2.run('return adapt.playStreak;'), 4);
+  eq(g2.run('return adapt.lastPlayDate;'), '2026-05-01');
+});
+
+t('a full day at high heat still runs to results', () => {
+  const g = boot(); lateGame(g);
+  g.run(`adapt.heat = 9; adapt.lastPlayDate = null; eco.day = 19; executeDayStart();`);
+  for(let i=0;i<400 && g.get('gameState')==='playing';i++) g.frame(60);
+  ok(['playing','results','gameover'].includes(g.get('gameState')), 'state: ' + g.get('gameState'));
+});
+
+section('8. Save safety');
+
+t('a corrupt save is recovered from the backup instead of wiped', () => {
+  const g = boot();
+  g.run(`eco.day = 7; eco.cash = 321; saveGame(); eco.day = 8; saveGame();`);
+  const good = g.dom.localStorage.getItem('burgerBoss_save');
+  const bak  = g.dom.localStorage.getItem('burgerBoss_save_bak');
+  ok(bak && bak !== good, 'saving should keep the previous save as a backup');
+  const g2 = boot();
+  g2.dom.localStorage.setItem('burgerBoss_save', good.slice(0, good.length >> 1)); // truncated write
+  g2.dom.localStorage.setItem('burgerBoss_save_bak', bak);
+  g2.run('loadSave();');
+  eq(g2.run('return eco.day;'), 7, 'should restore the backup:');
+  ok(g2.dom.localStorage.getItem('burgerBoss_save_corrupt'), 'the bad save should be kept for support');
+});
+
+t('reset erases the backup too', () => {
+  const g = boot();
+  g.run(`saveGame(); saveGame(); eco.day=3; saveGame();`);
+  g.run(`document.getElementById('reset-confirm-input').value='RESET'; location.reload=function(){}; doReset();`);
+  ok(!g.dom.localStorage.getItem('burgerBoss_save_bak'), 'backup survived a reset');
+});
+
+t('graphics quality cycles and can be applied without a renderer error', () => {
+  const g = boot();
+  g.run('toggleGraphics(); toggleGraphics(); toggleGraphics();');
+  eq(g.run('return settings.graphics;'), 'auto');
+  g.run('settings.graphics="low"; applyQuality();');
+  eq(g.run('return qualityTier;'), 'low');
 });
 
 // ── summary ─────────────────────────────────────────────────────────────────

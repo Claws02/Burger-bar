@@ -3,6 +3,8 @@
 // ─────────────────────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────────────────────
+try { applyBigText(); } catch(e){ console.warn('applyBigText failed', e); }
+applyQuality();
 loadSave();
 // Build the player from the saved character + skin. Must run after loadSave()
 // (so cosm is populated) and after the CHARACTERS/buildCharacter definitions.
@@ -55,6 +57,7 @@ if(!localStorage.getItem('burgerBoss_tutorialSeen')){
 //  MAIN LOOP
 // ─────────────────────────────────────────────────────────────
 let lastT=performance.now(), ds=1;
+const homeScreenEl=document.getElementById('home-screen');
 const TARGET=1/60;
 
 function animate(){
@@ -62,7 +65,9 @@ function animate(){
   try {
   if(gamePaused) return;
   const now=performance.now();
-  ds=Math.min((now-lastT)/1000,0.1)/TARGET; lastT=now;
+  const frameMs = now-lastT;
+  ds=Math.min(frameMs/1000,0.1)/TARGET; lastT=now;
+  if(gameState==='playing') perfSample(frameMs);
 
   (window._clouds||[]).forEach(c=>{ c.position.x+=c._spd*ds; if(c.position.x>75) c.position.x=-75; });
 
@@ -90,12 +95,14 @@ function animate(){
       if(al){
         const prompt = (gameState==='playing') ? actionPromptFor(t) : '';
         if(prompt && actionBtn.classList.contains('active')){
-          const r = actionBtn.getBoundingClientRect();
-          al.textContent = prompt;
-          al.style.left = (r.left + r.width/2) + 'px';
-          al.style.top  = (r.top - 18) + 'px';
-          al.style.display = 'block';
-        } else { al.style.display = 'none'; }
+          // Position comes from where the thumb put the button (showAct), so no
+          // per-frame layout read is needed.
+          if(al._t !== prompt){ al._t = prompt; al.textContent = prompt; }
+          const lx = actPos.x + 'px', ly = (actPos.y - 68) + 'px';
+          if(al.style.left !== lx) al.style.left = lx;
+          if(al.style.top !== ly) al.style.top = ly;
+          if(al.style.display !== 'block') al.style.display = 'block';
+        } else if(al.style.display !== 'none') al.style.display = 'none';
       }
     } else {
       hlRing.visible=false;
@@ -172,13 +179,15 @@ function animate(){
         const sw = document.getElementById('streak-wrap');
         if(sw){
           if(serveStreak >= 2 && streakTimer > 0){
-            sw.style.display = 'inline-flex';
+            if(sw.style.display !== 'inline-flex') sw.style.display = 'inline-flex';
             const mult = 1 + Math.min(serveStreak - 1, 4) * 0.1;
-            document.getElementById('streak-x').textContent = `🔥 x${mult.toFixed(1)}`;
-            document.getElementById('streak-fill').style.width = Math.max(0, Math.min(100, streakTimer / 360 * 100)) + '%';
-          } else sw.style.display = 'none';
+            const label = `🔥 x${mult.toFixed(1)}`, sx = document.getElementById('streak-x');
+            if(sx.textContent !== label) sx.textContent = label;
+            document.getElementById('streak-fill').style.width = Math.round(Math.max(0, Math.min(100, streakTimer / 360 * 100))) + '%';
+          } else if(sw.style.display !== 'none') sw.style.display = 'none';
         }
       }
+      updateRush(ds);
       if(stats.spawnTimer>0) stats.spawnTimer-=ds;
       if(stats.groupsLeft>0&&stats.spawnTimer<=0){ 
         // After day 10: spawn up to maxSimultaneous groups at once when timer fires
@@ -194,7 +203,7 @@ function animate(){
           const w = (Math.random() + Math.random() + Math.random()) / 3;
           delay = baseDelay * (0.75 + w * 0.5);
         }
-        stats.spawnTimer = delay * 60;
+        stats.spawnTimer = delay * 60 * heatSpawnMult() * rushSpawnMult();
       }
 
       if(stats.groupsLeft===0&&groups.length===0&&gameState==='playing'){
@@ -268,6 +277,8 @@ function animate(){
             // on Day 2 without inflating the rest of the curve.
             rawCash *= eco.day <= 4 ? 1.30 : eco.day <= 6 ? 1.15 : 1.0;
             rawCash *= diffPayoutMult();
+            // Heat pays: a hotter kitchen tips better, and rush-hour serves more so.
+            rawCash *= heatTipMult() * rushTipMult();
 
             // Serve streak: consecutive serves within the window stack a tip
             // bonus (up to +40%).
@@ -339,11 +350,14 @@ function animate(){
     }
     drawFloatUI();
   }
-  renderer.render(scene,camera);
+  // The Home Screen is an opaque overlay with its own renderers; drawing the
+  // full bar underneath it every frame only cost battery.
+  if(!(gameState==='start_menu' && homeScreenEl.style.display!=='none')) renderer.render(scene,camera);
   } catch(err){
     // A per-frame error shouldn't blank the screen forever. Log it and, once,
     // tell the player how to recover instead of leaving a frozen black canvas.
     console.error('Frame error:', err);
+    try { window.BurgerLogError && window.BurgerLogError('frame: ' + (err && err.stack || err)); } catch(_){}
     if(!window._frameErrShown){
       window._frameErrShown = true;
       const d=document.createElement('div');

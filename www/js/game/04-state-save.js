@@ -123,7 +123,13 @@ function saveGame(){
       }
       stores[activeStoreIdx].layout = layout;
     }
-    localStorage.setItem('burgerBoss_save', JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records, dailyGoals}));
+    const data = JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records, dailyGoals, adapt, savedAt:Date.now()});
+    // Keep the last good save as a backup. A corrupt or half-written main save
+    // used to fall through to bootstrapNewSave(), and the next autosave then
+    // overwrote the player's whole run.
+    const prev = localStorage.getItem('burgerBoss_save');
+    if(prev && prev !== data) { try { localStorage.setItem('burgerBoss_save_bak', prev); } catch(_){} }
+    localStorage.setItem('burgerBoss_save', data);
     window._saveWarned = false;
   }catch(e){
     // An empty catch here meant a full localStorage quota (or a private window)
@@ -137,11 +143,29 @@ function saveGame(){
   }
 }
 
+// Parse a save string into a validated object, or null if it is unusable.
+function parseSave(raw){
+  if(!raw) return null;
+  try {
+    const s = JSON.parse(raw);
+    if(!s || typeof s !== 'object' || !s.v || s.v < 6) return null;
+    if(s.stores && (!Array.isArray(s.stores) || !s.stores.length || !s.stores[0] || typeof s.stores[0] !== 'object')) return null;
+    return s;
+  } catch(e){ return null; }
+}
 function loadSave(){
   try{
     const raw = localStorage.getItem('burgerBoss_save');
-    if(!raw) { bootstrapNewSave(); return; }
-    const s = JSON.parse(raw);
+    let s = parseSave(raw);
+    if(!s){
+      // Unreadable or missing main save: fall back to the last good backup
+      // before giving up, and keep the bad copy for support/debugging.
+      if(raw){ try { localStorage.setItem('burgerBoss_save_corrupt', raw); } catch(_){} }
+      s = parseSave(localStorage.getItem('burgerBoss_save_bak'));
+      if(!s){ bootstrapNewSave(); return; }
+      window._recoveredFromBackup = true;
+      console.warn('Main save unreadable; restored the backup.');
+    }
 
     // If save is from an old version, wipe and start fresh to avoid corrupted state
     if(!s.v || s.v < 6) { bootstrapNewSave(); return; }
@@ -168,6 +192,7 @@ function loadSave(){
     if(s.achievements) achievements = Object.assign({unlocked:[]}, s.achievements);
     if(s.records) records = Object.assign({bestDayCash:0, bestDayStars:0, totalServed:0}, s.records);
     if(Array.isArray(s.dailyGoals)) dailyGoals = s.dailyGoals;
+    adapt = Object.assign(defAdapt(), s.adapt || {});
 
     loadActiveStore();
   }catch(e){ console.warn('Load failed',e); bootstrapNewSave(); }

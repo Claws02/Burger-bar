@@ -74,6 +74,18 @@ function showStartMenu(){
   document.getElementById('home-cash').textContent='$'+eco.cash.toFixed(2);
   document.getElementById('home-rating').textContent=getCumRating();
   document.getElementById('home-day').textContent=eco.day;
+  {
+    // Calendar streak chip: only meaningful if the streak is still alive today
+    // or yesterday (otherwise the next shift will reset it).
+    const chip = document.getElementById('home-streak');
+    if(chip){
+      const gap = adapt.lastPlayDate ? adaptDayDiff(adapt.lastPlayDate, adaptToday()) : 99;
+      const alive = adapt.playStreak >= 2 && gap <= 1;
+      chip.style.display = alive ? '' : 'none';
+      if(alive) chip.innerHTML = `🔥 <span>${adapt.playStreak}</span>`;
+      chip.title = alive ? `${adapt.playStreak}-day streak — play today to keep it going` : '';
+    }
+  }
   document.getElementById('home-next-day').textContent=eco.day+1;
   document.getElementById('home-nametag').textContent = stores[activeStoreIdx]?.name || 'Burger Bar #1';
 
@@ -140,6 +152,12 @@ function refreshSettingsUI(){
   if(df){ const casual = settings.difficulty==='casual'; df.textContent = casual?'CASUAL':'NORMAL'; df.style.color = casual?'#66BB6A':'#90caf9'; }
   const tg = document.getElementById('set-tag-state');
   if(tg){ tg.textContent = settings.ordertags?'ON':'OFF'; tg.style.color = settings.ordertags?'#66BB6A':'#888'; }
+  const hp = document.getElementById('set-hap-state');
+  if(hp){ const on = settings.haptics !== false; hp.textContent = on?'ON':'OFF'; hp.style.color = on?'#66BB6A':'#888'; }
+  const gf = document.getElementById('set-gfx-state');
+  if(gf){ const g = settings.graphics || 'auto';
+    gf.textContent = g==='high'?'HIGH':g==='low'?'BATTERY SAVER':'AUTO';
+    gf.style.color = g==='high'?'#FFD54F':g==='low'?'#66BB6A':'#90caf9'; }
   const bg = document.getElementById('set-big-state');
   if(bg){ bg.textContent = settings.bigtext?'ON':'OFF'; bg.style.color = settings.bigtext?'#66BB6A':'#888'; }
 }
@@ -179,8 +197,10 @@ function validateResetInput(){
 function doReset(){
   const inp = document.getElementById('reset-confirm-input');
   if(!inp || inp.value.trim().toUpperCase() !== 'RESET') return; // guard
-  localStorage.removeItem('burgerBoss_save');
-  localStorage.removeItem('burgerBoss_tutorialSeen');
+  // The backup must go too, or loadSave() would faithfully "recover" the run
+  // the player just asked to erase.
+  ['burgerBoss_save','burgerBoss_save_bak','burgerBoss_save_corrupt','burgerBoss_tutorialSeen']
+    .forEach(k=>{ try { localStorage.removeItem(k); } catch(_){} });
   location.reload();
 }
 window.showResetConfirm=showResetConfirm; window.closeResetConfirm=closeResetConfirm;
@@ -215,6 +235,20 @@ function applyBigText(){
 }
 window.toggleOrderTags = toggleOrderTags;
 window.toggleBigText = toggleBigText;
+function toggleHaptics(){
+  settings.haptics = settings.haptics === false;
+  saveSettings(); refreshSettingsUI();
+  haptic('medium');
+}
+window.toggleHaptics = toggleHaptics;
+function toggleGraphics(){
+  const order = ['auto','high','low'];
+  settings.graphics = order[(order.indexOf(settings.graphics||'auto')+1) % order.length];
+  // A manual change resets what Auto learned, so Auto gets a fresh look.
+  if(settings.graphics === 'auto') delete settings.autoTier;
+  saveSettings(); applyQuality(); refreshSettingsUI();
+}
+window.toggleGraphics = toggleGraphics;
 function toggleDifficulty(){
   settings.difficulty = (settings.difficulty==='casual') ? 'normal' : 'casual';
   refreshSettingsUI(); saveSettings();
@@ -670,6 +704,8 @@ function startNextDay(){
 
 function executeDayStart() {
   eco.day++;
+  // Advance the calendar streak / heat before anything reads difficulty.
+  const heatNote = adaptStartShift();
 
   // Snapshot state BEFORE the day runs so we can restore on quit
   window._daySnapshot = {
@@ -695,14 +731,16 @@ function executeDayStart() {
 
   // Simultaneous arrivals ramp with the day (and with how many tables you own),
   // which is what makes late days demanding now that they're length-capped.
-  const maxSimultaneousGroups = eco.day >= 10
-    ? Math.max(1, Math.min(upg.tableCount, 2 + Math.floor((eco.day - 10) / 12), 5))
-    : 1;
+  // Kitchen Heat (calendar streak + recent skill) can add another arrival slot.
+  const baseSimultaneous = eco.day >= 10 ? Math.min(2 + Math.floor((eco.day - 10) / 12), 5) : 1;
+  const maxSimultaneousGroups = Math.max(1, Math.min(upg.tableCount, baseSimultaneous + heatExtraSimultaneous(), 6));
   
   // First spawn: give player 8 seconds to get ready (longer on early days)
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
   stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
-         spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups, combosServed:0, walkouts:0};
+         spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups, combosServed:0, walkouts:0,
+         heat: effectiveHeat(), rushAt: planRushes(groupCount), rushTimer:0, rushes:0};
+  setRushBanner(false);
   serveStreak = 0; streakTimer = 0;
   rollDailyGoals(eco.day); // fresh objectives for the day about to start
 
@@ -721,7 +759,11 @@ function executeDayStart() {
       if(el) el.style.display='none';
   });
   
-  document.getElementById('day-banner').innerHTML=`DAY ${eco.day}<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${groupCount}</span>`;
+  {
+    const hl = heatLabel();
+    document.getElementById('day-banner').innerHTML=`DAY ${eco.day}<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${groupCount}</span>` +
+      (hl ? `<br><span id="day-heat" class="${adapt.easeShifts>0?'ease':''}">${hl}</span>` : '');
+  }
   updateCashUI();
 
   let traysAssigned = false;
@@ -752,6 +794,7 @@ function executeDayStart() {
   gameState='playing'; gamePaused=false;
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
   saveGame();
+  if(heatNote) setTimeout(()=>{ try{ showToast(heatNote, 3200); }catch(e){} }, 900);
   // NOTE: day-milestone heads-ups (Busy Hours/VIP, new unlocks, etc.) are no
   // longer shown here at the START of a day — they're queued at the END of the
   // previous day (see queueNextDayHeadsUp) so the player can prepare first.
@@ -799,6 +842,9 @@ function showShop(){
 window.showShop=showShop;
 
 function endDay(){
+  stats._heatBefore = effectiveHeat();
+  adaptEndShift(shiftPerformance());
+  setRushBanner(false);
   gStats.lifeStars+=stats.totalStars;
   gStats.lifeGroups+=stats.groupsServed;
   hlRing.visible=false;
@@ -870,9 +916,18 @@ function queueNextDayHeadsUp(){
   const parts = [];
   let color = '#4CAF50', title = `📣 HEADS UP · DAY ${upcoming}`;
 
+  // One new mechanic per heads-up, matching when spawnGroup() introduces it.
+  if(upcoming === 8){
+    color = '#7E57C2'; title = '📣 TOMORROW: VIP GUESTS';
+    parts.push("Impatient <b>VIPs</b> (💢) start visiting. They wait half as long but pay <b>3×</b>. Seat and serve them first!");
+  }
   if(upcoming === 10){
     color = '#F44336'; title = '📣 TOMORROW: BUSY HOURS';
-    parts.push("Day 10 gets busy — <b>multiple groups</b> can arrive at once, and impatient <b>VIPs</b> (💢, 3× pay) start visiting. Stock up and keep wait times low!");
+    parts.push("Day 10 gets busy — <b>multiple groups</b> can arrive at once. Stock trays and keep the grill full!");
+  }
+  if(upcoming === 12){
+    color = '#FF7043'; title = '📣 TOMORROW: BIG APPETITES';
+    parts.push("<b>Hungry regulars</b> (the big ones) order <b>three rounds</b> in a row. Keep a plate ready for their next order.");
   }
   if(!SINGLE_BAR_MODE && upcoming === 30){
     color = '#ab47bc'; title = '🏪 TOMORROW: EXPAND';
@@ -955,7 +1010,16 @@ function showResults(){
     } else {
       msg = '⏳ Orders sat too long — cook ahead and keep clean trays stocked.';
     }
+    // Kitchen Heat recap: where tomorrow's difficulty is heading and why.
+    const before = stats._heatBefore || 0, after = adapt.heat * heatRamp() * (settings.difficulty==='casual'?0.5:1);
+    let heat = '';
+    if(eco.day >= HEAT.RAMP_FROM_DAY){
+      const arrow = after > before + 0.2 ? '▲' : after < before - 0.2 ? '▼' : '•';
+      const streak = adapt.playStreak >= 2 ? `${adapt.playStreak}-day streak · ` : '';
+      heat = `🔥 ${streak}Heat ${after.toFixed(1)} ${arrow} <span>(+${Math.round(HEAT.TIP_PER_HEAT*after*100)}% tips)</span>`;
+    }
     co.textContent = msg; co.style.opacity = '1';
+    const rh = el('res-heat'); if(rh) rh.innerHTML = heat;
   }, 1600);
   setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
   setTimeout(()=>{
