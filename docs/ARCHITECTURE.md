@@ -11,9 +11,13 @@
 > (a full, runnable copy of the previous multi-map build) and are intentionally
 > not created at boot. See [Single-bar mode](#single-bar-mode) below.
 
-All gameplay lives in one `<script type="text/gamejs" id="game-code">` block in
-[`index.html`](index.html) (≈ lines 919–5083). Line numbers below are
-approximate and meant as jump-off points, not exact anchors.
+> **Layout update:** the single `index.html` script has been split into ordered
+> files under [`www/js/game/`](../www/js/game/) (see the table in the
+> [README](../README.md)). Function names below are unchanged; line numbers
+> referring to the old `index.html` are historical. Newer systems — Kitchen Heat
+> (`07a-adaptive.js`), the model kit and baking (`01a-modelkit.js`), static
+> station batching and upgrade tiers (`02-world.js`) — are documented in their
+> file headers.
 
 ---
 
