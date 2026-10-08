@@ -121,13 +121,13 @@ function handleAction(){
     }
   }
   else if(type==='sodafountain'){
-    if(player.holding==='tray'){ player.holding='soda_on_tray'; ok=true; playSound('sizzle'); }
-    else if(player.holding==='burger_on_tray'){ player.holding='burger_soda_on_tray'; ok=true; playSound('sizzle'); }
+    if(player.holding==='tray'){ player.holding='soda_on_tray'; ok=true; playSound('pour'); }
+    else if(player.holding==='burger_on_tray'){ player.holding='burger_soda_on_tray'; ok=true; playSound('pour'); }
   }
   else if(type==='grill'){
     if(player.holding==='raw'){ 
       const i=t.slots.indexOf(null); 
-      if(i!==-1){ t.slots[i]={state:'raw',progress:0, burnTimer:0}; player.holding=null; ok=true; } 
+      if(i!==-1){ t.slots[i]={state:'raw',progress:0, burnTimer:0}; player.holding=null; ok=true; playSound('grillplace'); } 
     }
     else if(!player.holding){ 
       const cIdx=t.slots.findIndex(s=>s&&(s.state==='charred'));
@@ -152,7 +152,7 @@ function handleAction(){
     } else if (player.holding==='raw'||player.holding==='cooked'||player.holding==='charred'||player.holding==='burger_on_tray'||player.holding==='burger_soda_on_tray'||player.holding==='soda_on_tray'||player.holding==='raw_fries'||player.holding==='fries'||player.holding==='burnt_fries'||player.holding==='fries_on_tray'){
        if(t.contents < 4) {
           player.holding = (player.holding.includes('tray') ? 'tray' : null);
-          t.contents++; ok=true; playSound('error');
+          t.contents++; ok=true; playSound('toss');
        } else {
           playSound('error'); 
        }
@@ -196,7 +196,7 @@ function handleAction(){
     }
   }
 
-  if(ok){ updateHolding(); updateStationVisuals(); }
+  if(ok){ playSound(player.holding ? 'pickup' : 'place'); updateHolding(); updateStationVisuals(); }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ function updateSinkHold(ds){
     player.holding='tray';
     stats.traysWashed = (stats.traysWashed||0) + 1;
     showToast('🍽️ Tray washed!', 1200);
-    playSound('sizzle');
+    playSound('washed');
     updateHolding(); updateStationVisuals();
     cancelSinkHold();
   }

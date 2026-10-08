@@ -72,6 +72,7 @@ function showStartMenu(){
   document.getElementById('pause-screen').style.display='none';
   document.getElementById('quit-confirm').style.display='none';
   gameState='start_menu';
+  setMusicMood(0);
 
   document.getElementById('home-cash').textContent='$'+eco.cash.toFixed(2);
   document.getElementById('home-rating').textContent=getCumRating();
@@ -135,7 +136,7 @@ function toggleSound(){
 }
 // Patch playSound to respect mute
 const _origPlaySound = playSound;
-window.playSound = function(type){ if(!soundMuted) _origPlaySound(type); };
+window.playSound = function(type, at){ if(!soundMuted) _origPlaySound(type, at); };
 window.toggleSound=toggleSound;
 
 // ── SETTINGS PANEL ───────────────────────────────────────────
@@ -212,7 +213,7 @@ function setVolume(val){
 }
 function toggleMusic(){
   settings.music = !(settings.music!==false);
-  if(musicGain) musicGain.gain.value = settings.music?0.35:0;
+  if(musicGain) musicGain.gain.value = settings.music?0.42:0;
   if(settings.music){ if(audioCtx) startMusic(); } else { stopMusic(); }
   refreshSettingsUI(); saveSettings();
 }
@@ -779,6 +780,7 @@ function executeDayStart() {
   saveGame();
   if(heatNote) setTimeout(()=>{ try{ showToast(heatNote, 3200); }catch(e){} }, 900);
   if(tutorialShouldStart()) startTutorial();
+  setMusicMood(1);
   // NOTE: day-milestone heads-ups (Busy Hours/VIP, new unlocks, etc.) are no
   // longer shown here at the START of a day — they're queued at the END of the
   // previous day (see queueNextDayHeadsUp) so the player can prepare first.

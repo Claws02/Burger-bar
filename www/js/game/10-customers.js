@@ -62,6 +62,7 @@ function spawnGroup(){
     m.position.set(i*1.7-(size>1?.85:0),0,i*.4); g.mesh.add(m);
   }
   scene.add(g.mesh); groups.push(g);
+  playSound('doorbell');
   stats.groupsLeft--; document.getElementById('day-sub').textContent=`Customers: ${stats.groupsLeft}`;
 }
 

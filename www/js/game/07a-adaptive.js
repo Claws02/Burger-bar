@@ -170,7 +170,7 @@ function rushTipMult(){ return rushActive() ? HEAT.RUSH_TIP_MULT : 1; }
 function updateRush(dsF){
   if(stats.rushTimer > 0){
     stats.rushTimer -= dsF;
-    if(stats.rushTimer <= 0){ stats.rushTimer = 0; setRushBanner(false); }
+    if(stats.rushTimer <= 0){ stats.rushTimer = 0; setRushBanner(false); setMusicMood(1); }
     return;
   }
   const at = stats.rushAt;
@@ -180,7 +180,7 @@ function updateRush(dsF){
     stats.rushes = (stats.rushes || 0) + 1;
     stats.spawnTimer = Math.min(stats.spawnTimer, 60);
     setRushBanner(true);
-    try { playSound('rush'); } catch(e){}
+    try { playSound('rush'); setMusicMood(2); } catch(e){}
   }
 }
 function setRushBanner(on){

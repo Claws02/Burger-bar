@@ -180,15 +180,16 @@ function animate(){
             sl.progress += cookRate*ds;
             if(sl.progress >= 200){
               sl.state = s.type==='fryer' ? 'fries' : 'cooked';
-              sl.burnTimer=0; needVis=true; playSound('sizzle');
+              sl.burnTimer=0; needVis=true; playSound('ding');
             }
           } else if (sl.state === 'cooked' || sl.state === 'fries') {
             // Burn window is fixed (independent of cook speed) so upgrading the
             // grill makes cooking faster WITHOUT making food burn faster.
             sl.burnTimer += ds;
+            if(sl.burnTimer >= 200 && !sl._warned){ sl._warned = true; playSound('warn'); }
             if(sl.burnTimer >= 300) {
               sl.state = s.type==='fryer' ? 'burnt_fries' : 'charred';
-              needVis=true; playSound('error');
+              needVis=true; playSound('burnt');
             }
           }
         });
@@ -256,7 +257,7 @@ function animate(){
           moveToTarget(g,ds); 
           g.waitPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0) * (tutorialActive() ? 0 : 1);
           
-          if(g.waitPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; }
+          if(g.waitPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; playSound('walkout'); }
           else if(qi===0){
             let tgt=null;
             for(const k in stations){ const s=stations[k]; if(s.type==='table'&&!s.group&&s.dirtyTrays===0){tgt=s;break;} }
@@ -276,7 +277,7 @@ function animate(){
         }
         else if(g.state==='ordering'){
           g.foodPatience -= ds * (window._currentStinkPenalty ? 1.2 : 1.0) * (tutorialActive() ? 0 : 1);
-          if(g.foodPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; g.tbl.group=null; g.tbl.served=0; }
+          if(g.foodPatience<=0){ g.state='leave'; stats.walkouts=(stats.walkouts||0)+1; g.tbl.group=null; g.tbl.served=0; playSound('walkout'); }
         }
         else if(g.state==='eating'){
           g.eatTimer-=ds;
@@ -321,7 +322,7 @@ function animate(){
             playSound('coin');
             // Mastery feedback: a chime + callout on great service.
             if(stars >= 4){
-              playSound('serve');
+              playSound(stars === 5 ? 'sparkle' : 'serve');
               spawnFloater(g.tbl.mesh.position.clone().add(new THREE.Vector3(0,0.9,0)),
                 stars===5?'PERFECT! ⭐':'GREAT! ⭐', '#FFD54F');
             }
@@ -377,6 +378,7 @@ function animate(){
   // The Home Screen is an opaque overlay with its own renderers; drawing the
   // full bar underneath it every frame only cost battery.
   updateStationBatch();
+  updateAmbience();
   if(gameState==='start_menu' && homeScreenEl.style.display!=='none'){
     // The opaque Home Screen covers the canvas except the preview window.
     renderHomeShowcase();

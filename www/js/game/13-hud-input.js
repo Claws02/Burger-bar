@@ -96,7 +96,9 @@ function drawFloatUI(){
           if(isBurnt) return;
           const col = isCooked ? '#FF9800' : '#4CAF50';
           const pct = isCooked ? ((sl.burnTimer||0)/300*100) : (sl.progress/200*100);
-          fuiBar('cook', p.x, p.y, 0, pct, col);
+          const cb = fuiBar('cook', p.x, p.y, 0, pct, col);
+          const cc = isCooked && (sl.burnTimer||0) >= 200 ? 'fbar urgent' : 'fbar';   // about to burn
+          if(cb._cls !== cc){ cb._cls = cc; cb.className = cc; }
         });
       }
       if(s.type==='trash' && s.contents >= 4) {
