@@ -1050,6 +1050,75 @@ t('the camera stays close enough to read characters at full size', () => {
   lte(g.run('eco.floorLevel = 6; return cameraFrustumSize();'), 30, 'fully expanded view size:');
 });
 
+// ── 13. Robot navigation & coordination ─────────────────────────────────────
+section('13. Robot pathfinding, counter sharing and trays');
+
+t('a planned path never crosses a station or wall', () => {
+  const g = boot();
+  g.run('eco.day = 5; executeDayStart();');
+  const bad = g.run(`
+    const fridge = stations.fridge, table = stations.table0;
+    const p = navPath(table.x + 3.5, table.z, fridge, 2.0);
+    if(!p || !p.length) return 'no path';
+    let prev = {x: table.x + 3.5, z: table.z}, hits = 0;
+    for(const w of p){
+      for(let k=1;k<=4;k++){ const x = prev.x + (w.x-prev.x)*k/4, z = prev.z + (w.z-prev.z)*k/4;
+        if(checkColl(x, z, 'robot-probe')) hits++; }
+      prev = w;
+    }
+    const last = p[p.length-1];
+    return hits + (Math.hypot(last.x - fridge.x, last.z - fridge.z) <= 2.0 ? 0 : 1000);`);
+  eq(bad, 0, 'path collisions (or the path stopped short of the fridge):');
+});
+
+t('robot chefs cook to demand instead of filling every counter', () => {
+  const g = boot();
+  g.run(`eco.day = 6; upg.grillMult = 3; executeDayStart();
+    groups.forEach(x=>scene.remove(x.mesh)); groups.length = 0; stats.groupsLeft = 1; stats.spawnTimer = 1e9;
+    for(let i=2;i<6;i++) addStation('counter'+i,'counter',-8+i*2.6,-3.5,1.8,1.8);
+    for(let i=0;i<2;i++) addStation('robot'+i,'robot',-4+i*2,0,1.5,1.5,{role:'chef',hiredDay:1});`);
+  g.frame(1800);
+  const staged = g.run(`return Object.values(stations).filter(s=>s.type==='counter' && s.item).length
+                     + Object.values(stations).filter(s=>s.type==='grill').reduce((a,s)=>a+s.slots.filter(Boolean).length,0);`);
+  eq(staged, 0, 'patties cooked with no orders anywhere:');
+});
+
+t('robots leave a counter free for the player', () => {
+  const g = boot();
+  g.run(`eco.day = 6; executeDayStart();
+    for(let i=2;i<4;i++) addStation('counter'+i,'counter',-8+i*2.6,-3.5,1.8,1.8);
+    stations.counter0.item = 'cooked'; stations.counter1.item = 'cooked'; stations.counter2.item = 'cooked';
+    addStation('robot0','robot',0,0,1.5,1.5,{role:'chef',hiredDay:1});`);
+  eq(g.run('const b = stations.robot0; b.holding = "fries"; return stageCounter(b) === null;'), true,
+     'a robot took the last free counter');
+  eq(g.run('const b = stations.robot0; b._stuck = 150; return !!stageCounter(b);'), true,
+     'a robot stuck for 2.5 s should be allowed the last counter');
+});
+
+t('two robots never head for the same counter', () => {
+  const g = boot();
+  g.run(`eco.day = 6; executeDayStart();
+    addStation('robot0','robot',4,-5,1.5,1.5,{role:'chef',hiredDay:1});
+    addStation('robot1','robot',5,-5,1.5,1.5,{role:'chef',hiredDay:1});
+    const a = stations.robot0, b = stations.robot1;
+    a.holding = b.holding = 'cooked';`);
+  g.frame(2);
+  const same = g.run('const a = stations.robot0, b = stations.robot1; return !!a.target && a.target === b.target && a.target.type === "counter";');
+  eq(same, false, 'both chefs targeted one counter:');
+});
+
+t('bussers return stray trays from counters to the rack', () => {
+  const g = boot();
+  g.run(`eco.day = 6; executeDayStart();
+    groups.forEach(x=>scene.remove(x.mesh)); groups.length = 0; stats.groupsLeft = 1; stats.spawnTimer = 1e9;
+    stations.counter0.item = 'tray'; stations.counter1.item = 'dirty_tray';
+    globalThis.__rack0 = stations.rack0.cleanTrays;
+    addStation('robot0','robot',0,0,1.5,1.5,{role:'busser',hiredDay:1});`);
+  g.frame(2400);
+  eq(g.run('return [stations.counter0.item, stations.counter1.item].join();'), ',', 'trays left on counters:');
+  eq(g.run('return stations.rack0.cleanTrays - globalThis.__rack0;'), 2, 'trays back on the rack:');
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){
