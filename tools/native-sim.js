@@ -19,6 +19,9 @@ const initScript = (store) => {
       { name: 'StatusBar', methods: methods(['hide','show']) },
       { name: 'SplashScreen', methods: methods(['hide']) },
       { name: 'App', methods: [{ name:'addListener', rtype:'callback' }] },
+      { name: 'GameCenter', methods: methods(['signIn','submitScore','showLeaderboard','reportAchievement']) },
+      { name: 'Coop', methods: methods(['invite','send','disconnect']).concat([{ name:'addListener', rtype:'callback' }]) },
+      { name: 'SharedBar', methods: methods(['status','create','invite','open','save','close']).concat([{ name:'addListener', rtype:'callback' }]) },
     ],
     nativePromise(plugin, method, opts) {
       window.__calls.push(plugin + '.' + method);

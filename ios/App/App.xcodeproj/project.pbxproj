@@ -12,6 +12,8 @@
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		B0B0B0B02A00000000000012 /* GameCenterPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0B0B0B02A00000000000011 /* GameCenterPlugin.swift */; };
 		B0B0B0B02A00000000000014 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0B0B0B02A00000000000013 /* MainViewController.swift */; };
+		B0B0B0B02A00000000000017 /* CoopPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0B0B0B02A00000000000016 /* CoopPlugin.swift */; };
+		B0B0B0B02A00000000000019 /* SharedBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0B0B0B02A00000000000018 /* SharedBarPlugin.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		B0B0B0B02A00000000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B0B0B0B02A00000000000001 /* PrivacyInfo.xcprivacy */; };
@@ -27,6 +29,8 @@
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B0B0B0B02A00000000000011 /* GameCenterPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterPlugin.swift; sourceTree = "<group>"; };
 		B0B0B0B02A00000000000013 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		B0B0B0B02A00000000000016 /* CoopPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoopPlugin.swift; sourceTree = "<group>"; };
+		B0B0B0B02A00000000000018 /* SharedBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedBarPlugin.swift; sourceTree = "<group>"; };
 		B0B0B0B02A00000000000015 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -76,6 +80,8 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				B0B0B0B02A00000000000013 /* MainViewController.swift */,
 				B0B0B0B02A00000000000011 /* GameCenterPlugin.swift */,
+				B0B0B0B02A00000000000016 /* CoopPlugin.swift */,
+				B0B0B0B02A00000000000018 /* SharedBarPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -173,6 +179,8 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				B0B0B0B02A00000000000014 /* MainViewController.swift in Sources */,
 				B0B0B0B02A00000000000012 /* GameCenterPlugin.swift in Sources */,
+				B0B0B0B02A00000000000017 /* CoopPlugin.swift in Sources */,
+				B0B0B0B02A00000000000019 /* SharedBarPlugin.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

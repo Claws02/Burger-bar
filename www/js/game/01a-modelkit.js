@@ -82,6 +82,19 @@ const TEX = {
       ctx.fillStyle = 'rgba(80,50,20,.6)'; ctx.fillRect(i*pw, 0, 2, n);
     }
   },
+  floorwood(ctx, n){  // main dining-room floor: honey planks, soft grain, low contrast
+    const r = _rng(19), pw = n / 4;
+    for(let i=0;i<4;i++){
+      ctx.fillStyle = [ '#c8955c', '#c18f57', '#cc9a61', '#c49259' ][i]; ctx.fillRect(i*pw, 0, pw, n);
+      for(let k=0;k<18;k++){       // grain: faint, so the floor reads as one calm surface
+        ctx.strokeStyle = `rgba(110,70,30,${.03+r()*.05})`; ctx.lineWidth = 1+r();
+        const x = i*pw + r()*pw; ctx.beginPath(); ctx.moveTo(x, 0); ctx.bezierCurveTo(x+3, n*.3, x-3, n*.6, x+1, n); ctx.stroke();
+      }
+      const cut = r()*n;           // board end joint
+      ctx.fillStyle = 'rgba(90,55,25,.28)'; ctx.fillRect(i*pw, cut, pw, 2);
+      ctx.fillStyle = 'rgba(80,50,20,.32)'; ctx.fillRect(i*pw, 0, 2, n);
+    }
+  },
   checker(ctx, n){    // classic black & white diner tile, 2x2 per tile
     const h = n/2;
     ctx.fillStyle = '#ece4d3'; ctx.fillRect(0,0,n,n);

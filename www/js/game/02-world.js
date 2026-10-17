@@ -146,9 +146,11 @@ function buildRoom(){
   const b = bounds;
   const w = b.r - b.l, d = b.b - b.t;
   const cx = (b.r + b.l) / 2, cz = (b.b + b.t) / 2;
-  // Classic diner checkerboard.
-  addMesh(roomGrp, GBox(w,.2,d), M('#3a3f47'), cx,.0,cz, 0,0,0,false);
-  addMesh(roomGrp, GPlane(w,d,3.2), MT('checker', TEX.checker, 256), cx,.11,cz, 0,0,0,false);
+  // Warm wood planks. The old black-and-white checkerboard was high contrast
+  // across the whole screen and tiring to look at; low-contrast wood lets the
+  // customers, food and robots stand out instead.
+  addMesh(roomGrp, GBox(w,.2,d), M('#5a3d24'), cx,.0,cz, 0,0,0,false);
+  addMesh(roomGrp, GPlane(w,d,4), MT('floorwood', TEX.floorwood, 256), cx,.11,cz, 0,0,0,false);
 
   const wH=2.8, wT=0.55, doorHalfW = 2.5;
   const dt = decorTier();

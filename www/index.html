@@ -123,6 +123,14 @@
       </button>
     </div>
 
+    <!-- PLAY TOGETHER — online co-op and the shared bar -->
+    <div id="home-btn-coop">
+      <button class="hbtn-square" style="background:linear-gradient(135deg,#00ACC1,#00838F);box-shadow:0 5px 0 #004d55;" onclick="showCoop()">
+        <span class="btn-icon">👥</span>Together
+      </button>
+      <div id="home-coop-chip" style="display:none;"></div>
+    </div>
+
     <!-- GAME CENTER — under Settings; only shown in the iOS app -->
     <div id="home-btn-ranks" style="display:none;">
       <button class="hbtn-square" style="background:linear-gradient(135deg,#8E24AA,#5E35B1);box-shadow:0 5px 0 #311b92;" onclick="showLeaderboards()">
@@ -252,6 +260,12 @@
   </div>
 
   <!-- MULTI-STORE SCREEN -->
+  <div id="coop-screen">
+    <h1 style="font-size:26px;margin:0 0 6px;color:#26C6DA;">👥 PLAY TOGETHER</h1>
+    <div id="coop-body" style="width:100%;max-width:440px;"></div>
+    <button class="btn-green" onclick="closeCoop()" style="margin-top:14px;">BACK</button>
+  </div>
+
   <div id="stores-screen">
     <h1 style="font-size:26px;margin:0 0 6px;color:#ab47bc;">🏪 YOUR STORES</h1>
     <div style="font-size:12px;color:rgba(255,255,255,.55);margin:0 0 14px;text-align:center;max-width:420px;">Every store trades during the shift. Walk out the front door and along the street to work in another one. Each store keeps its own cash.</div>

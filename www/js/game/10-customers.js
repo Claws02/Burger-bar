@@ -56,14 +56,39 @@ function spawnGroup(){
   g.unservedOrders = [...g.orders];
   g.servedMask = g.orders.map(()=>false); // per-seat served state (aligned to orders)
 
-  for(let i=0;i<size;i++){
-    const m=personModel(randomLook(type === 'vip'));
-    if(type === 'heavy') m.scale.set(1.3, 1.05, 1.3);
-    m.position.set(i*1.7-(size>1?.85:0),0,i*.4); g.mesh.add(m);
-  }
+  // Looks are recorded by index so a co-op partner's screen can build the
+  // same people (13b-coop.js).
+  g.looks = [];
+  for(let i=0;i<size;i++) g.looks.push(LOOK_POOL.indexOf(randomLook(type === 'vip')));
+  fillGroupMesh(g);
   actGrp.add(g.mesh); groups.push(g);
   playSound('doorbell');
   stats.groupsLeft--; if(!window._remoteSim) document.getElementById('day-sub').textContent=`Customers: ${stats.groupsLeft}`;
+}
+
+// The group's people, standing in a line (also used to rebuild a partner's
+// customers in co-op).
+function fillGroupMesh(g){
+  for(let i=0;i<g.size;i++){
+    const m=personModel(LOOK_POOL[g.looks[i]] || LOOK_POOL[0]);
+    if(g.type === 'heavy') m.scale.set(1.3, 1.05, 1.3);
+    m.position.set(i*1.7-(g.size>1?.85:0),0,i*.4); g.mesh.add(m);
+  }
+}
+// Seated at a table: one guest either side, facing in.
+function seatGroupMesh(g){
+  g.mesh.rotation.y = 0;
+  g.mesh.children.forEach((c, idx) => {
+    c.position.set(idx === 0 ? -2.8 : 2.8, 0, 0);
+    c.rotation.y = idx === 0 ? Math.PI/2 : -Math.PI/2;
+  });
+}
+// Back on their feet to leave.
+function standGroupMesh(g){
+  g.mesh.children.forEach((c, idx) => {
+    c.position.set(idx * 1.7 - (g.size > 1 ? .85 : 0), 0, idx * .4);
+    c.rotation.y = 0;
+  });
 }
 
 function moveToTarget(g,scale){

@@ -85,7 +85,9 @@ let floaters = [];
 let serveStreak = 0, streakTimer = 0;
 function spawnFloater(pos, txt, color='#66BB6A'){
   // pos is store-local; floaters are drawn in world space.
-  floaters.push({pos:pos.clone().add(new THREE.Vector3(storeOX,2,0)), text:txt, color:color, life:1.5});
+  const f = {pos:pos.clone().add(new THREE.Vector3(storeOX,2,0)), text:txt, color:color, life:1.5};
+  floaters.push(f);
+  coopNoteFloater(f);   // a co-op partner sees it too
 }
 
 function getRobotLevel(bot) {
@@ -102,6 +104,9 @@ function getRobotLevel(bot) {
 //  SAVE / LOAD
 // ─────────────────────────────────────────────────────────────
 function saveGame(){
+  // Visiting a friend's bar in co-op: their restaurant is not ours to save.
+  if(coopIsGuest()) return;
+  if(sharedBarActive()) return saveSharedBar();
   try{
     // Every live store is written, not just the one you're standing in.
     const live = (typeof storeCtx !== 'undefined' && storeCtx.length) ? storeCtx.length : 0;

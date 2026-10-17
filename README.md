@@ -3,7 +3,9 @@
 A 3D cooking & restaurant tycoon game for iPhone (and the web). Grill burgers,
 serve impatient customers, earn stars and tips, and grow a tiny diner into a
 staffed, neon-lit machine, then open up to three Burger Bars on one street and
-walk between them while they all trade.
+walk between them while they all trade. Play together online with a friend
+(4-letter room codes on the web, Game Center in the app), or run a bar you
+both own (iCloud, app only). See `docs/MULTIPLAYER.md`.
 
 Built with [Three.js](https://threejs.org/) r128 and plain JavaScript (no
 bundler), wrapped for iOS with [Capacitor](https://capacitorjs.com/) 8.
@@ -52,6 +54,9 @@ earlier file; `npm run check` enforces that.
 | `12a-robot-nav` | robot A* pathfinding, station claims, cook-to-demand |
 | `13-hud-input` | pooled floating UI, touch/keyboard input |
 | `13a-tutorial` | hands-on first-shift tutorial |
+| `13b-coop` | online co-op: host runs the bar, guest's chef joins over Game Center |
+| `13c-sharedbar` | the shared partnership bar in iCloud (one player at a time) |
+| `13d-weblink` | browser co-op: room codes over a public MQTT lobby, WebRTC with relay fallback |
 | `14-main` | boot sequence and main loop |
 
 ## Run it

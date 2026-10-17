@@ -39,6 +39,9 @@ function serveHeldToGroup(t, holding){
   for(let i=0;i<g.orders.length;i++){ if(!g.servedMask[i] && g.orders[i]===holding){ seat=i; break; } }
   if(seat === -1) return false;            // nobody at this table ordered that
   g.servedMask[seat] = true;
+  // Co-op: remember which seats the visiting partner served (they keep those tips).
+  if(!g.servedBy) g.servedBy = g.orders.map(()=>0);
+  g.servedBy[seat] = window._coopActor === 'guest' ? 1 : 0;
   const ui = g.unservedOrders.indexOf(holding); if(ui !== -1) g.unservedOrders.splice(ui, 1);
   t.served++;
   // Track combo meals served today (for daily goals).
@@ -85,6 +88,13 @@ function handleAction(){
   if(gameState!=='playing') return;
 
   const t=getClosest(); if(!t) return;
+  // Co-op guest: the host runs the restaurant, so the action is sent there.
+  // Washing is a hold: show the bar here, and let the host time it too.
+  if(coopIsGuest()){
+    coopSend({t:'act'});
+    if(t.type==='sink' && player.holding==='dirty_tray') startSinkHold(t);
+    return;
+  }
   const type=t.type; let ok=false;
 
   // ── SEAFOOD PLAYER ACTIONS ─────────────────────────────────
@@ -95,6 +105,7 @@ function handleAction(){
   if(type==='sink'){ 
     if(player.holding==='dirty_tray'){
       // Sink now requires 3-second hold — handled in action-hold logic, not instant
+      if(window._coopActor === 'guest'){ coopStartGuestWash(t); return; }   // the partner's own timer
       startSinkHold(t);
       return; // don't set ok=true here; handled async
     }
@@ -214,6 +225,8 @@ function startSinkHold(t){
 }
 
 function cancelSinkHold(){
+  // A co-op guest letting go early tells the host to stop its wash timer too.
+  if(sinkHoldActive && coopIsGuest() && sinkHoldProgress < SINK_HOLD_TIME) coopSend({t:'unhold'});
   sinkHoldActive = false;
   sinkHoldTarget = null;
   sinkHoldProgress = 0;
@@ -231,6 +244,7 @@ function updateSinkHold(ds){
   sinkHoldProgress += ds / 60; // ds is in frames; TARGET=1/60
   const pct = Math.min(1, sinkHoldProgress / SINK_HOLD_TIME);
   document.getElementById('sink-hold-fill').style.width=(pct*100)+'%';
+  if(pct >= 1 && coopIsGuest()){ cancelSinkHold(); return; }   // the host swaps the tray
   if(pct >= 1){
     player.holding='tray';
     stats.traysWashed = (stats.traysWashed||0) + 1;

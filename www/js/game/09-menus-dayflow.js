@@ -57,6 +57,15 @@ function updateTrail(ds, moving){
 
 // ── HOME SCREEN ──────────────────────────────────────────────
 function showStartMenu(){
+  // A co-op guest has no home screen of their own while visiting.
+  if(coopIsGuest()){
+    ['results-screen','shop-screen','start-screen'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+    document.getElementById('top-hud').style.display='none';
+    document.getElementById('pause-btn').style.display='none';
+    gameState='start_menu';
+    coopShowWait(`Waiting for ${coopPeerName()} to start the next shift…`);
+    return;
+  }
   ['results-screen','shop-screen','start-screen'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
@@ -122,6 +131,7 @@ function showStartMenu(){
   runHomeAnim();
 
   updateGcButton();
+  updateCoopHome();
   // Preview window onto the player's real bar (drawn by the main loop).
   initRestaurantRenderer();
 }
@@ -290,6 +300,7 @@ let gamePaused = false;
 function togglePause(){
   if(gameState !== 'playing' && !gamePaused) return;
   gamePaused = !gamePaused;
+  coopOnPause(gamePaused);
   const ps = document.getElementById('pause-screen');
   ps.style.display = gamePaused ? 'flex' : 'none';
   if(!gamePaused) hideQuitConfirm();
@@ -301,6 +312,8 @@ function hideQuitConfirm(){
   document.getElementById('quit-confirm').style.display='none';
 }
 function quitToMenu(){
+  if(coopIsGuest()){ coopLeave(); return; }   // a guest quitting leaves the session
+  coopOnQuit();
   gamePaused = false;
   document.getElementById('pause-screen').style.display='none';
   document.getElementById('quit-confirm').style.display='none';
@@ -654,8 +667,9 @@ function executeDayStart() {
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
   saveGame();
   if(heatNote) setTimeout(()=>{ try{ showToast(heatNote, 3200); }catch(e){} }, 900);
-  if(tutorialShouldStart()) startTutorial();
+  if(tutorialShouldStart() && !coopPartnerHere()) startTutorial();
   setMusicMood(1);
+  coopOnDayStart();   // co-op: send the guest today's restaurant
   // NOTE: day-milestone heads-ups (Busy Hours/VIP, new unlocks, etc.) are no
   // longer shown here at the START of a day — they're queued at the END of the
   // previous day (see queueNextDayHeadsUp) so the player can prepare first.
@@ -759,6 +773,7 @@ function endDay(){
   checkAchievements(true); // award now; celebrate on the Home Screen
   useStore(activeStoreIdx);
   gameState='results'; saveGame(); playSound('daycomplete'); showResults();
+  coopOnDayEnd();
   gcSync();
 }
 

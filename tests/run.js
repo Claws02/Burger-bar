@@ -1284,6 +1284,239 @@ t('a slow new-store chef does not burn every patty fetching the next one', () =>
   }
 });
 
+// ── 16. Online co-op ───────────────────────────────────────────────────────
+section('16. Online co-op and the shared bar');
+
+// Two games joined by an in-memory link; pump() delivers queued messages.
+function coopPair(){
+  const H = boot(), G = boot();
+  const toH = [], toG = [];
+  const mk = (out) => ({ onmessage: null, onclose: null,
+    send(m){ out.push(JSON.parse(JSON.stringify(m))); }, close(){ out.push({ t: 'bye' }); } });
+  const hl = mk(toG), gl = mk(toH);
+  const pump = () => { for(let i = 0; i < 50 && (toH.length || toG.length); i++){
+    while(toH.length){ const m = toH.shift(); if(hl.onmessage) hl.onmessage(m); }
+    while(toG.length){ const m = toG.shift(); if(gl.onmessage) gl.onmessage(m); } } };
+  H.ctx.__link = hl; G.ctx.__link = gl;
+  const both = (n = 1) => { for(let i = 0; i < n; i++){ H.frame(6); pump(); G.frame(6); pump(); } };
+  return { H, G, pump, both };
+}
+function coopJoin(p, hostSetup){
+  p.H.run((hostSetup || 'eco.day = 6; eco.cash = 500;') + ' coopBegin("host", __link);');
+  p.G.run('eco.cash = 42; saveGame(); coopBegin("guest", __link);');
+  p.pump();
+}
+// Stand the guest's chef in front of a station and press ACT.
+function guestActAt(p, stationExpr){
+  p.G.run(`const s = ${stationExpr}; player.pos.set(s.x, 0, s.z + (s.d||2)/2 + 1.9); player.dir = Math.PI;`);
+  p.both(2);
+  p.G.run('handleAction();');
+  p.both(2);
+}
+
+t("a guest joins the host's bar and sees the same shift", () => {
+  const p = coopPair(); coopJoin(p);
+  eq(p.H.run('return !!coop.peer;'), true, 'host never heard from the guest');
+  eq(p.G.run('return [coop.gotWorld, calendarDay()].join();'), 'true,6', 'guest world / day:');
+  p.H.run('executeDayStart();'); p.pump();
+  eq(p.G.get('gameState'), 'playing', 'guest did not start the shift:');
+  p.both(60);
+  eq(p.G.run('return groups.length;'), p.H.run('return groups.length;'), 'customers on the two screens:');
+  eq(p.G.run('return stats.groupsLeft;'), p.H.run('return stats.groupsLeft;'), 'customers still to come:');
+  ok(p.H.run('return coop.avatar && coop.avatar.root.visible;'), "the host can't see the guest's chef");
+  ok(p.G.run('return coop.avatar && coop.avatar.root.visible;'), "the guest can't see the host's chef");
+});
+
+t("the guest's actions happen in the host's restaurant", () => {
+  const p = coopPair(); coopJoin(p);
+  p.H.run('executeDayStart();'); p.pump();
+  guestActAt(p, 'stations.fridge');
+  eq(p.G.run('return player.holding;'), 'raw', 'guest hands after the fridge:');
+  eq(p.H.run('return coop.remote.holding + "/" + player.holding;'), 'raw/null', "host's copy of the hands (guest/host):");
+  guestActAt(p, 'stations.grill0');
+  eq(p.H.run('return stations.grill0.slots.filter(Boolean).length;'), 1, 'patty on the host grill:');
+  eq(p.G.run('return stations.grill0.slots.filter(Boolean).length;'), 1, 'patty on the guest grill:');
+  eq(p.G.run('return player.holding;'), null);
+});
+
+t("a helper keeps the tips on plates they serve, in their own bar's save", () => {
+  const p = coopPair(); coopJoin(p, 'eco.day = 12; eco.cash = 500;');
+  p.H.run(`executeDayStart(); groups.forEach(x=>discard(actGrp,x.mesh)); groups.length = 0; stats.groupsLeft = 0; stats.spawnTimer = 1e9;
+    const t = stations.table0;
+    const g = { id: 0.5, size: 1, type: 'normal', state: 'ordering', looks: [0], orders: ['burger_on_tray'], unservedOrders: ['burger_on_tray'],
+      servedMask: [false], waitPatience: 1800, maxWait: 1800, foodPatience: 1300, maxFood: 1300, eatTimer: 0, mesh: new THREE.Group(),
+      pos: new THREE.Vector3(t.x, 0, t.z), target: new THREE.Vector3(t.x, 0, t.z), heavyCount: 1, tbl: t };
+    actGrp.add(g.mesh); groups.push(g); t.group = g; t.served = 0; globalThis.__cash0 = eco.cash;
+    coop.remote.holding = 'burger_on_tray';`);
+  p.both(2);
+  guestActAt(p, 'stations.table0');
+  eq(p.H.run('return groups[0] && groups[0].servedBy.join();'), '1', 'seat served by the guest:');
+  for(let i = 0; i < 40 && p.H.run('return groups.length;') && p.H.run('return groups[0].state;') !== 'leave'; i++) p.both(5);
+  const hostGot = p.H.run('return eco.cash - globalThis.__cash0;');
+  const own = JSON.parse(p.G.dom.localStorage.getItem('burgerBoss_save')).stores[0].eco.cash;
+  ok(own > 42, `the guest's own bar got no tip (still $${own})`);
+  ok(hostGot > 0 && hostGot < 30, `the host should keep the check minus the tip (got $${hostGot})`);
+});
+
+t("visiting never overwrites the guest's own save, and leaving restores their bar", () => {
+  const p = coopPair(); coopJoin(p, 'eco.day = 25; eco.cash = 9000;');
+  p.H.run('executeDayStart();'); p.pump(); p.both(10);
+  const own = JSON.parse(p.G.dom.localStorage.getItem('burgerBoss_save'));
+  eq(own.stores[0].eco.cash, 42, 'guest save cash while visiting:');
+  p.G.run('coopLeave();'); p.pump();
+  eq(p.G.run('return [coop.role, eco.cash, calendarDay()].join();'), ',42,0', 'guest after leaving (role/cash/day):');
+  eq(p.H.run('return coop.peer;'), null, 'the host still thinks the guest is there');
+});
+
+t('a silent connection is dropped instead of hanging', () => {
+  const p = coopPair(); coopJoin(p);
+  p.G.frame(800);   // ~13 s with no messages
+  eq(p.G.run('return coop.role;'), null, 'guest still connected after 13 s of silence:');
+});
+
+t('a guest can wash a tray at the sink by holding ACT', () => {
+  const p = coopPair(); coopJoin(p);
+  p.H.run('executeDayStart(); coop.remote.holding = "dirty_tray";'); p.both(2);
+  eq(p.G.run('return player.holding;'), 'dirty_tray');
+  guestActAt(p, 'stations.sink0');
+  p.both(40);   // ~4 s held
+  eq(p.H.run('return coop.remote.holding;'), 'tray', 'the host never finished the wash:');
+  eq(p.G.run('return player.holding;'), 'tray');
+});
+
+// Shared bar: one fake iCloud record shared by two players' games.
+function fakeCloud(){
+  const rec = { r: null };
+  const be = (me) => ({
+    status(){ return Promise.resolve({ available: true, hasBar: !!rec.r, role: rec.r && rec.r.owner === me ? 'owner' : rec.r ? 'partner' : null, name: rec.r && rec.r.name }); },
+    create(o){ rec.r = { owner: me, name: o.name, save: o.save, lock: '', at: 0 }; return Promise.resolve({ ok: true }); },
+    invite(){ return Promise.resolve({ ok: true }); },
+    open(){ const r = rec.r; if(r.lock && r.lock !== me && Date.now() - r.at < 15*60000) return Promise.resolve({ ok: false, locked: true, lockedBy: r.lock });
+            r.lock = me; r.at = Date.now(); return Promise.resolve({ ok: true, save: r.save, name: r.name }); },
+    save(o){ if(rec.r.lock !== me) return Promise.resolve({ ok: false, lostLock: true }); rec.r.save = o.save; rec.r.at = Date.now(); return Promise.resolve({ ok: true }); },
+    close(o){ if(rec.r.lock === me){ if(o && o.save) rec.r.save = o.save; rec.r.lock = ''; } return Promise.resolve({ ok: true }); },
+    addListener(){ return Promise.resolve({ remove(){} }); },
+  });
+  return { rec, be };
+}
+
+t('the shared bar: one partner at a time, progress kept for both, own bars untouched', async () => {
+  const cloud = fakeCloud();
+  const A = boot(), B = boot();
+  A.ctx.NativeBridge = { sharedBar: cloud.be('alex') };
+  B.ctx.NativeBridge = { sharedBar: cloud.be('sam') };
+  A.run('eco.cash = 777; saveGame();'); B.run('eco.cash = 55; saveGame();');
+  A.run('createSharedBar();'); await settle(); await settle();
+  ok(cloud.rec.r, 'no shared bar was created');
+  A.run('openSharedBar();'); await settle(); await settle();
+  eq(A.run('return [sharedBarActive(), eco.cash, storeName(0)].join();'), 'true,100,Our Burger Bar', 'Alex in the shared bar:');
+  A.run('eco.cash = 350; eco.day = 3; saveGame();'); await settle();
+  B.run('openSharedBar();'); await settle(); await settle();
+  eq(B.run('return sharedBarActive();'), false, 'Sam got in while Alex had it open');
+  eq(JSON.parse(A.dom.localStorage.getItem('burgerBoss_save')).stores[0].eco.cash, 777, "Alex's own bar was overwritten");
+  A.run('closeSharedBar();'); await settle(); await settle();
+  eq(A.run('return eco.cash;'), 777, "Alex didn't get their own bar back:");
+  B.run('openSharedBar();'); await settle(); await settle();
+  eq(B.run('return [sharedBarActive(), eco.cash, eco.day].join();'), 'true,350,3', "Sam sees Alex's progress (active/cash/day):");
+});
+
+t('a stale shared-bar lock (phone vanished) frees up after 15 minutes', async () => {
+  const cloud = fakeCloud();
+  const A = boot(), B = boot();
+  A.ctx.NativeBridge = { sharedBar: cloud.be('alex') };
+  B.ctx.NativeBridge = { sharedBar: cloud.be('sam') };
+  A.run('createSharedBar();'); await settle(); await settle();
+  A.run('openSharedBar();'); await settle(); await settle();
+  cloud.rec.r.at -= 16 * 60000;   // Alex's phone died 16 minutes ago
+  B.run('openSharedBar();'); await settle(); await settle();
+  eq(B.run('return sharedBarActive();'), true, 'Sam is still locked out by a dead lock');
+});
+
+t('no tip split when partners play their shared bar together', () => {
+  const p = coopPair();
+  p.H.run('sharedBar.active = true;');
+  coopJoin(p);
+  eq(p.H.run('return coopHostSplitsTips();'), false);
+  p.H.run('sharedBar.active = false;');
+});
+
+// ── 17. Browser co-op: room codes over a lobby broker ──────────────────────
+section('17. Browser co-op with room codes (MQTT lobby + relay)');
+
+// A tiny in-memory MQTT broker behind a fake WebSocket: enough of MQTT 3.1.1
+// (CONNECT, SUBSCRIBE, PUBLISH QoS 0, PING) to exercise the game's own client.
+function fakeBroker(){
+  const subs = new Map();   // topic -> Set(ws)
+  const enc = (n) => { const o = []; do { let d = n % 128; n = Math.floor(n / 128); if(n > 0) d |= 128; o.push(d); } while(n > 0); return o; };
+  const pkt = (h, body) => Uint8Array.from([h, ...enc(body.length), ...body]);
+  class WS {
+    constructor(url){ this.readyState = 0; this.buf = []; setImmediate(() => { this.readyState = 1; this.onopen && this.onopen(); }); }
+    send(data){
+      const b = [...new Uint8Array(data)];
+      let i = 1, n = 0, mul = 1, x; do { x = b[i++]; n += (x & 127) * mul; mul *= 128; } while(x & 128);
+      const body = b.slice(i, i + n), type = b[0] >> 4;
+      if(type === 1) this.deliver(pkt(0x20, [0, 0]));
+      else if(type === 8){ const tl = (body[2] << 8) | body[3]; const t = Buffer.from(body.slice(4, 4 + tl)).toString();
+        if(!subs.has(t)) subs.set(t, new Set()); subs.get(t).add(this); this.deliver(pkt(0x90, [body[0], body[1], 0])); }
+      else if(type === 3){ const tl = (body[0] << 8) | body[1]; const t = Buffer.from(body.slice(2, 2 + tl)).toString();
+        for(const w of subs.get(t) || []) w.deliver(pkt(0x30, body)); }
+      else if(type === 14) this.close();
+    }
+    deliver(u8){ setImmediate(() => { if(this.readyState === 1 && this.onmessage) this.onmessage({ data: u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) }); }); }
+    close(){ if(this.readyState === 3) return; this.readyState = 3; for(const set of subs.values()) set.delete(this); setImmediate(() => this.onclose && this.onclose()); }
+  }
+  return { WS, subs };
+}
+function roomPair(){
+  const br = fakeBroker();
+  const H = boot(), G = boot();
+  for(const g of [H, G]){ Object.assign(g.ctx, { WebSocket: br.WS, TextEncoder, TextDecoder }); g.run('window.__coopBrokers = ["ws://fake"];'); }
+  return { H, G, br };
+}
+const spin = async (p, n = 10) => { for(let i = 0; i < n; i++){ await settle(); p.H.flushTimers(); p.G.flushTimers(); p.H.frame(6); p.G.frame(6); await settle(); } };
+
+t('two players meet with a room code and play through the relay', async () => {
+  const p = roomPair();
+  p.H.run('eco.day = 7; eco.cash = 300; coopSaveName("Caleb"); coopHostRoom();');
+  await spin(p, 4);
+  const code = p.H.run('return coop.link.code;');
+  ok(/^[A-Z2-9]{4}$/.test(code), `bad room code ${code}`);
+  p.G.run(`coopSaveName("Sam"); showCoop(); document.getElementById('coop-code').value = 'burger-${code.toLowerCase()}'; coopJoinRoom();`);
+  await spin(p, 30);
+  eq(p.H.run('return coop.peer && coop.peer.name;'), 'Sam', 'host never met the guest:');
+  eq(p.G.run('return coop.gotWorld && calendarDay();'), 7, 'guest never got the bar:');
+  p.H.run('executeDayStart();');
+  await spin(p, 20);
+  eq(p.G.get('gameState'), 'playing');
+  p.G.run('const f = stations.fridge; player.pos.set(f.x, 0, f.z + 3.4); player.dir = Math.PI;');
+  await spin(p, 6);
+  p.G.run('handleAction();');
+  await spin(p, 10);
+  eq(p.H.run('return coop.remote.holding;'), 'raw', "the host didn't run the guest's action:");
+  eq(p.G.run('return player.holding;'), 'raw');
+});
+
+t('a wrong room code gives up with a clear message', async () => {
+  const p = roomPair();
+  p.G.run(`showCoop(); document.getElementById('coop-code').value = 'ZZZZ'; window.__t = []; const o = showToast; showToast = (m, d) => { __t.push(m); return o(m, d); }; coopJoinRoom();`);
+  await spin(p, 4);
+  p.G.frame(1600);   // ~27 s with nobody answering
+  eq(p.G.run('return coop.role;'), null, 'still waiting on a room nobody hosts');
+  ok(p.G.run('return __t.some(m => m.includes("ZZZZ"));'), 'no message naming the room code');
+});
+
+t('a third player is turned away from a full room', async () => {
+  const p = roomPair();
+  const X = boot(); Object.assign(X.ctx, { WebSocket: p.br.WS, TextEncoder, TextDecoder }); X.run('window.__coopBrokers = ["ws://fake"];');
+  p.H.run('coopHostRoom();'); await spin(p, 4);
+  const code = p.H.run('return coop.link.code;');
+  p.G.run(`showCoop(); document.getElementById('coop-code').value = '${code}'; coopJoinRoom();`); await spin(p, 20);
+  X.run(`showCoop(); document.getElementById('coop-code').value = '${code}'; coopJoinRoom();`);
+  for(let i = 0; i < 10; i++){ await settle(); X.flushTimers(); X.frame(6); await spin(p, 1); }
+  eq(X.run('return coop.role;'), null, 'a third chef got into a two-player room');
+  eq(p.H.run('return coop.peer && coop.peer.name;'), p.G.run('return coopMyName();'), 'the host lost its partner');
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){

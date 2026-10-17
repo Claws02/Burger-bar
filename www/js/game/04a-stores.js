@@ -186,7 +186,27 @@ function addStoreContext(i){
   return c;
 }
 
-// Build a live context for every store in the save. Called once at boot.
+// Throw away every store's scene and state, leaving fresh, empty globals for
+// initStoreContexts() to adopt. Used when co-op or the shared bar swaps in a
+// different restaurant.
+function teardownStores(){
+  for(let i = 0; i < storeCtx.length; i++){
+    useStore(i);
+    for(const k in stations){ const s = stations[k]; if(s.visuals) s.visuals.forEach(v => discard(actGrp, v)); }
+    discard(scene, storeCtx[i].root);
+  }
+  storeCtx = []; simIdx = 0;
+  worldGrp = new THREE.Group(); roomGrp = new THREE.Group(); stGrp = new THREE.Group();
+  stationBatch = new THREE.Group(); actGrp = new THREE.Group();
+  [worldGrp, roomGrp, stGrp, stationBatch, actGrp].forEach(g => scene.add(g));
+  stations = {}; groups = []; stats = freshStats(); wings = []; collEdges = [];
+  _stationBatchOn = false; _stationBatchDirty = true; _roomDecorTier = -1; _nav = null;
+  serveStreak = 0; streakTimer = 0; storeOX = 0; activeStoreIdx = 0;
+  playerRoot.position.x = 0;
+}
+
+// Build a live context for every store in the save. Called at boot (and after
+// teardownStores when a different restaurant is loaded).
 function initStoreContexts(){
   storeCtx = []; simIdx = 0;
   for(let i = 0; i < stores.length; i++) addStoreContext(i);
