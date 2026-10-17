@@ -61,9 +61,9 @@ function spawnGroup(){
     if(type === 'heavy') m.scale.set(1.3, 1.05, 1.3);
     m.position.set(i*1.7-(size>1?.85:0),0,i*.4); g.mesh.add(m);
   }
-  scene.add(g.mesh); groups.push(g);
+  actGrp.add(g.mesh); groups.push(g);
   playSound('doorbell');
-  stats.groupsLeft--; document.getElementById('day-sub').textContent=`Customers: ${stats.groupsLeft}`;
+  stats.groupsLeft--; if(!window._remoteSim) document.getElementById('day-sub').textContent=`Customers: ${stats.groupsLeft}`;
 }
 
 function moveToTarget(g,scale){
@@ -179,24 +179,24 @@ function updateStationVisuals(force){
     const sig = stationVisualSig(s) + '@' + s.x + ',' + s.z;
     if(!force && s._visSig === sig) continue;
     s._visSig = sig;
-    s.visuals.forEach(v=>discard(scene, v)); s.visuals=[];
+    s.visuals.forEach(v=>discard(actGrp, v)); s.visuals=[];
     const gY=3.1, cY=3.0, tY=2.2;
     if(s.type==='grill'&&s.slots) s.slots.forEach((sl,i)=>{
       if(!sl) return;
-      const m=itemMesh(sl.state); m.position.set(s.x-0.8+i*1.6, gY, s.z + 0.2); scene.add(m); s.visuals.push(m);
+      const m=itemMesh(sl.state); m.position.set(s.x-0.8+i*1.6, gY, s.z + 0.2); actGrp.add(m); s.visuals.push(m);
     });
     if(s.type==='fryer'&&s.slots) s.slots.forEach((sl,i)=>{
       if(!sl) return;
-      const m=itemMesh(sl.state); m.position.set(s.x-0.8+i*1.6, gY, s.z + 0.2); scene.add(m); s.visuals.push(m);
+      const m=itemMesh(sl.state); m.position.set(s.x-0.8+i*1.6, gY, s.z + 0.2); actGrp.add(m); s.visuals.push(m);
     });
     if(s.type==='counter' && s.item) {
-      const m=itemMesh(s.item); m.position.set(s.x, cY, s.z); scene.add(m); s.visuals.push(m);
+      const m=itemMesh(s.item); m.position.set(s.x, cY, s.z); actGrp.add(m); s.visuals.push(m);
     }
     if(s.type==='trayrack') for(let i=0;i<Math.min(s.cleanTrays, 15);i++){
-      const p=itemMesh('tray'); p.position.set(s.x, 2.95+i*.12, s.z); scene.add(p); s.visuals.push(p);
+      const p=itemMesh('tray'); p.position.set(s.x, 2.95+i*.12, s.z); actGrp.add(p); s.visuals.push(p);
     }
     if(s.type==='sink') for(let i=0;i<Math.min(s.cleanTrays, 15);i++){
-      const p=itemMesh('tray'); p.position.set(s.x + 0.6, 3.1+i*.12, s.z - 0.6); scene.add(p); s.visuals.push(p);
+      const p=itemMesh('tray'); p.position.set(s.x + 0.6, 3.1+i*.12, s.z - 0.6); actGrp.add(p); s.visuals.push(p);
     }
     if(s.type==='table'){
       if(s.served>0){
@@ -209,11 +209,11 @@ function updateStationVisuals(force){
           const served = mask ? mask[i] : (i < s.served);
           if(!served) continue;
           const itemName = (s.group && s.group.orders[i]) ? s.group.orders[i] : 'burger_on_tray';
-          const m=itemMesh(itemName); m.position.set(s.x-.9+shown*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+          const m=itemMesh(itemName); m.position.set(s.x-.9+shown*1.8, tY, s.z); actGrp.add(m); s.visuals.push(m);
           shown++;
         }
       } else if(s.dirtyTrays>0) for(let i=0;i<s.dirtyTrays;i++){
-        const m=itemMesh('dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); scene.add(m); s.visuals.push(m);
+        const m=itemMesh('dirty_tray'); m.position.set(s.x-.9+i*1.8, tY, s.z); actGrp.add(m); s.visuals.push(m);
       }
     }
   }

@@ -974,6 +974,316 @@ t('submits improvements once, and retries what Apple did not confirm', async () 
   eq(g.run('return __gcCalls.join();'), 'bb.days_in_business=13', 'only the improved board:');
 });
 
+// ── 12. Late-game balance ───────────────────────────────────────────────────
+section('12. Late-game balance (equipment caps, menu prices, camera)');
+
+// Buy an item until the shop refuses; returns how many were bought.
+function buyUntilStopped(g, id){
+  return g.run(`let n=0; for(let i=0;i<40;i++){ const c=eco.cash; doBuy("${id}"); if(eco.cash===c) break; n++; } return n;`);
+}
+
+t('equipment caps grow with each floor expansion', () => {
+  const g = boot();
+  g.run('eco.day = 18; eco.cash = 1e7;');
+  eq(g.run('return equipCap("counter");'), 3, 'counters at floor 0 (extras):');
+  eq(g.run('eco.floorLevel = 3; return equipCap("counter");'), 9, 'counters at floor 3:');
+  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 15, 'counters at floor 6:');
+  eq(g.run('eco.floorLevel = 10; return equipCap("counter");'), 20, 'counters at full size (22 total):');
+  eq(g.run('return equipCap("grill") + "," + equipCap("sink") + "," + equipCap("soda") + "," + equipCap("table");'),
+     '13,13,8,18', 'grill/sink/soda/table caps at full size:');
+});
+
+t('a fully expanded bar (floor 10) has room for every counter, grill, sink, soda and table', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<12;i++) doBuy("expand");');
+  eq(g.run('return eco.floorLevel;'), 10);
+  const bought = {};
+  for(const id of ['table','xcounter','xgrill','xsink','soda']) bought[id] = buyUntilStopped(g, id);
+  eq(bought.xcounter, 20, 'extra counters bought:');
+  eq(bought.xgrill, 13, 'extra grills bought:');
+  eq(bought.xsink, 13, 'extra sinks bought:');
+  eq(bought.soda, 8, 'soda fountains bought:');
+  eq(g.run('return upg.tableCount;'), 18, 'tables:');
+  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 22, 'counters on the floor:');
+  // Nothing was placed overlapping another station.
+  const overlaps = g.run(`
+    const ss = Object.values(stations).filter(s=>s.type!=='robot' && s.type!=='dumpster'); let n=0;
+    for(const a of ss) for(const b of ss){ if(a===b || a.type==='table' || b.type==='table') continue;
+      if(Math.abs(a.x-b.x) < (a.w+b.w)/2 && Math.abs(a.z-b.z) < (a.d+b.d)/2) n++; }
+    return n;`);
+  eq(overlaps, 0, 'overlapping stations:');
+});
+
+t('the shop points at Expand while a cap can still grow', () => {
+  const g = boot();
+  g.run('eco.day = 18; eco.cash = 1e7;');
+  buyUntilStopped(g, 'xcounter');
+  g.run('activeShopTab = "Equipment"; updateShop();');
+  ok(g.run('return document.getElementById("shop-items").innerHTML.includes("EXPAND");'), 'capped counter should say EXPAND');
+});
+
+t('Menu Prices raise every payout and get pricier each level', () => {
+  const g = boot();
+  g.run('eco.day = 10; eco.cash = 1e6;');
+  eq(g.run('return menuPriceMult();'), 1);
+  const costs = g.run('const c=[]; for(let i=0;i<3;i++){ c.push(menuPriceCost(upg.priceLv)); doBuy("price"); } return c;');
+  eq(costs.join(','), '150,210,295', 'first three level prices:');
+  ok(Math.abs(g.run('return menuPriceMult();') - 1.45) < 1e-9, 'three levels = +45%');
+  // The earn goal follows half the boost, so it stays a goal.
+  const goal0 = g.run('upg.priceLv = 0; return dailyGoalPool(10).find(x=>x.id==="earn").goal;');
+  const goal4 = g.run('upg.priceLv = 4; return dailyGoalPool(10).find(x=>x.id==="earn").goal;');
+  ok(goal4 > goal0 && goal4 < goal0 * 1.6, `earn goal ${goal0} -> ${goal4} should rise by about +30%`);
+});
+
+t('robot hires climb gently; Overclock unlocks on Day 15 and speeds robots up', () => {
+  const g = boot();
+  eq(g.run('let t=0; for(let i=0;i<10;i++) t+=robotCost(i); return t;'), 4700, 'full crew price:');
+  g.run('eco.day = 14; eco.cash = 1e6;');
+  eq(buyUntilStopped(g, 'overclock'), 0, 'Overclock should be locked before Day 15:');
+  g.run('eco.day = 15;');
+  eq(buyUntilStopped(g, 'overclock'), 5, 'Overclock levels:');
+  ok(Math.abs(g.run('return robotOverclockMult();') - 1.6) < 1e-9, 'five levels = +60% robot speed');
+});
+
+t('the camera stays close enough to read characters at full size', () => {
+  const g = boot();
+  eq(g.run('eco.floorLevel = 0; return cameraFrustumSize();'), 26);
+  lte(g.run('eco.floorLevel = 6; return cameraFrustumSize();'), 30, 'fully expanded view size:');
+});
+
+// ── 13. Robot navigation & coordination ─────────────────────────────────────
+section('13. Robot pathfinding, counter sharing and trays');
+
+t('a planned path never crosses a station or wall', () => {
+  const g = boot();
+  g.run('eco.day = 5; executeDayStart();');
+  const bad = g.run(`
+    const fridge = stations.fridge, table = stations.table0;
+    const p = navPath(table.x + 3.5, table.z, fridge, 2.0);
+    if(!p || !p.length) return 'no path';
+    let prev = {x: table.x + 3.5, z: table.z}, hits = 0;
+    for(const w of p){
+      for(let k=1;k<=4;k++){ const x = prev.x + (w.x-prev.x)*k/4, z = prev.z + (w.z-prev.z)*k/4;
+        if(checkColl(x, z, 'robot-probe')) hits++; }
+      prev = w;
+    }
+    const last = p[p.length-1];
+    return hits + (Math.hypot(last.x - fridge.x, last.z - fridge.z) <= 2.0 ? 0 : 1000);`);
+  eq(bad, 0, 'path collisions (or the path stopped short of the fridge):');
+});
+
+t('robot chefs cook to demand instead of filling every counter', () => {
+  const g = boot();
+  g.run(`eco.day = 6; upg.grillMult = 3; executeDayStart();
+    groups.forEach(x=>scene.remove(x.mesh)); groups.length = 0; stats.groupsLeft = 1; stats.spawnTimer = 1e9;
+    for(let i=2;i<6;i++) addStation('counter'+i,'counter',-8+i*2.6,-3.5,1.8,1.8);
+    for(let i=0;i<2;i++) addStation('robot'+i,'robot',-4+i*2,0,1.5,1.5,{role:'chef',hiredDay:1});`);
+  g.frame(1800);
+  const staged = g.run(`return Object.values(stations).filter(s=>s.type==='counter' && s.item).length
+                     + Object.values(stations).filter(s=>s.type==='grill').reduce((a,s)=>a+s.slots.filter(Boolean).length,0);`);
+  eq(staged, 0, 'patties cooked with no orders anywhere:');
+});
+
+t('robots leave a counter free for the player', () => {
+  const g = boot();
+  g.run(`eco.day = 6; executeDayStart();
+    for(let i=2;i<4;i++) addStation('counter'+i,'counter',-8+i*2.6,-3.5,1.8,1.8);
+    stations.counter0.item = 'cooked'; stations.counter1.item = 'cooked'; stations.counter2.item = 'cooked';
+    addStation('robot0','robot',0,0,1.5,1.5,{role:'chef',hiredDay:1});`);
+  eq(g.run('const b = stations.robot0; b.holding = "fries"; return stageCounter(b) === null;'), true,
+     'a robot took the last free counter');
+  eq(g.run('const b = stations.robot0; b._stuck = 150; return !!stageCounter(b);'), true,
+     'a robot stuck for 2.5 s should be allowed the last counter');
+});
+
+t('two robots never head for the same counter', () => {
+  const g = boot();
+  g.run(`eco.day = 6; executeDayStart();
+    addStation('robot0','robot',4,-5,1.5,1.5,{role:'chef',hiredDay:1});
+    addStation('robot1','robot',5,-5,1.5,1.5,{role:'chef',hiredDay:1});
+    const a = stations.robot0, b = stations.robot1;
+    a.holding = b.holding = 'cooked';`);
+  g.frame(2);
+  const same = g.run('const a = stations.robot0, b = stations.robot1; return !!a.target && a.target === b.target && a.target.type === "counter";');
+  eq(same, false, 'both chefs targeted one counter:');
+});
+
+t('bussers return stray trays from counters to the rack', () => {
+  const g = boot();
+  g.run(`eco.day = 6; executeDayStart();
+    groups.forEach(x=>scene.remove(x.mesh)); groups.length = 0; stats.groupsLeft = 1; stats.spawnTimer = 1e9;
+    stations.counter0.item = 'tray'; stations.counter1.item = 'dirty_tray';
+    globalThis.__rack0 = stations.rack0.cleanTrays;
+    addStation('robot0','robot',0,0,1.5,1.5,{role:'busser',hiredDay:1});`);
+  g.frame(2400);
+  eq(g.run('return [stations.counter0.item, stations.counter1.item].join();'), ',', 'trays left on counters:');
+  eq(g.run('return stations.rack0.cleanTrays - globalThis.__rack0;'), 2, 'trays back on the rack:');
+});
+
+// ── 14. Store grades & demand ───────────────────────────────────────────────
+section('14. Store grades drive demand; base day length stops at Day 30');
+
+t('grades follow service quality, and walkouts cost a letter', () => {
+  const g = boot();
+  eq(g.run('return gradeFor(20, 0, 20*4.8);'), 'A+');
+  eq(g.run('return gradeFor(20, 0, 20*4.3);'), 'A');
+  eq(g.run('return gradeFor(20, 0, 20*3.2);'), 'C');
+  eq(g.run('return gradeFor(15, 5, 15*4.8);'), 'B', '4.8★ service with 25% walkouts (scores A, then loses a letter):');
+  eq(g.run('return gradeFor(10, 10, 10*2.0);'), 'F');
+});
+
+t('the base day stops growing at Day 30; demand decides the rest', () => {
+  const g = boot();
+  eq(g.run('eco.demand = 1; return plannedGroupCount(30);'), 31);
+  eq(g.run('eco.demand = 1; return plannedGroupCount(60);'), 31, 'Day 60 at normal demand:');
+  eq(g.run('eco.demand = 2; return plannedGroupCount(60);'), 62, 'Day 60 at 2x demand:');
+  eq(g.run('eco.demand = 2; return plannedGroupCount(20);'), 27, 'demand is held to 1.3x before Day 30:');
+  eq(g.run('eco.demand = 0.6; return plannedGroupCount(40);'), 19, 'poor demand:');
+});
+
+t('a great shift raises demand, a bad one lowers it', () => {
+  const g = boot();
+  g.run('eco.day = 35; eco.demand = 1.5;');
+  const up = g.run('stats = {groupsServed:20, walkouts:0, totalStars:20*4.9}; return applyShiftGrade();');
+  eq(up.grade, 'A+'); ok(Math.abs(up.after - 1.6) < 1e-9, 'A+ adds 10 points of demand');
+  const down = g.run('stats = {groupsServed:10, walkouts:10, totalStars:10*2}; return applyShiftGrade();');
+  eq(down.grade, 'F'); ok(Math.abs(down.after - 1.45) < 1e-9, 'F takes 15 points off');
+  g.run('eco.demand = 0.62; stats = {groupsServed:2, walkouts:10, totalStars:2};  applyShiftGrade();');
+  eq(g.run('return eco.demand;'), 0.6, 'demand floor:');
+});
+
+t('high demand sends customers faster and more at once, limited by tables', () => {
+  const g = boot();
+  g.run('eco.day = 40; eco.demand = 2.0; upg.tableCount = 12; executeDayStart();');
+  ok(g.run('return stats.maxSimultaneous;') >= 5, 'a 2x-demand store should seat several groups at once');
+  ok(g.run('return demandSpawnMult();') < 0.75, 'arrivals should come closer together');
+  g.run('upg.tableCount = 2; eco.day = 40; executeDayStart();');
+  lte(g.run('return stats.maxSimultaneous;'), 2, 'arrivals at once never exceed the tables:');
+});
+
+t('old saves get a starting demand from their lifetime rating', () => {
+  const g = boot({ save: { v:6, stores:[{ id:0, name:'Burger Bar #1', type:'burger',
+    eco:{cash:100, day:18, floorLevel:2}, upg:{}, gStats:{lifeStars:450, lifeGroups:100}, wings:[], layout:null }] } });
+  eq(g.run('return eco.demand;'), 1.3);
+});
+
+// ── 15. Multiple stores on one street ──────────────────────────────────────
+section('15. Multiple live stores');
+
+// Achievements pay cash into the register; mark them earned so these tests
+// can check exact amounts.
+function noAchv(g){ g.run('achievements.unlocked = ACHIEVEMENTS.map(a=>a.id);'); }
+function twoStores(g){
+  noAchv(g);
+  g.run('eco.day = 20; eco.cash = 9000; openNewStore(); document.getElementById("alert-popup").style.display="none";');
+}
+
+t('a second store unlocks on Day 20 for $5,000 from the managing store, up to 3', () => {
+  const g = boot(); noAchv(g);
+  g.run('eco.day = 19; eco.cash = 99999;');
+  eq(g.run('return openNewStore();'), false, 'opened before Day 20:');
+  g.run('eco.day = 20; eco.cash = 4999;');
+  eq(g.run('return openNewStore();'), false, 'opened without $5,000:');
+  g.run('eco.cash = 20000;');
+  eq(g.run('return openNewStore();'), true);
+  eq(g.run('return [storeCtx.length, Math.round(ctxOf(0).eco.cash), ctxOf(1).eco.cash, ctxOf(1).eco.day].join();'), '2,15000,0,0',
+     'stores / HQ cash / new store cash / new store day:');
+  g.run('openNewStore();');
+  eq(g.run('return openNewStore();'), false, 'a fourth store:');
+  eq(g.run('return storeCtx.length;'), 3);
+  eq(g.run('return Object.values(ctxOf(2).stations).filter(s=>s.type==="fridge").length;'), 1, 'new store has a kitchen:');
+});
+
+t('transfers move cash between registers and never overdraw', () => {
+  const g = boot(); twoStores(g);
+  eq(g.run('return transferCash(0, 1, 1500);'), 1500);
+  eq(g.run('return [ctxOf(0).eco.cash, ctxOf(1).eco.cash].join();'), '2500,1500');
+  eq(g.run('return transferCash(1, 0, 99999);'), 1500, 'sending more than the register holds:');
+  eq(g.run('return ctxOf(1).eco.cash;'), 0);
+});
+
+t('every store trades in the same shift, and the shift ends when all are closed', () => {
+  const g = boot(); twoStores(g);
+  g.run(`useStore(1);
+    for(let i=0;i<3;i++){ upg.robots.push({role:['chef','waiter','busser'][i],hiredDay:0});
+      addStation('robot'+i,'robot',-4+i*2,0,1.5,1.5,{role:['chef','waiter','busser'][i],hiredDay:0}); }
+    upg.robotCount = 3; useStore(activeStoreIdx); executeDayStart();`);
+  eq(g.run('return [ctxOf(0).eco.day, ctxOf(1).eco.day, ctxOf(1).stats.groupsLeft].join();'), '21,1,2',
+     'calendar day / branch day / branch customers:');
+  let f = 0;
+  while(g.get('gameState') === 'playing' && f < 60000){ g.frame(60); f += 60; }
+  eq(g.get('gameState'), 'results', 'the shift never ended:');
+  ok(g.run('return ctxOf(1).stats.groupsServed;') > 0, 'the robot-staffed branch served nobody while the player was elsewhere');
+  ok(g.run('return ctxOf(1).eco.cash;') > 0, 'the branch kept none of its own takings');
+  eq(g.run('return lastShift.stores.length;'), 2, 'results rows:');
+  ok(g.run('return !!lastShift.stores[1].gradeInfo.grade;'), 'the branch got no grade');
+});
+
+t('walking past the midpoint makes the neighbour the active store', () => {
+  const g = boot(); twoStores(g);
+  g.run('executeDayStart(); player.pos.set(39.5, 0, 14); checkStoreCrossing();');
+  eq(g.run('return activeStoreIdx;'), 0);
+  g.run('player.pos.x = 40.5; checkStoreCrossing();');
+  eq(g.run('return activeStoreIdx;'), 1);
+  ok(Math.abs(g.run('return player.pos.x + storeOX;') - 40.5) < 1e-9, 'the player jumped in the world');
+  eq(g.run('return playerRoot.position.x;'), 80, 'player meshes follow the store root:');
+  eq(g.run('return checkColl(-45, 14, null);'), true, 'walked past the lawn edge');
+  eq(g.run('return checkColl(-35, 14, null);'), false, 'blocked on the lawn between stores');
+});
+
+t('the HUD money and HQ rewards stay with the right stores', () => {
+  const g = boot(); twoStores(g);
+  g.run('executeDayStart(); player.pos.x = 41; checkStoreCrossing(); updateCashUI();');
+  eq(g.text('cash-val'), '$0.00', 'HUD should show the store you are standing in:');
+});
+
+t('both stores survive save and reload', () => {
+  const g = boot(); twoStores(g);
+  g.run('transferCash(0,1,700); useStore(1); doBuy("xcounter"); useStore(activeStoreIdx); saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  const g2 = boot({ save });
+  eq(g2.run('return storeCtx.length;'), 2);
+  eq(g2.run('return [ctxOf(1).eco.cash, ctxOf(1).upg.extraCounters].join();'), '630,1', 'branch cash / counters after reload:');
+  eq(g2.run('return Object.values(ctxOf(1).stations).filter(s=>s.type==="counter").length;'), 3);
+});
+
+t('old multi-map saves park other map types instead of running them', () => {
+  const g = boot({ save: { v:6, stores:[
+    { id:0, name:'Burger Bar #1', type:'burger', eco:{cash:10, day:12}, upg:{}, gStats:{}, wings:[], layout:null },
+    { id:1, name:'Seafood Shack', type:'seafood', eco:{cash:99, day:3}, upg:{}, gStats:{}, wings:[], layout:null } ] } });
+  eq(g.run('return storeCtx.length;'), 1);
+  g.run('saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  eq(save.parkedStores.length, 1, 'the parked store was dropped from the save:');
+});
+
+t('quitting mid-shift rolls every store back', () => {
+  const g = boot(); twoStores(g);
+  g.run('transferCash(0,1,1000); executeDayStart(); useStore(1); eco.cash += 77; useStore(activeStoreIdx); quitToMenu();');
+  eq(g.run('return [ctxOf(0).eco.day, ctxOf(1).eco.day, ctxOf(1).eco.cash].join();'), '20,0,1000');
+});
+
+t("a young branch's shop follows the calendar, not the branch's age", () => {
+  const g = boot(); twoStores(g);
+  g.run('transferCash(0,1,4000); manageStore(1);');
+  eq(g.run('const c = eco.cash; doBuy("robot"); return c - eco.cash;'), 200, 'robot hire in a Day-0 branch on calendar Day 20:');
+});
+
+t('a slow new-store chef does not burn every patty fetching the next one', () => {
+  // Seeds that used to char every patty: level-1 robots at a base-speed grill.
+  for(const seed of [7, 18]){
+    const g = boot(); twoStores(g);
+    g.run(`let s=${seed}; Math.random=()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; };
+      useStore(1);
+      for(let i=0;i<3;i++){ upg.robots.push({role:['chef','waiter','busser'][i],hiredDay:0});
+        addStation('robot'+i,'robot',-4+i*2,0,1.5,1.5,{role:['chef','waiter','busser'][i],hiredDay:0}); }
+      upg.robotCount = 3; useStore(activeStoreIdx); executeDayStart();`);
+    let f = 0;
+    while(g.get('gameState') === 'playing' && f < 60000){ g.frame(60); f += 60; }
+    eq(g.run('return ctxOf(1).stats.walkouts;'), 0, `seed ${seed}: walkouts at a 2-customer branch:`);
+  }
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){

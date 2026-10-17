@@ -20,7 +20,7 @@ function friesDemand(){
     else if(s.type === 'counter' && (s.item === 'fries' || s.item === 'fries_on_tray')) have++;
     else if(s.type === 'robot' && (s.holding === 'fries' || s.holding === 'fries_on_tray')) have++;
   }
-  if(player && (player.holding === 'fries' || player.holding === 'fries_on_tray')) have++;
+  if(player && !window._remoteSim && (player.holding === 'fries' || player.holding === 'fries_on_tray')) have++;
   return want - have;
 }
 
@@ -30,7 +30,7 @@ function updateRobots(ds){
     bot.mesh.position.y=Math.sin(Date.now()/180)*.15;
 
     const lvl = getRobotLevel(bot);
-    const botSpeed = 0.02 + (lvl * 0.025);
+    const botSpeed = (0.02 + (lvl * 0.025)) * robotOverclockMult();
 
     // Cooldown after each action to prevent thrashing
     if(bot._actionCooldown > 0) { bot._actionCooldown -= ds; }
@@ -45,45 +45,47 @@ function updateRobots(ds){
     if(bot.state === 'moving' && bot.target) {
         const targetId = Object.keys(stations).find(id => stations[id] === bot.target);
         if(!targetId) { bot.target = null; bot.state = 'idle';
-          bot._bestDist = undefined; bot._stall = 0; bot._ghost = 0; }
+          bot._bestProg = undefined; bot._stall = 0; bot._ghost = 0; bot._path = null; bot._pathFor = null; }
     }
 
     if(bot.state==='idle' && !(bot._actionCooldown > 0)){
       if(bot.role==='chef'){
         if(bot.holding === 'charred') {
-            const trash = Object.values(stations).find(s => s.type === 'trash');
+            const trash = pickNear(bot, s => s.type === 'trash');
             if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
         } else if (bot.holding === 'cooked') {
-            const c = Object.values(stations).find(s => s.type === 'counter' && !s.item);
+            const c = stageCounter(bot);
             if(c) { bot.target = c; bot.state = 'moving'; }
             else {
-                const cTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'tray');
+                const cTray = pickNear(bot, s => s.type === 'counter' && s.item === 'tray');
                 if(cTray) { bot.target = cTray; bot.state = 'moving'; }
                 else {
-                    const trash = Object.values(stations).find(s => s.type === 'trash');
-                    if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
+                    // Every counter is busy: plate the patty at the tray rack
+                    // rather than binning food somebody ordered.
+                    const rack = pickNear(bot, s => s.type === 'trayrack' && s.cleanTrays > 0);
+                    if(rack) { bot.target = rack; bot.state = 'moving'; }
                 }
             }
         } else if (bot.holding === 'raw') {
-            const g = Object.values(stations).find(s => s.type === 'grill' && s.slots.includes(null));
+            const g = pickNear(bot, s => s.type === 'grill' && s.slots.includes(null));
             if(g) { bot.target = g; bot.state = 'moving'; }
             else {
-                const trash = Object.values(stations).find(s => s.type === 'trash');
+                const trash = pickNear(bot, s => s.type === 'trash');
                 if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
             }
         } else if (bot.holding === 'burnt_fries') {
-            const trash = Object.values(stations).find(s => s.type === 'trash');
+            const trash = pickNear(bot, s => s.type === 'trash');
             if(trash && trash.contents < 4) { bot.target = trash; bot.state = 'moving'; }
         } else if (bot.holding === 'fries') {
             // Stage fries on a counter for a waiter to plate, exactly as the
             // chef does with a cooked patty.
-            const c = Object.values(stations).find(s => s.type === 'counter' && !s.item);
+            const c = stageCounter(bot);
             if(c) { bot.target = c; bot.state = 'moving'; }
             else {
-                const cTray = Object.values(stations).find(s => s.type === 'counter' && s.item === 'tray');
+                const cTray = pickNear(bot, s => s.type === 'counter' && s.item === 'tray');
                 if(cTray) { bot.target = cTray; bot.state = 'moving'; }
                 else {
-                    const rack = Object.values(stations).find(s => s.type === 'trayrack' && s.cleanTrays > 0);
+                    const rack = pickNear(bot, s => s.type === 'trayrack' && s.cleanTrays > 0);
                     if(rack) { bot.target = rack; bot.state = 'moving'; }
                 }
             }
@@ -91,21 +93,39 @@ function updateRobots(ds){
             // Flat priority list across BOTH cookers. Clear blockages first
             // (burnt food occupies a slot forever), then collect finished food
             // before it burns, then start new batches.
-            const find = fn => Object.values(stations).find(fn);
+            const find = fn => pickNear(bot, fn);
             const fryBurnt = find(s => s.type==='fryer' && s.slots.some(sl => sl && sl.state==='burnt_fries'));
             const gCharred = find(s => s.type==='grill' && s.slots.some(sl => sl && sl.state==='charred'));
             const fryDone  = find(s => s.type==='fryer' && s.slots.some(sl => sl && sl.state==='fries'));
             const gCooked  = find(s => s.type==='grill' && s.slots.some(sl => sl && sl.state==='cooked'));
             const fryFree  = find(s => s.type==='fryer' && s.slots.includes(null));
             const gEmpty   = find(s => s.type==='grill' && s.slots.includes(null));
-            if(fryBurnt)      { bot.target = fryBurnt; bot.state = 'moving'; }
-            else if(gCharred) { bot.target = gCharred; bot.state = 'moving'; }
-            else if(fryDone)  { bot.target = fryDone;  bot.state = 'moving'; }
+            // Finished food that can still be saved comes before binning burnt
+            // food: a slow chef walking charcoal to the bin used to let the next
+            // patty burn too, and a fresh store could char every patty all day.
+            const fridge = find(s => s.type === 'fridge');
+            if(fryDone)       { bot.target = fryDone;  bot.state = 'moving'; }
             else if(gCooked)  { bot.target = gCooked;  bot.state = 'moving'; }
+            else if(fryBurnt) { bot.target = fryBurnt; bot.state = 'moving'; }
+            else if(gCharred) { bot.target = gCharred; bot.state = 'moving'; }
             else if(fryFree && friesDemand() > 0) { bot.target = fryFree; bot.state = 'moving'; }
-            else if(gEmpty) {
-                const fridge = find(s => s.type === 'fridge');
-                if(fridge) { bot.target = fridge; bot.state = 'moving'; bot._grillTarget = gEmpty; }
+            else if(gEmpty && fridge && burgerDemand() > 0) {
+                // Don't leave for the fridge if a patty already on a grill would
+                // burn before this chef could get back: wait by the grill instead.
+                const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+                const trip = (dist(bot.pos, fridge) + dist(fridge, gEmpty)) / botSpeed + 45;
+                let deadline = Infinity, watch = null;
+                for(const k in stations){
+                    const g = stations[k];
+                    if(g.type !== 'grill' || !g.slots) continue;
+                    for(const sl of g.slots){
+                        if(!sl || sl.state !== 'raw') continue;
+                        const left = (200 - sl.progress) / Math.max(0.05, upg.grillMult) + 300;
+                        if(left < deadline){ deadline = left; watch = g; }
+                    }
+                }
+                if(deadline > trip) { bot.target = fridge; bot.state = 'moving'; bot._grillTarget = gEmpty; }
+                else if(watch && dist(bot.pos, watch) > 2) { bot.target = watch; bot.state = 'moving'; }
             }
             {
             }
@@ -114,14 +134,20 @@ function updateRobots(ds){
       else if(bot.role==='busser'){
         {
           if(bot.holding === 'dirty_tray') {
-              const sink = Object.values(stations).find(s => s.type === 'sink');
+              const sink = pickNear(bot, s => s.type === 'sink');
               if(sink) { bot.target = sink; bot.state = 'moving'; }
           } else if(bot.holding === 'tray') {
-              const rack = Object.values(stations).find(s => s.type === 'trayrack');
+              const rack = pickNear(bot, s => s.type === 'trayrack');
               if(rack) { bot.target = rack; bot.state = 'moving'; }
           } else if(!bot.holding) {
-              const t = Object.values(stations).find(s => s.type === 'table' && s.dirtyTrays > 0);
+              const t = pickNear(bot, s => s.type === 'table' && s.dirtyTrays > 0);
               if(t) { bot.target = t; bot.state = 'moving'; }
+              else {
+                  // Nothing to clear: put stray trays back where they belong
+                  // (clean ones to the rack, dirty ones to the sink).
+                  const c = pickNear(bot, s => s.type === 'counter' && (s.item === 'tray' || s.item === 'dirty_tray'));
+                  if(c) { bot.target = c; bot.state = 'moving'; }
+              }
           }
         }
       }
@@ -130,12 +156,12 @@ function updateRobots(ds){
         let foundTarget = false;
 
         // Helper: does any ordering table need this item?
-        const tableWants = (item) => Object.values(stations).find(s =>
+        const tableWants = (item) => pickNear(bot, s =>
             s.type==='table' && s.group && s.group.state==='ordering' &&
             s.group.unservedOrders.includes(item));
 
         // Helper: does any ordering table need a combo that contains this item?
-        const tableNeedsComboWith = (item) => Object.values(stations).find(s =>
+        const tableNeedsComboWith = (item) => pickNear(bot, s =>
             s.type==='table' && s.group && s.group.state==='ordering' &&
             s.group.unservedOrders.includes('burger_soda_on_tray') &&
             (item==='burger_on_tray' || item==='soda_on_tray'));
@@ -147,13 +173,13 @@ function updateRobots(ds){
 
             // Or is there a combo order needing us? Go to soda fountain to complete it.
             if(!foundTarget && tableWants('burger_soda_on_tray')){
-                const sf = Object.values(stations).find(s=>s.type==='sodafountain');
+                const sf = pickNear(bot, s=>s.type==='sodafountain');
                 if(sf){ bot.target=sf; bot.state='moving'; foundTarget=true; }
             }
 
             // Stage on empty counter rather than trash
             if(!foundTarget){
-                const ec = Object.values(stations).find(s=>s.type==='counter'&&!s.item);
+                const ec = stageCounter(bot);
                 if(ec){ bot.target=ec; bot.state='moving'; foundTarget=true; }
             }
         }
@@ -164,14 +190,14 @@ function updateRobots(ds){
 
             // Or pick up a burger from counter to complete a combo
             if(!foundTarget && tableWants('burger_soda_on_tray')){
-                const burgerCounter = Object.values(stations).find(s=>
+                const burgerCounter = pickNear(bot, s=>
                     s.type==='counter' && (s.item==='burger_on_tray' || s.item==='cooked'));
                 if(burgerCounter){ bot.target=burgerCounter; bot.state='moving'; foundTarget=true; }
             }
 
             // Stage on counter
             if(!foundTarget){
-                const ec = Object.values(stations).find(s=>s.type==='counter'&&!s.item);
+                const ec = stageCounter(bot);
                 if(ec){ bot.target=ec; bot.state='moving'; foundTarget=true; }
             }
         }
@@ -181,11 +207,11 @@ function updateRobots(ds){
             if(t){ bot.target=t; bot.state='moving'; foundTarget=true; }
             // Nowhere to deliver — stage or trash
             if(!foundTarget){
-                const ec = Object.values(stations).find(s=>s.type==='counter'&&!s.item);
+                const ec = stageCounter(bot);
                 if(ec){ bot.target=ec; bot.state='moving'; foundTarget=true; }
             }
             if(!foundTarget){
-                const trash = Object.values(stations).find(s=>s.type==='trash'&&s.contents<4);
+                const trash = pickNear(bot, s=>s.type==='trash'&&s.contents<4);
                 if(trash){ bot.target=trash; bot.state='moving'; foundTarget=true; }
             }
         }
@@ -194,7 +220,7 @@ function updateRobots(ds){
             const t = tableWants(bot.holding);
             if(t){ bot.target=t; bot.state='moving'; foundTarget=true; }
             if(!foundTarget){
-                const ec = Object.values(stations).find(s=>s.type==='counter'&&!s.item);
+                const ec = stageCounter(bot);
                 if(ec){ bot.target=ec; bot.state='moving'; foundTarget=true; }
             }
         }
@@ -208,41 +234,41 @@ function updateRobots(ds){
 
                 if(order==='burger_soda_on_tray'){
                     // Check if burger_on_tray already staged on counter
-                    const burgerStaged = Object.values(stations).find(s=>s.type==='counter'&&s.item==='burger_on_tray');
+                    const burgerStaged = pickNear(bot, s=>s.type==='counter'&&s.item==='burger_on_tray');
                     if(burgerStaged){ bot.target=burgerStaged; bot.state='moving'; foundTarget=true; break; }
                     // Check if soda staged
-                    const sodaStaged = Object.values(stations).find(s=>s.type==='counter'&&s.item==='soda_on_tray');
+                    const sodaStaged = pickNear(bot, s=>s.type==='counter'&&s.item==='soda_on_tray');
                     if(sodaStaged){ bot.target=sodaStaged; bot.state='moving'; foundTarget=true; break; }
                     // Pick up burger from cooked counter
-                    const cookedCounter = Object.values(stations).find(s=>s.type==='counter'&&s.item==='cooked');
+                    const cookedCounter = pickNear(bot, s=>s.type==='counter'&&s.item==='cooked');
                     if(cookedCounter){ bot.target=cookedCounter; bot.state='moving'; foundTarget=true; break; }
                     // Otherwise go get soda first
-                    const sf = Object.values(stations).find(s=>s.type==='sodafountain');
+                    const sf = pickNear(bot, s=>s.type==='sodafountain');
                     if(sf){ bot.target=sf; bot.state='moving'; foundTarget=true; break; }
                 }
                 else if(order==='soda_on_tray'){
-                    const sf = Object.values(stations).find(s=>s.type==='sodafountain');
+                    const sf = pickNear(bot, s=>s.type==='sodafountain');
                     if(sf){ bot.target=sf; bot.state='moving'; foundTarget=true; break; }
                 }
                 else if(order==='fries_on_tray'){
                     // Fries staged on a counter, else plate straight off the fryer.
-                    const cFries = Object.values(stations).find(s=>s.type==='counter'&&s.item==='fries');
+                    const cFries = pickNear(bot, s=>s.type==='counter'&&s.item==='fries');
                     if(cFries){ bot.target=cFries; bot.state='moving'; foundTarget=true; break; }
-                    const fDone = Object.values(stations).find(s=>s.type==='fryer'&&s.slots.some(sl=>sl&&sl.state==='fries'));
+                    const fDone = pickNear(bot, s=>s.type==='fryer'&&s.slots.some(sl=>sl&&sl.state==='fries'));
                     if(fDone){ bot.target=fDone; bot.state='moving'; foundTarget=true; break; }
                 }
                 else if(order==='burger_on_tray'){
                     // Check for assembled item on counter
-                    const c = Object.values(stations).find(s=>s.type==='counter'&&s.item==='burger_on_tray');
+                    const c = pickNear(bot, s=>s.type==='counter'&&s.item==='burger_on_tray');
                     if(c){ bot.target=c; bot.state='moving'; foundTarget=true; break; }
-                    const cc = Object.values(stations).find(s=>s.type==='counter'&&s.item==='cooked');
+                    const cc = pickNear(bot, s=>s.type==='counter'&&s.item==='cooked');
                     if(cc){ bot.target=cc; bot.state='moving'; foundTarget=true; break; }
                 }
             }
 
             // No use for tray right now — return it
             if(!foundTarget){
-                const rack = Object.values(stations).find(s=>s.type==='trayrack');
+                const rack = pickNear(bot, s=>s.type==='trayrack');
                 if(rack){ bot.target=rack; bot.state='moving'; foundTarget=true; }
             }
         }
@@ -255,21 +281,21 @@ function updateRobots(ds){
                 const order = t.group.unservedOrders[0];
 
                 // Grab fully assembled item directly from counter
-                const assembled = Object.values(stations).find(s=>s.type==='counter'&&s.item===order);
+                const assembled = pickNear(bot, s=>s.type==='counter'&&s.item===order);
                 if(assembled){ bot.target=assembled; bot.state='moving'; foundTarget=true; break; }
 
                 // Partial combo: grab burger_on_tray to then go get soda
                 if(order==='burger_soda_on_tray'){
-                    const bt = Object.values(stations).find(s=>s.type==='counter'&&s.item==='burger_on_tray');
+                    const bt = pickNear(bot, s=>s.type==='counter'&&s.item==='burger_on_tray');
                     if(bt){ bot.target=bt; bot.state='moving'; foundTarget=true; break; }
-                    const st = Object.values(stations).find(s=>s.type==='counter'&&s.item==='soda_on_tray');
+                    const st = pickNear(bot, s=>s.type==='counter'&&s.item==='soda_on_tray');
                     if(st){ bot.target=st; bot.state='moving'; foundTarget=true; break; }
                 }
 
                 // Get a tray to start building
                 const needsTray = order==='burger_on_tray'||order==='soda_on_tray'||order==='burger_soda_on_tray'||order==='fries_on_tray';
                 if(needsTray){
-                    const rack = Object.values(stations).find(s=>s.type==='trayrack'&&s.cleanTrays>0);
+                    const rack = pickNear(bot, s=>s.type==='trayrack'&&s.cleanTrays>0);
                     if(rack){ bot.target=rack; bot.state='moving'; foundTarget=true; break; }
                 }
             }
@@ -285,18 +311,35 @@ function updateRobots(ds){
     // Enumerated by tests/run.js -> "no robot role/holding combination is a
     // permanent dead end".
     if(bot.state === 'idle' && !(bot._actionCooldown > 0)){
-      const pick = fn => Object.values(stations).find(fn);
+      const pick = fn => pickNear(bot, fn);
       if(bot.holding === 'trash_bag'){
         const d = pick(s => s.type === 'dumpster');
         if(d){ bot.target = d; bot.state = 'moving'; }
-      } else if(bot.holding){
-        const ec = pick(s => s.type === 'counter' && !s.item);
+      } else if(bot.holding === 'tray'){
+        const rack = pick(s => s.type === 'trayrack');
+        if(rack){ bot.target = rack; bot.state = 'moving'; }
+      } else if(bot.holding === 'dirty_tray'){
+        const sink = pick(s => s.type === 'sink');
+        if(sink){ bot.target = sink; bot.state = 'moving'; }
+      }
+      if(bot.state === 'idle' && bot.holding && bot.holding.includes('_on_tray')){
+        // Any robot holding a plated order delivers it if someone wants it:
+        // a chef who had to plate at the rack shouldn't strand the burger.
+        const want = pick(s => s.type === 'table' && s.group && s.group.state === 'ordering' &&
+                               s.group.unservedOrders.includes(bot.holding));
+        if(want){ bot.target = want; bot.state = 'moving'; }
+      }
+      if(bot.state === 'idle' && bot.holding && bot.holding !== 'trash_bag'){
+        const waste = bot.holding === 'charred' || bot.holding === 'burnt_fries';
+        const ec = waste ? null : stageCounter(bot);
         if(ec){ bot.target = ec; bot.state = 'moving'; }
-        else {
+        else if(waste || (bot._stuck || 0) > 200){
+          // Good food is only binned after ~3 s with nowhere at all to put it
+          // (stageCounter stops holding the player's counter back after ~2 s).
           const tr = pick(s => s.type === 'trash' && s.contents < 4);
           if(tr){ bot.target = tr; bot.state = 'moving'; }
         }
-      } else {
+      } else if(bot.state === 'idle' && !bot.holding){
         // Empty-handed and a bin is full: haul it out. Robots can now clear the
         // trash themselves, so a full bin no longer bricks the whole staff.
         const full = pick(s => s.type === 'trash' && s.contents >= 4);
@@ -326,40 +369,57 @@ function updateRobots(ds){
     const tDist = bot.target.type === 'table' ? 3.0 : 2.0;
 
     if(dist>tDist){
-        let dx = dx_direct / dist;
-        let dz = dz_direct / dist;
-
-        // Robots used to walk straight through walls, counters and tables. They
-        // now slide along obstacles like the player does -- but there is NO
-        // pathfinding, so sliding alone can livelock: a robot wedged between
-        // the tray rack and the back wall slides freely on z forever while
-        // never getting closer on x.
-        //
-        // The watchdog therefore measures PROGRESS TOWARD THE TARGET, not
-        // whether a given axis is blocked. If the robot hasn't got meaningfully
-        // closer in ~1.5s it phases through obstacles until it arrives.
-        // Reaching the target always outranks looking correct.
-        const stepX = dx * botSpeed * ds, stepZ = dz * botSpeed * ds;
-        const nx = bot.pos.x + stepX, nz = bot.pos.z + stepZ;
+        // Walk an A* path (12a-robot-nav.js) around stations and walls. The
+        // path is planned once per target and replanned if the robot stalls.
+        // The old straight-line slide is kept underneath as a fallback: if no
+        // path exists, or a replan didn't help, the progress watchdog still
+        // phases the robot through after ~1.5 s. Arriving always outranks
+        // looking correct.
+        if(bot._pathFor !== bot.target){
+          bot._pathFor = bot.target; bot._replans = 0;
+          bot._path = navPath(bot.pos.x, bot.pos.z, bot.target, tDist - 0.2);
+          bot._pi = 0;
+        }
+        let wx = tx, wz = tz;
+        const path = bot._path;
+        if(path && bot._pi < path.length){
+          const w = path[bot._pi];
+          if(Math.hypot(w.x - bot.pos.x, w.z - bot.pos.z) < 0.35) bot._pi++;
+          if(bot._pi < path.length){ wx = path[bot._pi].x; wz = path[bot._pi].z; }
+        }
+        const wdx = wx - bot.pos.x, wdz = wz - bot.pos.z;
+        const wd = Math.hypot(wdx, wdz) || 1;
+        const step = Math.min(botSpeed * ds, wd);
+        const dx = wdx / wd, dz = wdz / wd;
+        const nx = bot.pos.x + dx*step, nz = bot.pos.z + dz*step;
+        // Progress = path waypoints passed, or distance closed on the target.
+        const progress = path ? bot._pi * 1000 - wd : -dist;
         if(bot._ghost > 0){
           bot._ghost -= ds;
           bot.pos.x = nx; bot.pos.z = nz;
         } else {
-          if(!checkColl(nx, nz, bot.id)){ bot.pos.x = nx; bot.pos.z = nz; }
+          if(path && bot._pi < path.length){ bot.pos.x = nx; bot.pos.z = nz; }   // the path is already clear
+          else if(!checkColl(nx, nz, bot.id)){ bot.pos.x = nx; bot.pos.z = nz; }
           else if(!checkColl(nx, bot.pos.z, bot.id)){ bot.pos.x = nx; }
           else if(!checkColl(bot.pos.x, nz, bot.id)){ bot.pos.z = nz; }
 
-          if(bot._bestDist === undefined || dist < bot._bestDist - 0.05){
-            bot._bestDist = dist; bot._stall = 0;
+          if(bot._bestProg === undefined || progress > bot._bestProg + 0.05){
+            bot._bestProg = progress; bot._stall = 0;
           } else {
             bot._stall = (bot._stall || 0) + ds;
-            if(bot._stall > 90){ bot._ghost = 240; bot._stall = 0; }
+            if(bot._stall > 90){
+              bot._stall = 0; bot._bestProg = undefined;
+              if(path && (bot._replans||0) < 1){
+                bot._replans = (bot._replans||0) + 1;
+                bot._path = navPath(bot.pos.x, bot.pos.z, bot.target, tDist - 0.2); bot._pi = 0;
+              } else bot._ghost = 240;
+            }
           }
         }
 
         bot.mesh.position.x = bot.pos.x;
         bot.mesh.position.z = bot.pos.z;
-        bot.mesh.rotation.y = Math.atan2(dx_direct, dz_direct);
+        bot.mesh.rotation.y = Math.atan2(dx, dz);
     } else {
       const t = bot.target;
       let actionDone = false;
@@ -406,6 +466,9 @@ function updateRobots(ds){
                   else if(t.item === 'tray') { t.item = 'fries_on_tray'; bot.holding = null; actionDone = true; }
               }
           }
+          else if(t.type === 'trayrack' && bot.holding === 'cooked' && t.cleanTrays > 0) {
+              t.cleanTrays--; bot.holding = 'burger_on_tray'; actionDone = true;
+          }
           else if(t.type === 'trayrack' && bot.holding === 'fries' && t.cleanTrays > 0) {
               // Fallback when every counter is occupied: plate it directly.
               t.cleanTrays--; bot.holding = 'fries_on_tray'; actionDone = true;
@@ -419,9 +482,11 @@ function updateRobots(ds){
           if(t.type === 'table' && !bot.holding && t.dirtyTrays > 0) {
               t.dirtyTrays--; bot.holding = 'dirty_tray'; actionDone = true;
           } else if(t.type === 'sink' && bot.holding === 'dirty_tray') {
-              bot.holding = 'tray'; bot.timer = 100 - (lvl * 15); bot.state = 'washing'; actionDone = true;
+              bot.holding = 'tray'; bot.timer = (100 - (lvl * 15)) / robotOverclockMult(); bot.state = 'washing'; actionDone = true;
           } else if(t.type === 'trayrack' && bot.holding === 'tray') {
               t.cleanTrays++; bot.holding = null; actionDone = true;
+          } else if(t.type === 'counter' && !bot.holding && (t.item === 'tray' || t.item === 'dirty_tray')) {
+              bot.holding = t.item; t.item = null; actionDone = true;
           }
       }
       else if(bot.role === 'waiter') {
@@ -500,6 +565,10 @@ function updateRobots(ds){
           t.item = bot.holding; bot.holding = null; actionDone = true;
         } else if(t.type === 'trayrack' && bot.holding === 'tray'){
           t.cleanTrays++; bot.holding = null; actionDone = true;
+        } else if(t.type === 'table' && bot.holding && serveHeldToGroup(t, bot.holding)){
+          bot.holding = null; actionDone = true;
+        } else if(t.type === 'sink' && bot.holding === 'dirty_tray'){
+          bot.holding = 'tray'; bot.timer = (100 - (lvl * 15)) / robotOverclockMult(); bot.state = 'washing'; actionDone = true;
         }
       }
 
@@ -511,7 +580,7 @@ function updateRobots(ds){
 
       if(bot.state !== 'washing') bot.state = 'idle';
       bot.target = null;
-      bot._bestDist = undefined; bot._stall = 0; bot._ghost = 0;   // reset nav watchdog
+      bot._bestProg = undefined; bot._stall = 0; bot._ghost = 0; bot._path = null; bot._pathFor = null;   // reset nav watchdog
       // Only redraw when something actually changed.
       if(actionDone) updateStationVisuals();
     }

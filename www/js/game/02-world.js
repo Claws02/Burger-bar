@@ -38,31 +38,12 @@ function buildWorld(){
 function buildBurgerWorld(b, rW, rD, cx, cz, sw, dcx, bz){
     scene.background = new THREE.Color(SKY);
     scene.fog = new THREE.Fog(lin(SKY), 60, 130);
-    const grass = MT('grass', TEX.grass, 256);
     const pavers = MT('pavers', TEX.pavers, 256);
-    const asphalt = MT('asphalt', TEX.asphalt, 256);
 
-    // Ground, sidewalk apron, street.
-    addMesh(worldGrp, GPlane(170,170,10), grass, 0,-.5,0, 0,0,0,false);
+    // Sidewalk apron. The grass, road and parked cars are shared by every
+    // store on the street (buildStreet in 04a-stores.js).
     addMesh(worldGrp, GBox(rW+sw*2,.3,rD+sw*2), M('#b9bfc2'), cx,-.2,cz, 0,0,0,false);
     addMesh(worldGrp, GPlane(rW+sw*2-.2, rD+sw*2-.2, 4), pavers, cx,-.04,cz, 0,0,0,false);
-    const roadZ = b.b+sw+6;
-    addMesh(worldGrp, GBox(120,.3,.5), M('#d5d9db'), cx,-.2, roadZ-6.2, 0,0,0,false);   // curb
-    addMesh(worldGrp, GPlane(120,12,12), asphalt, cx,-.32, roadZ, 0,0,0,false);
-    for(let i=-6;i<=6;i++) addMesh(worldGrp, GBox(3.2,.02,.35), M('#ffd54f'), cx+i*9,-.3, roadZ, 0,0,0,false);
-    addMesh(worldGrp, GBox(120,.02,.18), M('#f5f5f5'), cx,-.3, roadZ+5.2, 0,0,0,false);
-
-    // Parked cars across the street: a little life at the edge of the frame.
-    [[cx-22,'#1e88e5'],[cx+19,'#fdd835'],[cx+31,'#e53935']].forEach(([x,col],i)=>{
-      const c=new THREE.Group(); c.position.set(x,0,roadZ+3); c.rotation.y = i===1?Math.PI:0;
-      addMesh(c, GRBox(5,1.1,2.3,.4), MP(col,90), 0,.95,0);
-      addMesh(c, GRBox(2.8,.9,2.0,.35), MP('#cfe8f5',120,.85), -.2,1.8,0);
-      addMesh(c, GRBox(2.9,.12,2.1,.06), MP(col,90), -.2,2.28,0);
-      for(const wx of [-1.6,1.6]) for(const wz of [-1.1,1.1]) addMesh(c, GCyl(.45,.35,16), M('#1d1f22'), wx,.45,wz, Math.PI/2,0,0);
-      addMesh(c, GBox(.1,.25,.5), ME('#fff8e1'), 2.52,1.05,.65, 0,0,0,false);
-      addMesh(c, GBox(.1,.25,.5), ME('#fff8e1'), 2.52,1.05,-.65, 0,0,0,false);
-      worldGrp.add(c);
-    });
 
     // Street lamps
     for(const lx of [b.l-4, b.r+4]){
@@ -89,7 +70,8 @@ function buildBurgerWorld(b, rW, rD, cx, cz, sw, dcx, bz){
       {x:b.l-8,z:b.t-6,s:1},{x:b.r+8,z:b.t-6,s:1.15},
       {x:b.l-10,z:cz,s:.9},  {x:b.r+10,z:cz,s:1.05},
       {x:b.l-10,z:b.b+4,s:1},{x:b.r+10,z:b.b+4,s:.95},
-      {x:b.l-20,z:b.t+2,s:1.2},{x:b.r+20,z:b.t-2,s:1.1},
+      // Outer trees stay within the lawn between neighbouring stores.
+      {x:b.l-14,z:b.t+2,s:1.2},{x:b.r+14,z:b.t-2,s:1.1},
     ];
     for(const tp of treePos){
       const t=new THREE.Group(); t.position.set(tp.x,0,tp.z); t.scale.setScalar(tp.s);
@@ -123,7 +105,8 @@ function buildBurgerWorld(b, rW, rD, cx, cz, sw, dcx, bz){
     // Rooftop sign on the back wall: real lettering, neon frame, burger icon.
     const signW = Math.min(14, rW*.6);
     addMesh(worldGrp, GRBox(signW+.5,2.5,.4,.2), MP('#212121',80), cx, 4.4, bz-.45);
-    const face = new THREE.MeshBasicMaterial({ map: signTex('BURGER BAR', {bg:'#c62828', fg:'#fff8e1', stripe:'#ffca28', glow:'#ffecb3', size:.5}), fog:false });
+    const signText = simIdx > 0 ? 'BURGER BAR #' + (simIdx + 1) : 'BURGER BAR';
+    const face = new THREE.MeshBasicMaterial({ map: signTex(signText, {bg:'#c62828', fg:'#fff8e1', stripe:'#ffca28', glow:'#ffecb3', size:.5}), fog:false });
     face._shared = true;
     addMesh(worldGrp, cachedGeo('signface|'+signW, ()=>new THREE.PlaneGeometry(signW, 2.0)), face, cx, 4.4, bz-.24, 0,0,0,false);
     addMesh(worldGrp, GBox(signW+.3,.08,.08), ME('#ffe082'), cx, 5.6, bz-.22, 0,0,0,false);
@@ -575,13 +558,13 @@ function buildRobot(role, lvl){
 
 
 
-const stations = {};
+let stations = {};
 // ── Static station batch ─────────────────────────────────────────────────────
 // Stations don't move outside Edit Mode, so all of them (robots excepted) are
 // merged into one mesh per material: a full Day-20 bar draws its equipment in a
 // few dozen calls instead of a couple of hundred. The individual station meshes
 // stay in the scene (hidden) for Edit Mode, positions and raycast-free logic.
-const stationBatch = new THREE.Group(); scene.add(stationBatch);
+let stationBatch = new THREE.Group(); scene.add(stationBatch);
 let _stationBatchDirty = true, _stationBatchOn = false;
 function markStationsDirty(){ _stationBatchDirty = true; }
 function _clearStationBatch(){
@@ -643,7 +626,7 @@ function addStation(id,type,x,z,w,d,opts={}){
 function removeStation(id){
   const s = stations[id];
   if(!s) return;
-  if(s.visuals) s.visuals.forEach(v => discard(scene, v));
+  if(s.visuals) s.visuals.forEach(v => discard(actGrp, v));
   discard(stGrp, s.mesh); markStationsDirty();
   delete stations[id];
 }

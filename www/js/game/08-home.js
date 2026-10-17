@@ -186,10 +186,10 @@ function renderHomeShowcase(){
   cam.aspect = r.width / r.height;
   // Fit the bar's width (narrow portrait windows need to back off further).
   const R = span * (cam.aspect < 1 ? 1.9 / cam.aspect : 1.6) + 6;
-  cam.position.set(cx + Math.sin(homeShowcase.yaw) * R, R * 0.62, cz + Math.cos(homeShowcase.yaw) * R);
-  cam.lookAt(cx, 0, cz + span * 0.06);
+  cam.position.set(cx + storeOX + Math.sin(homeShowcase.yaw) * R, R * 0.62, cz + Math.cos(homeShowcase.yaw) * R);
+  cam.lookAt(cx + storeOX, 0, cz + span * 0.06);
   cam.updateProjectionMatrix();
-  fitSunToView(cx, cz);
+  fitSunToView(cx + storeOX, cz);
   const H = window.innerHeight;
   renderer.setViewport(r.left, H - r.bottom, r.width, r.height);
   renderer.setScissor(r.left, H - r.bottom, r.width, r.height);

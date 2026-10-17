@@ -98,6 +98,15 @@ scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(new THREE.Color(SKY).convertSRGBToLinear(), 60, 130);
 
 let frustumSize = 26;
+// How much of the world the camera shows. It used to grow 2.5 units per floor
+// expansion (26 -> 41 at full size), shrinking the characters to ~60% and
+// making the animations hard to read on a phone. The camera already follows
+// the player, so the view only needs to grow a little: enough that a typical
+// station cluster stays in frame. Capped at 30.
+const CAMERA_FRUSTUM_BASE = 26, CAMERA_FRUSTUM_PER_FLOOR = 0.7, CAMERA_FRUSTUM_MAX = 30;   // reached at floor 6
+function cameraFrustumSize(){
+  return Math.min(CAMERA_FRUSTUM_MAX, CAMERA_FRUSTUM_BASE + (eco.floorLevel||0) * CAMERA_FRUSTUM_PER_FLOOR);
+}
 const camera = new THREE.OrthographicCamera(1,1,1,1,1,1000);
 camera.position.set(0,38,38); camera.lookAt(0,0,0);
 
@@ -242,9 +251,15 @@ const crumbGeo = i => GSphS([0.05,0.07,0.09][i%3], 4, 4);
 // ─────────────────────────────────────────────────────────────
 //  WORLD GROUPS
 // ─────────────────────────────────────────────────────────────
-const worldGrp = new THREE.Group(); scene.add(worldGrp);
-const roomGrp  = new THREE.Group(); scene.add(roomGrp);
-const stGrp    = new THREE.Group(); scene.add(stGrp);
+// Each store owns its own set of these groups under a root offset along the
+// street (04a-stores.js swaps them in with the rest of the store's state).
+// Game logic works in the CURRENT store's local coordinates; only rendering
+// adds the store's offset (storeOX).
+let worldGrp = new THREE.Group(); scene.add(worldGrp);
+let roomGrp  = new THREE.Group(); scene.add(roomGrp);
+let stGrp    = new THREE.Group(); scene.add(stGrp);
+let actGrp   = new THREE.Group(); scene.add(actGrp);   // customers + item visuals
+let storeOX  = 0;                                     // world x of the current store
 
 let baseBounds = {l:-10, r:10, t:-10, b:10};
 let wings = [];
@@ -267,6 +282,9 @@ function updateBoundsFromLevel() {
   if (eco.floorLevel >= 4) { t -= 10; }        // 40w x 40d
   if (eco.floorLevel >= 5) { l -= 5; r += 5; } // 50w x 40d
   if (eco.floorLevel >= 6) { t -= 10; }        // 50w x 50d
+  // Past 6 the lot only grows BACK: stores on the same street sit side by
+  // side, so width is fixed at 50 and every later level adds 10 of depth.
+  if (eco.floorLevel > 6) { t -= 10 * (eco.floorLevel - 6); }   // up to 50w x 90d
   baseBounds = {l, r, t, b};
   bounds = computeBounds();
 }
