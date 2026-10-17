@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
-function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}}; }
+function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}, demand:1, grades:[]}; }
 function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, fryerCount:0, priceLv:0, robotOC:0}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
@@ -210,6 +210,7 @@ function bootstrapNewSave() {
 
 function loadActiveStore() {
   const st = stores[activeStoreIdx];
+  const hadDemand = st.eco && typeof st.eco.demand === 'number';
   eco    = Object.assign(defEco(),  st.eco    || {});
   upg    = Object.assign(defUpg(),  st.upg    || {});
   gStats = Object.assign(defGS(),   st.gStats || {});
@@ -222,6 +223,13 @@ function loadActiveStore() {
     upg.robots=[];
     for(let i=0;i<upg.robotCount;i++) upg.robots.push({role:'busser',hiredDay:eco.day||1});
   } else if(upg.robots&&upg.robots.length>0) upg.robotCount=upg.robots.length;
+
+  // Saves from before store grades: start demand where the old lifetime-
+  // rating multiplier had the store (4+ stars 1.3x, under 3 stars 0.7x).
+  if(!hadDemand && eco.day > 1){
+    const r = gStats.lifeGroups ? gStats.lifeStars / gStats.lifeGroups : 3.5;
+    eco.demand = r >= 4 ? 1.3 : r < 3 ? 0.7 : 1;
+  }
 
   updateBoundsFromLevel();
 }

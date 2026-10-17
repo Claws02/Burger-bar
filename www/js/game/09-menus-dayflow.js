@@ -687,19 +687,9 @@ function startNextDay(){
   executeDayStart();
 }
 
-// How many groups a given day will bring. Day length is CAPPED: it used to be
-// `day + 1` forever, so a Day-100 shift was 100+ groups of identical work --
-// fatigue, not difficulty. Past the cap the day gets harder instead (more
-// simultaneous arrivals, tighter patience, Kitchen Heat). Shared with the daily
-// goals so a goal can never ask for more customers than the day will send.
-const DAY_LENGTH_CAP = 28;
-function plannedGroupCount(day){
-  let rating = parseFloat(getCumRating());
-  if(day === 1) rating = 3.0;
-  const multi = rating >= 4.0 ? 1.3 : rating < 3.0 ? 0.7 : 1.0;
-  const baseGroups = Math.min(day + 1, DAY_LENGTH_CAP);
-  return Math.max(1, Math.min(DAY_LENGTH_CAP, Math.floor(baseGroups * multi)));
-}
+// How many groups a day brings lives in 07b-grades.js (plannedGroupCount):
+// the base stops growing at Day 30 and each store's grade-driven demand
+// decides the rest.
 
 function executeDayStart() {
   eco.day++;
@@ -720,7 +710,8 @@ function executeDayStart() {
   // which is what makes late days demanding now that they're length-capped.
   // Kitchen Heat (calendar streak + recent skill) can add another arrival slot.
   const baseSimultaneous = eco.day >= 10 ? Math.min(2 + Math.floor((eco.day - 10) / 12), 5) : 1;
-  const maxSimultaneousGroups = Math.max(1, Math.min(upg.tableCount, baseSimultaneous + heatExtraSimultaneous(), 6));
+  const maxSimultaneousGroups = Math.max(1, Math.min(upg.tableCount,
+    baseSimultaneous + heatExtraSimultaneous() + demandExtraSimultaneous(), 10));
   
   // First spawn: give player 8 seconds to get ready (longer on early days)
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
@@ -831,6 +822,7 @@ window.showShop=showShop;
 function endDay(){
   stats._heatBefore = effectiveHeat();
   adaptEndShift(shiftPerformance());
+  stats._gradeInfo = applyShiftGrade();   // grade today, move tomorrow's demand
   setRushBanner(false);
   gStats.lifeStars+=stats.totalStars;
   gStats.lifeGroups+=stats.groupsServed;
@@ -1005,6 +997,12 @@ function showResults(){
       const arrow = after > before + 0.2 ? '▲' : after < before - 0.2 ? '▼' : '•';
       const streak = adapt.playStreak >= 2 ? `${adapt.playStreak}-day streak · ` : '';
       heat = `🔥 ${streak}Heat ${after.toFixed(1)} ${arrow} <span>(+${Math.round(HEAT.TIP_PER_HEAT*after*100)}% tips)</span>`;
+    }
+    const gi = stats._gradeInfo;
+    if(gi && gi.grade){
+      const pct = Math.round((gi.after - gi.before) * 100);
+      const trend = pct > 0 ? `📈 +${pct}% customers tomorrow` : pct < 0 ? `📉 ${pct}% customers tomorrow` : 'customers steady';
+      heat = `<b style="color:${GRADE_COLORS[gi.grade]}">Grade ${gi.grade}</b> · ${trend}` + (heat ? '<br>' + heat : '');
     }
     co.textContent = msg; co.style.opacity = '1';
     const rh = el('res-heat'); if(rh) rh.innerHTML = heat;

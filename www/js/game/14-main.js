@@ -237,7 +237,7 @@ function animate(){
           const w = (Math.random() + Math.random() + Math.random()) / 3;
           delay = baseDelay * (0.75 + w * 0.5);
         }
-        stats.spawnTimer = delay * 60 * heatSpawnMult() * rushSpawnMult();
+        stats.spawnTimer = delay * 60 * heatSpawnMult() * rushSpawnMult() * demandSpawnMult();
       }
 
       if(stats.groupsLeft===0&&groups.length===0&&gameState==='playing'){

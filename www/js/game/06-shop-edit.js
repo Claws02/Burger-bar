@@ -98,11 +98,11 @@ function rebuildAll(){
 // the EXTRA stations bought, on top of what the bar starts with.
 const EQUIP_CAPS = {
   //            extras at floor 0,  per expansion,  hard ceiling (extras)
-  counter: { base:3, perFloor:2,   max:14 },   // starts with 2 -> up to 16 total
-  grill:   { base:3, perFloor:1,   max:9  },   // starts with 1 -> up to 10
-  sink:    { base:3, perFloor:1,   max:9  },   // starts with 1 -> up to 10
-  soda:    { base:3, perFloor:0.5, max:6  },   // starts with 0 -> up to 6
-  table:   { base:8, perFloor:1,   max:14 },   // TOTAL tables (starts with 1)
+  counter: { base:3, perFloor:2,   max:20 },   // starts with 2 -> up to 22 total
+  grill:   { base:3, perFloor:1,   max:13 },   // starts with 1 -> up to 14
+  sink:    { base:3, perFloor:1,   max:13 },   // starts with 1 -> up to 14
+  soda:    { base:3, perFloor:0.5, max:8  },   // starts with 0 -> up to 8
+  table:   { base:8, perFloor:1,   max:18 },   // TOTAL tables (starts with 1)
 };
 function equipCap(kind, floor){
   const c = EQUIP_CAPS[kind];
@@ -113,7 +113,7 @@ function equipCap(kind, floor){
 function capGrowsWithFloor(kind){
   return (eco.floorLevel||0) < MAX_FLOOR_LEVEL && equipCap(kind, MAX_FLOOR_LEVEL) > equipCap(kind);
 }
-const MAX_FLOOR_LEVEL = 6;
+const MAX_FLOOR_LEVEL = 10;   // 1-6 widen and deepen the lot; 7-10 only deepen it
 
 // ── Menu Prices ──────────────────────────────────────────────────────────────
 // What a guest pays used to be flat for the whole game ($16 a burger on Day 1

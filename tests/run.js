@@ -987,23 +987,24 @@ t('equipment caps grow with each floor expansion', () => {
   g.run('eco.day = 18; eco.cash = 1e7;');
   eq(g.run('return equipCap("counter");'), 3, 'counters at floor 0 (extras):');
   eq(g.run('eco.floorLevel = 3; return equipCap("counter");'), 9, 'counters at floor 3:');
-  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 14, 'counters at full size (16 total):');
+  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 15, 'counters at floor 6:');
+  eq(g.run('eco.floorLevel = 10; return equipCap("counter");'), 20, 'counters at full size (22 total):');
   eq(g.run('return equipCap("grill") + "," + equipCap("sink") + "," + equipCap("soda") + "," + equipCap("table");'),
-     '9,9,6,14', 'grill/sink/soda/table caps at full size:');
+     '13,13,8,18', 'grill/sink/soda/table caps at full size:');
 });
 
-t('a fully expanded bar has room for every counter, grill, sink, soda and table', () => {
+t('a fully expanded bar (floor 10) has room for every counter, grill, sink, soda and table', () => {
   const g = boot();
-  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<6;i++) doBuy("expand");');
-  eq(g.run('return eco.floorLevel;'), 6);
+  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<12;i++) doBuy("expand");');
+  eq(g.run('return eco.floorLevel;'), 10);
   const bought = {};
   for(const id of ['table','xcounter','xgrill','xsink','soda']) bought[id] = buyUntilStopped(g, id);
-  eq(bought.xcounter, 14, 'extra counters bought:');
-  eq(bought.xgrill, 9, 'extra grills bought:');
-  eq(bought.xsink, 9, 'extra sinks bought:');
-  eq(bought.soda, 6, 'soda fountains bought:');
-  eq(g.run('return upg.tableCount;'), 14, 'tables:');
-  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 16, 'counters on the floor:');
+  eq(bought.xcounter, 20, 'extra counters bought:');
+  eq(bought.xgrill, 13, 'extra grills bought:');
+  eq(bought.xsink, 13, 'extra sinks bought:');
+  eq(bought.soda, 8, 'soda fountains bought:');
+  eq(g.run('return upg.tableCount;'), 18, 'tables:');
+  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 22, 'counters on the floor:');
   // Nothing was placed overlapping another station.
   const overlaps = g.run(`
     const ss = Object.values(stations).filter(s=>s.type!=='robot' && s.type!=='dumpster'); let n=0;
@@ -1117,6 +1118,53 @@ t('bussers return stray trays from counters to the rack', () => {
   g.frame(2400);
   eq(g.run('return [stations.counter0.item, stations.counter1.item].join();'), ',', 'trays left on counters:');
   eq(g.run('return stations.rack0.cleanTrays - globalThis.__rack0;'), 2, 'trays back on the rack:');
+});
+
+// ── 14. Store grades & demand ───────────────────────────────────────────────
+section('14. Store grades drive demand; base day length stops at Day 30');
+
+t('grades follow service quality, and walkouts cost a letter', () => {
+  const g = boot();
+  eq(g.run('return gradeFor(20, 0, 20*4.8);'), 'A+');
+  eq(g.run('return gradeFor(20, 0, 20*4.3);'), 'A');
+  eq(g.run('return gradeFor(20, 0, 20*3.2);'), 'C');
+  eq(g.run('return gradeFor(15, 5, 15*4.8);'), 'B', '4.8★ service with 25% walkouts (scores A, then loses a letter):');
+  eq(g.run('return gradeFor(10, 10, 10*2.0);'), 'F');
+});
+
+t('the base day stops growing at Day 30; demand decides the rest', () => {
+  const g = boot();
+  eq(g.run('eco.demand = 1; return plannedGroupCount(30);'), 31);
+  eq(g.run('eco.demand = 1; return plannedGroupCount(60);'), 31, 'Day 60 at normal demand:');
+  eq(g.run('eco.demand = 2; return plannedGroupCount(60);'), 62, 'Day 60 at 2x demand:');
+  eq(g.run('eco.demand = 2; return plannedGroupCount(20);'), 27, 'demand is held to 1.3x before Day 30:');
+  eq(g.run('eco.demand = 0.6; return plannedGroupCount(40);'), 19, 'poor demand:');
+});
+
+t('a great shift raises demand, a bad one lowers it', () => {
+  const g = boot();
+  g.run('eco.day = 35; eco.demand = 1.5;');
+  const up = g.run('stats = {groupsServed:20, walkouts:0, totalStars:20*4.9}; return applyShiftGrade();');
+  eq(up.grade, 'A+'); ok(Math.abs(up.after - 1.6) < 1e-9, 'A+ adds 10 points of demand');
+  const down = g.run('stats = {groupsServed:10, walkouts:10, totalStars:10*2}; return applyShiftGrade();');
+  eq(down.grade, 'F'); ok(Math.abs(down.after - 1.45) < 1e-9, 'F takes 15 points off');
+  g.run('eco.demand = 0.62; stats = {groupsServed:2, walkouts:10, totalStars:2};  applyShiftGrade();');
+  eq(g.run('return eco.demand;'), 0.6, 'demand floor:');
+});
+
+t('high demand sends customers faster and more at once, limited by tables', () => {
+  const g = boot();
+  g.run('eco.day = 40; eco.demand = 2.0; upg.tableCount = 12; executeDayStart();');
+  ok(g.run('return stats.maxSimultaneous;') >= 5, 'a 2x-demand store should seat several groups at once');
+  ok(g.run('return demandSpawnMult();') < 0.75, 'arrivals should come closer together');
+  g.run('upg.tableCount = 2; eco.day = 40; executeDayStart();');
+  lte(g.run('return stats.maxSimultaneous;'), 2, 'arrivals at once never exceed the tables:');
+});
+
+t('old saves get a starting demand from their lifetime rating', () => {
+  const g = boot({ save: { v:6, stores:[{ id:0, name:'Burger Bar #1', type:'burger',
+    eco:{cash:100, day:18, floorLevel:2}, upg:{}, gStats:{lifeStars:450, lifeGroups:100}, wings:[], layout:null }] } });
+  eq(g.run('return eco.demand;'), 1.3);
 });
 
 // ── run + summary ───────────────────────────────────────────────────────────
