@@ -40,7 +40,7 @@ function spawnTrailParticle(){
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.copy(pMesh.position);
   mesh.position.y += 0.5;
-  scene.add(mesh);
+  playerRoot.add(mesh);
   trailParticles.push({mesh, life:1.0, decay:0.06});
 }
 function updateTrail(ds, moving){
@@ -51,7 +51,7 @@ function updateTrail(ds, moving){
     p.life -= p.decay * ds;
     p.mesh.material.opacity = p.life * 0.85;
     p.mesh.scale.setScalar(p.life);
-    if(p.life <= 0){ scene.remove(p.mesh); disposeObj(p.mesh); trailParticles.splice(i,1); }
+    if(p.life <= 0){ discard(p.mesh.parent, p.mesh); trailParticles.splice(i,1); }
   }
 }
 
@@ -76,7 +76,7 @@ function showStartMenu(){
 
   document.getElementById('home-cash').textContent='$'+eco.cash.toFixed(2);
   document.getElementById('home-rating').textContent=getCumRating();
-  document.getElementById('home-day').textContent=eco.day;
+  document.getElementById('home-day').textContent=calendarDay();
   {
     // Calendar streak chip: only meaningful if the streak is still alive today
     // or yesterday (otherwise the next shift will reset it).
@@ -89,20 +89,20 @@ function showStartMenu(){
       chip.title = alive ? `${adapt.playStreak}-day streak — play today to keep it going` : '';
     }
   }
-  document.getElementById('home-next-day').textContent=eco.day+1;
-  document.getElementById('home-nametag').textContent = stores[activeStoreIdx]?.name || 'Burger Bar #1';
+  document.getElementById('home-next-day').textContent=calendarDay()+1;
+  document.getElementById('home-nametag').textContent = storeName(activeStoreIdx);
 
   // Sync restaurant preview to current active store
   rp.storeIdx = activeStoreIdx;
 
-  // SINGLE-BAR MODE: the multi-store empire is disabled while we master the
-  // first bar, so the Stores button and store-swipe controls stay hidden.
+  // The Stores button appears ten days before a second store unlocks, so the
+  // goal is visible while you save for it.
   const storeBtn = document.getElementById('home-stores-btn');
-  if(storeBtn) storeBtn.style.display = 'none';
+  if(storeBtn) storeBtn.style.display = (storeCtx.length > 1 || calendarDay() >= NEW_STORE_DAY - 10) ? '' : 'none';
 
   // Preview the goals for the day you're about to play (deterministic per day,
   // so these are the exact goals that go live when you press PLAY).
-  rollDailyGoals(eco.day + 1);
+  rollDailyGoals(calendarDay() + 1);
   renderHomeAchievements();
 
   document.getElementById('home-screen').style.display='flex';
@@ -309,18 +309,24 @@ function quitToMenu(){
   document.getElementById('pause-btn').style.display='none';
   hlRing.visible=false;
 
-  // ── Roll back to pre-day state ──
-  if(window._daySnapshot){
-    eco.day        = window._daySnapshot.day - 1;  // undo the day++ from executeDayStart
-    eco.cash       = window._daySnapshot.cash;      // undo any cash earned mid-day
-    gStats.lifeStars  = window._daySnapshot.gStars;  // undo partial star progress
-    gStats.lifeGroups = window._daySnapshot.gGroups;
-    window._daySnapshot = null;
+  hideStoresHud();
+  // ── Roll every store back to its pre-shift state ──
+  for(let i = 0; i < storeCtx.length; i++){
+    useStore(i);
+    const snap = storeCtx[i].snapshot;
+    if(snap){
+      eco.day        = snap.day - 1;     // undo the day++ from storeShiftStart
+      eco.cash       = snap.cash;        // undo any cash earned mid-shift
+      gStats.lifeStars  = snap.gStars;   // undo partial star progress
+      gStats.lifeGroups = snap.gGroups;
+      storeCtx[i].snapshot = null;
+    }
+    // Clean up any customers/groups that were spawned
+    groups.forEach(g => discard(actGrp, g.mesh));
+    groups = [];
+    stats.groupsLeft = 0;
   }
-
-  // Clean up any customers/groups that were spawned
-  groups.forEach(g => scene.remove(g.mesh));
-  groups = [];
+  useStore(activeStoreIdx);
 
   updateCashUI();
   saveGame();
@@ -551,134 +557,10 @@ function introPrev(){ if(introIdx>0){ introIdx--; renderIntro(); } }
 function endIntro(){ document.getElementById('intro-screen').style.display='none'; }
 window.showIntro=showIntro; window.introNext=introNext; window.introPrev=introPrev; window.endIntro=endIntro;
 
-// ── MULTI-STORE ──────────────────────────────────────────────
-function calcPassiveIncome(store) {
-  // Each robot generates $16/day passively at an idle store
-  const robotCount = (store.upg && store.upg.robotCount) || 0;
-  return Math.round(robotCount * 16 * 100) / 100;
-}
+// Multiple stores: see 04a-stores.js (stores now trade live; no passive income).
 
-function showStores(){
-  if(SINGLE_BAR_MODE){ showStartMenu(); return; } // empire disabled for now
-  document.getElementById('home-screen').style.display='none';
-  const list = document.getElementById('stores-list');
-  list.innerHTML='';
-
-  // NOTE: Passive income is accrued exclusively in endDay() (single source of
-  // truth). This screen is display-only and must not pay out, to avoid
-  // double-counting.
-
-  for(let i=0;i<stores.length;i++){
-    const store = stores[i];
-    const isActive = i === activeStoreIdx;
-    const passive = calcPassiveIncome(store);
-    const card = document.createElement('div');
-    card.className = 'store-card' + (isActive?' active-store':'');
-    card.innerHTML = `
-      <div style="font-size:36px;">🏪</div>
-      <div style="flex:1;">
-        <div style="font-weight:900;font-size:17px;">${store.name}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:3px;">
-          Day ${store.eco.day} · $${(store.eco.cash||0).toFixed(2)} · ⭐${store.gStats.lifeGroups?((store.gStats.lifeStars/store.gStats.lifeGroups).toFixed(1)):'0.0'}
-        </div>
-        <div style="font-size:12px;color:#66BB6A;margin-top:2px;">🤖 Passive: +$${passive}/day (${store.upg.robotCount||0} robots)</div>
-      </div>
-      <div>
-        ${isActive
-          ? '<span style="color:#ffc107;font-weight:900;font-size:13px;">ACTIVE</span>'
-          : `<button class="buy-btn" onclick="switchToStore(${i})">VISIT</button>`}
-      </div>
-    `;
-    list.appendChild(card);
-  }
-
-  // New store unlock
-  const canUnlock = eco.day >= 30 && eco.cash >= 3000;
-  const newCard = document.createElement('div');
-  newCard.className = 'store-card locked-store';
-  newCard.innerHTML = `
-    <div style="font-size:36px;">🔒</div>
-    <div style="flex:1;">
-      <div style="font-weight:900;font-size:16px;">Open New Location</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">Requires Day 30 · Costs $3,000</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.4);">Day ${Math.max(0,30-eco.day)} days away</div>
-    </div>
-    <button class="buy-btn" ${canUnlock?'':'disabled'} onclick="openNewStore()">$3,000</button>
-  `;
-  list.appendChild(newCard);
-
-  document.getElementById('stores-screen').style.display='flex';
-}
-function closeStores(){
-  document.getElementById('stores-screen').style.display='none';
-  showStartMenu();
-}
 let groups=[];
 let wings_obj=[];
-
-function cleanupGameScene(){
-  // Remove all customers from scene
-  groups.forEach(g => discard(scene, g.mesh));
-  groups = [];
-  // Remove all station visuals
-  for(const k in stations){
-    if(stations[k].visuals) stations[k].visuals.forEach(v => discard(scene, v));
-    discard(stGrp, stations[k].mesh);
-    delete stations[k];
-    markStationsDirty();
-  }
-  // Remove all wings geometry
-  wings_obj.forEach(w=>{ discard(scene, w.obj||w); });
-  wings_obj = [];
-  // Clear any held item
-  player.holding = null;
-  updateHolding();
-  // Reset stats
-  stats = {groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:0, spawnTimer:0, initialGroups:1, maxSimultaneous:1};
-  // Reset day snapshot
-  window._daySnapshot = null;
-  // Hide in-game HUD
-  document.getElementById('top-hud').style.display = 'none';
-  document.getElementById('pause-btn').style.display = 'none';
-  hlRing.visible = false;
-}
-
-function switchToStore(idx){
-  saveGame();
-  cleanupGameScene();
-  activeStoreIdx = idx;
-  loadActiveStore();
-  if(stores[idx].layout && stores[idx].layout.length>0){
-    stores[idx].layout.forEach(l=>addStation(l.id,l.type,l.x,l.z,l.w,l.d,{role:l.role,hiredDay:l.hiredDay}));
-  } else {
-    initStations();
-  }
-  rebuildAll();
-  updateCashUI();
-  saveGame();
-  closeStores();
-}
-function openNewStore(){
-  if(eco.cash < 3000 || eco.day < 30) return;
-  eco.cash -= 3000;
-  const newId = stores.length;
-  const storeTypes = [
-    {name:'Downtown Diner',   type:'burger'},
-    {name:'Westside Grill',   type:'burger'},
-    {name:'East End Kitchen', type:'burger'},
-    {name:'Harbor Bites',     type:'burger'},
-  ];
-  const def = storeTypes[newId-1] || {name:`Location #${newId+1}`, type:'burger'};
-  const newStore = defStore(newId, def.name, def.type);
-  stores.push(newStore);
-  updateCashUI();
-  saveGame();
-  if(typeof checkAchievements==='function') checkAchievements();
-  showToast(`🎉 ${def.name} opened!`);
-  closeStores();
-  showStores();
-}
-window.showStores=showStores; window.closeStores=closeStores; window.switchToStore=switchToStore; window.openNewStore=openNewStore;
 
 function startNextDay(){
   // The Soda Fountain is no longer force-introduced mid-transition. It's a
@@ -687,44 +569,62 @@ function startNextDay(){
   executeDayStart();
 }
 
-// How many groups a day brings lives in 07b-grades.js (plannedGroupCount):
-// the base stops growing at Day 30 and each store's grade-driven demand
-// decides the rest.
-
-function executeDayStart() {
+// One store's side of starting a shift (runs in that store's context). Each
+// store counts its own days: a new branch starts at its Day 1 and ramps up.
+function storeShiftStart(){
   eco.day++;
-  // Advance the calendar streak / heat before anything reads difficulty.
-  const heatNote = adaptStartShift();
+  // Snapshot so quitting mid-shift can roll this store back.
+  storeCtx[simIdx].snapshot = { day: eco.day, cash: eco.cash, gStars: gStats.lifeStars, gGroups: gStats.lifeGroups };
 
-  // Snapshot state BEFORE the day runs so we can restore on quit
-  window._daySnapshot = {
-    day: eco.day,
-    cash: eco.cash,
-    gStars: gStats.lifeStars,
-    gGroups: gStats.lifeGroups,
-  };
-  
   const groupCount = plannedGroupCount(eco.day);
-
   // Simultaneous arrivals ramp with the day (and with how many tables you own),
-  // which is what makes late days demanding now that they're length-capped.
-  // Kitchen Heat (calendar streak + recent skill) can add another arrival slot.
+  // which is what makes late days demanding now that the base is length-capped.
+  // Kitchen Heat and store demand can each add arrival slots.
   const baseSimultaneous = eco.day >= 10 ? Math.min(2 + Math.floor((eco.day - 10) / 12), 5) : 1;
   const maxSimultaneousGroups = Math.max(1, Math.min(upg.tableCount,
     baseSimultaneous + heatExtraSimultaneous() + demandExtraSimultaneous(), 10));
-  
+
   // First spawn: give player 8 seconds to get ready (longer on early days)
   const firstSpawnDelay = eco.day <= 3 ? 600 : eco.day <= 6 ? 480 : 300;
   stats={groupsServed:0, totalStars:0, cashEarned:0, groupsLeft:groupCount, initialGroups:groupCount,
          spawnTimer: firstSpawnDelay, maxSimultaneous: maxSimultaneousGroups, combosServed:0, walkouts:0,
          heat: effectiveHeat(), rushAt: planRushes(groupCount), rushTimer:0, rushes:0};
-  setRushBanner(false);
   serveStreak = 0; streakTimer = 0;
-  rollDailyGoals(eco.day); // fresh objectives for the day about to start
+
+  let traysAssigned = false;
+  for(const k in stations){
+    const s=stations[k];
+    if(s.type==='grill') s.slots=[null,null];
+    if(s.type==='fryer') s.slots=[null,null];
+    if(s.type==='counter') s.item=null;
+    if(s.type==='sink')    s.cleanTrays=0;
+    if(s.type==='trayrack') { s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; traysAssigned = true; }
+    if(s.type==='table')   { s.group=null; s.served=0; s.dirtyTrays=0; }
+  }
+  groups.forEach(g=>discard(actGrp, g.mesh)); groups=[];
+  for(const k in stations) if(stations[k].type==='robot') { stations[k].state='idle'; stations[k].holding=null; }
+
+  updateStationVisuals();
+  // Robots level up overnight; swap their models and call it out.
+  refreshUpgradeVisuals().filter(s=>s.type==='robot').forEach(s=>{
+    spawnFloater(s.mesh.position.clone().add(new THREE.Vector3(0,3.2,0)), `⬆ Lv.${getRobotLevel(s)} ${s.role.toUpperCase()}`, '#4FC3F7');
+  });
+  return groupCount;
+}
+
+function executeDayStart() {
+  // Advance the calendar streak / heat before anything reads difficulty.
+  const heatNote = adaptStartShift();
+  for(let i = 0; i < storeCtx.length; i++){ useStore(i); storeShiftStart(); }
+  useStore(activeStoreIdx);
+  const groupCount = stats.initialGroups;
+
+  setRushBanner(false);
+  rollDailyGoals(calendarDay()); // fresh objectives for the day about to start
 
   document.getElementById('home-screen').style.display='none';
   document.getElementById('top-hud').style.display='flex';
-  { const th = document.getElementById('touch-hint'); if(th) th.style.display = eco.day <= 3 ? '' : 'none'; }
+  { const th = document.getElementById('touch-hint'); if(th) th.style.display = calendarDay() <= 3 ? '' : 'none'; }
   document.getElementById('pause-btn').style.display='flex';
   {
     const gh = document.getElementById('goals-hud');
@@ -737,35 +637,18 @@ function executeDayStart() {
       const el = document.getElementById(id);
       if(el) el.style.display='none';
   });
-  
+
   {
     const hl = heatLabel();
-    document.getElementById('day-banner').innerHTML=`DAY ${eco.day}<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${groupCount}</span>` +
+    const multi = storeCtx.length > 1;
+    document.getElementById('day-banner').innerHTML=`DAY ${calendarDay()}<br>` +
+      (multi ? `<span id="day-store" style="font-size:11px;color:#FFD54F;">${storeName(activeStoreIdx)}</span>` : '') +
+      `<span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${groupCount}</span>` +
       (hl ? `<br><span id="day-heat" class="${adapt.easeShifts>0?'ease':''}">${hl}</span>` : '');
   }
   updateCashUI();
 
-  let traysAssigned = false;
-  for(const k in stations){
-    const s=stations[k];
-    if(s.type==='grill') s.slots=[null,null];
-    if(s.type==='fryer') s.slots=[null,null];
-    if(s.type==='counter') s.item=null;
-    if(s.type==='sink')    s.cleanTrays=0;
-    if(s.type==='trayrack') { s.cleanTrays = traysAssigned ? 0 : eco.totalTrays; traysAssigned = true; }
-    if(s.type==='table')   { s.group=null; s.served=0; s.dirtyTrays=0; }
-  }
-
   player.holding=null; updateHolding();
-  groups.forEach(g=>discard(scene, g.mesh)); groups=[];
-
-  for(const k in stations) if(stations[k].type==='robot') { stations[k].state='idle'; stations[k].holding=null; }
-
-  updateStationVisuals();
-  // Robots level up overnight; swap their models and call it out.
-  refreshUpgradeVisuals().filter(s=>s.type==='robot').forEach(s=>{
-    spawnFloater(s.mesh.position.clone().add(new THREE.Vector3(0,3.2,0)), `⬆ Lv.${getRobotLevel(s)} ${s.role.toUpperCase()}`, '#4FC3F7');
-  });
   player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
   gameState='playing'; gamePaused=false;
   actionBtn.innerHTML='✋'; actionBtn.style.background='rgba(255,200,30,.8)';
@@ -779,27 +662,7 @@ function executeDayStart() {
 }
 window.startNextDay = startNextDay;
 
-function homePlaySelected(){
-  // SINGLE-BAR MODE always launches the first bar regardless of preview state.
-  const targetIdx = SINGLE_BAR_MODE ? 0 : rp.storeIdx;
-  if(targetIdx >= stores.length) return; // shouldn't happen but guard
-
-  if(targetIdx !== activeStoreIdx){
-    saveGame();
-    cleanupGameScene();
-    activeStoreIdx = targetIdx;
-    loadActiveStore();
-    if(stores[targetIdx].layout && stores[targetIdx].layout.length>0){
-      stores[targetIdx].layout.forEach(l=>addStation(l.id,l.type,l.x,l.z,l.w,l.d,{role:l.role,hiredDay:l.hiredDay}));
-    } else {
-      initStations();
-    }
-    rebuildAll();
-    updateCashUI();
-    saveGame();
-  }
-  startNextDay();
-}
+function homePlaySelected(){ startNextDay(); }
 window.homePlaySelected = homePlaySelected;
 
 function closeShop(){
@@ -819,15 +682,13 @@ function showShop(){
 }
 window.showShop=showShop;
 
-function endDay(){
-  stats._heatBefore = effectiveHeat();
-  adaptEndShift(shiftPerformance());
-  stats._gradeInfo = applyShiftGrade();   // grade today, move tomorrow's demand
-  setRushBanner(false);
+// One store's side of closing a shift (runs in that store's context): its
+// grade, tomorrow's demand, lifetime stats and the rolling rating.
+// Returns a summary row for the results screen.
+function storeShiftEnd(){
+  const gradeInfo = applyShiftGrade();   // grade today, move tomorrow's demand
   gStats.lifeStars+=stats.totalStars;
   gStats.lifeGroups+=stats.groupsServed;
-  hlRing.visible=false;
-  document.getElementById('pause-btn').style.display='none';
 
   // Track a ROLLING rating (today's average, last 3 days) for the fail check so
   // one or two rough days can be recovered from instead of a sticky lifetime
@@ -850,38 +711,53 @@ function endDay(){
   const rollAvg = gStats.recentDays.length
     ? gStats.recentDays.reduce((a,b)=>a+b,0) / gStats.recentDays.length
     : 5;
-  if(!diffNoFail() && eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0){
+  storeCtx[simIdx].snapshot = null;
+  return { idx: simIdx, name: storeName(simIdx), gradeInfo, served: stats.groupsServed, walkouts: stats.walkouts || 0,
+           earned: stats.cashEarned, cash: eco.cash,
+           failing: eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0 };
+}
+
+// What the results screen shows: the whole chain's shift. Set by endDay().
+let lastShift = null;
+
+function endDay(){
+  const heatBefore = effectiveHeat();
+  adaptEndShift(shiftPerformance());
+  setRushBanner(false);
+  hlRing.visible=false;
+  hideStoresHud();
+  document.getElementById('pause-btn').style.display='none';
+
+  // Totals across every store, taken before the per-store wrap-up.
+  const S = Object.assign({}, dayStats());
+  const rows = [];
+  for(let i = 0; i < storeCtx.length; i++){ useStore(i); rows.push(storeShiftEnd()); }
+  // Rewards and the fail check run against the first store (the chain's HQ).
+  useStore(0);
+  const cashBefore = totalCash() - S.cashEarned;
+  lastShift = Object.assign(S, { _heatBefore: heatBefore, stores: rows, _gradeInfo: rows[0].gradeInfo,
+                                 _cashBefore: cashBefore, _achvEarned: 0, _dailyEarned: 0, _newRecord: false });
+
+  // Only the original bar can end the run. A struggling branch loses demand
+  // (fewer customers) until it recovers instead.
+  if(!diffNoFail() && rows[0].failing){
     gameState='gameover';
-    document.getElementById('fail-days').textContent=eco.day;
+    document.getElementById('fail-days').textContent=calendarDay();
     document.getElementById('gameover-screen').style.display='flex';
+    useStore(activeStoreIdx);
     saveGame(); return;
   }
 
-  // Passive income from other stores. Disabled in single-bar mode so a dormant
-  // map left over in an old multi-map save can't keep paying out invisibly.
-  let passiveTotal = 0;
-  if(!SINGLE_BAR_MODE) stores.forEach((store, idx) => {
-    if(idx !== activeStoreIdx && store.unlocked) {
-      const inc = calcPassiveIncome(store);
-      passiveTotal += inc;
-      store.eco.cash += inc;
-    }
-  });
-  if(passiveTotal > 0) {
-    eco.cash += passiveTotal;
-    stats._passiveEarned = passiveTotal;
-  } else { stats._passiveEarned = 0; }
-
   // Lifetime records
-  records.totalServed += stats.groupsServed;
-  const todayStarsAvg = stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0;
-  stats._newRecord = false;
-  if(stats.cashEarned > records.bestDayCash){ records.bestDayCash = stats.cashEarned; stats._newRecord = true; }
+  records.totalServed += S.groupsServed;
+  const todayStarsAvg = S.groupsServed>0 ? S.totalStars/S.groupsServed : 0;
+  if(S.cashEarned > records.bestDayCash){ records.bestDayCash = S.cashEarned; lastShift._newRecord = true; }
   if(todayStarsAvg > records.bestDayStars) records.bestDayStars = todayStarsAvg;
 
   queueNextDayHeadsUp();   // heads-up about tomorrow, shown on the Home Screen
   checkDailyGoals();       // award daily-goal bonuses before the results math
   checkAchievements(true); // award now; celebrate on the Home Screen
+  useStore(activeStoreIdx);
   gameState='results'; saveGame(); playSound('daycomplete'); showResults();
   gcSync();
 }
@@ -934,23 +810,24 @@ function flushDayHeadsUp(){
 }
 
 function showResults(){
+  const S = lastShift || Object.assign({stores:[]}, stats);
   const scr=document.getElementById('results-screen');
   scr.style.display='flex';
   // Highlight a new daily-earnings record in the header.
   const dayLbl=document.getElementById('res-day-lbl');
   if(dayLbl){
-    dayLbl.textContent = stats._newRecord ? '🏆 NEW BEST DAY!' : 'Day Complete';
-    dayLbl.style.color = stats._newRecord ? '#FFD54F' : 'rgba(255,255,255,.4)';
+    dayLbl.textContent = S._newRecord ? '🏆 NEW BEST DAY!' : 'Day Complete';
+    dayLbl.style.color = S._newRecord ? '#FFD54F' : 'rgba(255,255,255,.4)';
   }
   // Today's rating as an exact average; light full stars by floor and show a
   // half-star for the .5 remainder so e.g. 4.5 shows 4½ stars, never 5.
-  const todayAvg = stats.groupsServed>0 ? stats.totalStars/stats.groupsServed : 0;
+  const todayAvg = S.groupsServed>0 ? S.totalStars/S.groupsServed : 0;
   const fullStars = Math.floor(todayAvg);
   const hasHalf = (todayAvg - fullStars) >= 0.5;
   const cum=getCumRating();
-  // eco.cash already includes today's serving cash + passive + achievement
-  // bonuses, so back all of them out to get the true starting balance.
-  const cashBefore=eco.cash-stats.cashEarned-(stats._passiveEarned||0)-(stats._achvEarned||0)-(stats._dailyEarned||0);
+  // Cash across every store: the balance before the shift, and after today's
+  // sales plus goal and achievement bonuses.
+  const cashBefore = S._cashBefore, cashAfter = totalCash();
 
   const el=id=>document.getElementById(id);
   el('res-day-lbl').style.opacity='0'; el('res-title').style.opacity='0'; el('res-title').style.transform='scale(.75)';
@@ -976,8 +853,8 @@ function showResults(){
   // score but never the cause, so there was nothing to act on tomorrow.
   setTimeout(()=>{
     const co = el('res-coach'); if(!co) return;
-    const walked = stats.walkouts || 0;
-    const served = stats.groupsServed || 0;
+    const walked = S.walkouts || 0;
+    const served = S.groupsServed || 0;
     let msg;
     if(walked > 0){
       msg = `🚶 ${walked} ${walked===1?'customer':'groups of customers'} walked out — serve faster or add a table.`;
@@ -991,41 +868,43 @@ function showResults(){
       msg = '⏳ Orders sat too long — cook ahead and keep clean trays stocked.';
     }
     // Kitchen Heat recap: where tomorrow's difficulty is heading and why.
-    const before = stats._heatBefore || 0, after = adapt.heat * heatRamp() * (settings.difficulty==='casual'?0.5:1);
+    const before = S._heatBefore || 0, after = adapt.heat * heatRamp() * (settings.difficulty==='casual'?0.5:1);
     let heat = '';
-    if(eco.day >= HEAT.RAMP_FROM_DAY){
+    if(calendarDay() >= HEAT.RAMP_FROM_DAY){
       const arrow = after > before + 0.2 ? '▲' : after < before - 0.2 ? '▼' : '•';
       const streak = adapt.playStreak >= 2 ? `${adapt.playStreak}-day streak · ` : '';
       heat = `🔥 ${streak}Heat ${after.toFixed(1)} ${arrow} <span>(+${Math.round(HEAT.TIP_PER_HEAT*after*100)}% tips)</span>`;
     }
-    const gi = stats._gradeInfo;
-    if(gi && gi.grade){
+    // Each store's grade and where its customer count is heading.
+    const gradeLine = r => {
+      const gi = r.gradeInfo;
+      if(!gi || !gi.grade) return `${r.name}: closed today`;
       const pct = Math.round((gi.after - gi.before) * 100);
       const trend = pct > 0 ? `📈 +${pct}% customers tomorrow` : pct < 0 ? `📉 ${pct}% customers tomorrow` : 'customers steady';
-      heat = `<b style="color:${GRADE_COLORS[gi.grade]}">Grade ${gi.grade}</b> · ${trend}` + (heat ? '<br>' + heat : '');
-    }
+      const who = S.stores.length > 1 ? `${r.name} · +$${r.earned.toFixed(0)} · ` : '';
+      return `${who}<b style="color:${GRADE_COLORS[gi.grade]}">Grade ${gi.grade}</b> · ${trend}`;
+    };
+    heat = S.stores.map(gradeLine).join('<br>') + (heat ? '<br>' + heat : '');
     co.textContent = msg; co.style.opacity = '1';
     const rh = el('res-heat'); if(rh) rh.innerHTML = heat;
   }, 1600);
-  setTimeout(()=>{ el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
+  setTimeout(()=>{ el('res-cash-earned').textContent=`+$${S.cashEarned.toFixed(2)}`; el('res-cash-earned').style.opacity='1'; el('res-cash-earned').style.transform='translateY(0)'; }, 1700);
   setTimeout(()=>{
     // Show passive + achievement income if any
-    const passiveEarned = stats._passiveEarned || 0;
-    const achvEarned = stats._achvEarned || 0;
-    const dailyEarned = stats._dailyEarned || 0;
-    const totalEarned = stats.cashEarned + passiveEarned + achvEarned + dailyEarned;
+    const achvEarned = S._achvEarned || 0;
+    const dailyEarned = S._dailyEarned || 0;
+    const totalEarned = S.cashEarned + achvEarned + dailyEarned;
     el('res-prev').textContent='$'+cashBefore.toFixed(2); el('res-earn-sm').textContent='$'+totalEarned.toFixed(2);
     let extra = '';
-    if(passiveEarned > 0) extra += ` (+$${passiveEarned.toFixed(2)} passive 🤖)`;
     if(dailyEarned > 0)   extra += ` (+$${dailyEarned.toFixed(2)} 🎯)`;
     if(achvEarned > 0)    extra += ` (+$${achvEarned.toFixed(2)} 🏆)`;
-    if(extra) el('res-cash-earned').textContent=`+$${stats.cashEarned.toFixed(2)}${extra}`;
+    if(extra) el('res-cash-earned').textContent=`+$${S.cashEarned.toFixed(2)}${extra}`;
     el('res-total-row').style.opacity='1';
     const totalEl=el('res-new-total');
     const dur=900, t0=performance.now();
     (function tick(now){
       const t=Math.min((now-t0)/dur,1), e=1-Math.pow(1-t,3);
-      totalEl.textContent='$'+(cashBefore+(eco.cash-cashBefore)*e).toFixed(2);
+      totalEl.textContent='$'+(cashBefore+(cashAfter-cashBefore)*e).toFixed(2);
       if(t<1) requestAnimationFrame(tick); else totalEl.style.animation='totalPop .4s ease forwards';
     })(performance.now());
   }, 2100);

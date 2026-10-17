@@ -251,9 +251,15 @@ const crumbGeo = i => GSphS([0.05,0.07,0.09][i%3], 4, 4);
 // ─────────────────────────────────────────────────────────────
 //  WORLD GROUPS
 // ─────────────────────────────────────────────────────────────
-const worldGrp = new THREE.Group(); scene.add(worldGrp);
-const roomGrp  = new THREE.Group(); scene.add(roomGrp);
-const stGrp    = new THREE.Group(); scene.add(stGrp);
+// Each store owns its own set of these groups under a root offset along the
+// street (04a-stores.js swaps them in with the rest of the store's state).
+// Game logic works in the CURRENT store's local coordinates; only rendering
+// adds the store's offset (storeOX).
+let worldGrp = new THREE.Group(); scene.add(worldGrp);
+let roomGrp  = new THREE.Group(); scene.add(roomGrp);
+let stGrp    = new THREE.Group(); scene.add(stGrp);
+let actGrp   = new THREE.Group(); scene.add(actGrp);   // customers + item visuals
+let storeOX  = 0;                                     // world x of the current store
 
 let baseBounds = {l:-10, r:10, t:-10, b:10};
 let wings = [];

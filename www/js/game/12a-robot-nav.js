@@ -199,6 +199,6 @@ function burgerDemand(){
     else if(s.type === 'counter' && carries(s.item)) have++;
     else if(s.type === 'robot' && carries(s.holding)) have++;
   }
-  if(player && carries(player.holding)) have++;
+  if(player && !window._remoteSim && carries(player.holding)) have++;
   return want - have;
 }

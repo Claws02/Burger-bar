@@ -29,11 +29,10 @@ const SKIN_DEFS = [
 let stores = [];
 let activeStoreIdx = 0;
 
-// SINGLE-BAR MODE: while we master the first Burger Bar, the only playable map
-// is store 0. This one flag gates every path that could switch/launch another
-// map (preview swipe, swipe arrows, PLAY target, Stores screen). Flip to false
-// to re-enable the multi-store empire (see ARCHITECTURE.md → Single-bar mode).
-const SINGLE_BAR_MODE = true;
+// Multiple stores are live again (04a-stores.js): up to three Burger Bars on
+// one street, all trading during the same shift. The old swipe-between-maps
+// empire (other map types, passive income) stays retired.
+const SINGLE_BAR_MODE = false;
 
 function defStore(id, name, type='burger') {
   return {
@@ -88,7 +87,8 @@ let floaters = [];
 // Serve-streak: serving groups in quick succession builds a tip multiplier.
 let serveStreak = 0, streakTimer = 0;
 function spawnFloater(pos, txt, color='#66BB6A'){
-  floaters.push({pos:pos.clone().add(new THREE.Vector3(0,2,0)), text:txt, color:color, life:1.5});
+  // pos is store-local; floaters are drawn in world space.
+  floaters.push({pos:pos.clone().add(new THREE.Vector3(storeOX,2,0)), text:txt, color:color, life:1.5});
 }
 
 function getRobotLevel(bot) {
@@ -106,22 +106,15 @@ function getRobotLevel(bot) {
 // ─────────────────────────────────────────────────────────────
 function saveGame(){
   try{
-    if(stores.length > 0) {
-      stores[activeStoreIdx].eco    = JSON.parse(JSON.stringify(eco));
-      stores[activeStoreIdx].upg    = JSON.parse(JSON.stringify(upg));
-      stores[activeStoreIdx].gStats = JSON.parse(JSON.stringify(gStats));
-      stores[activeStoreIdx].wings  = JSON.parse(JSON.stringify(wings));
-      let layout = [];
-      for(const k in stations) {
-        const s = stations[k];
-        let lData = {id: s.id, type: s.type, w: s.w, d: s.d};
-        if(s.type === 'robot') { lData.x = s.pos.x; lData.z = s.pos.z; lData.role = s.role; lData.hiredDay = s.hiredDay; }
-        else { lData.x = s.x; lData.z = s.z; }
-        layout.push(lData);
-      }
-      stores[activeStoreIdx].layout = layout;
+    // Every live store is written, not just the one you're standing in.
+    const live = (typeof storeCtx !== 'undefined' && storeCtx.length) ? storeCtx.length : 0;
+    if(live){
+      stashGlobals(storeCtx[simIdx]);
+      for(let i = 0; i < live; i++) writeStoreRecord(stores[i], storeCtx[i]);
+    } else if(stores.length > 0) {
+      writeStoreRecord(stores[activeStoreIdx], {eco, upg, gStats, wings, stations});
     }
-    const data = JSON.stringify({v:6, stores, activeStoreIdx, cosm, achievements, records, dailyGoals, adapt, savedAt:Date.now()});
+    const data = JSON.stringify({v:6, stores, parkedStores, activeStoreIdx:0, cosm, achievements, records, dailyGoals, adapt, savedAt:Date.now()});
     // Keep the last good save as a backup. A corrupt or half-written main save
     // used to fall through to bootstrapNewSave(), and the next autosave then
     // overwrote the player's whole run.
@@ -139,6 +132,22 @@ function saveGame(){
       try{ showToast("⚠️ Couldn't save progress — use Export Save in Settings", 4500); }catch(_){}
     }
   }
+}
+
+function writeStoreRecord(rec, c){
+  rec.eco    = JSON.parse(JSON.stringify(c.eco));
+  rec.upg    = JSON.parse(JSON.stringify(c.upg));
+  rec.gStats = JSON.parse(JSON.stringify(c.gStats));
+  rec.wings  = JSON.parse(JSON.stringify(c.wings || []));
+  const layout = [];
+  for(const k in c.stations){
+    const s = c.stations[k];
+    const lData = {id: s.id, type: s.type, w: s.w, d: s.d};
+    if(s.type === 'robot') { lData.x = s.pos.x; lData.z = s.pos.z; lData.role = s.role; lData.hiredDay = s.hiredDay; }
+    else { lData.x = s.x; lData.z = s.z; }
+    layout.push(lData);
+  }
+  rec.layout = layout;
 }
 
 // Parse a save string into a validated object, or null if it is unusable.
@@ -179,11 +188,16 @@ function loadSave(){
       stores = [store0];
       activeStoreIdx = 0;
     } else {
-      stores = s.stores;
-      // SINGLE-BAR MODE: always return the player to the first Burger Bar.
-      // Any extra stores from older multi-map saves are preserved in the array
-      // (so nothing is lost) but are not reachable until we re-enable the
-      // multi-store empire. activeStoreIdx is pinned to the first burger bar.
+      // Live stores are burger bars, at most MAX_STORES. Anything else from the
+      // old multi-map build (a parked Seafood Shack, extra franchises) is kept
+      // in parkedStores so it survives saving, but it doesn't run.
+      const live = [], parked = [];
+      for(const st of s.stores){
+        if(st && (st.type || 'burger') === 'burger' && live.length < MAX_STORES) live.push(st); else parked.push(st);
+      }
+      if(!live.length) live.push(defStore(0, 'Burger Bar #1'));
+      stores = live;
+      parkedStores = (s.parkedStores || []).concat(parked);
       activeStoreIdx = 0;
     }
     if(s.cosm) cosm = Object.assign({ownedSkins:['classic'], equippedSkin:'classic', character:'human'}, s.cosm);
@@ -208,8 +222,9 @@ function bootstrapNewSave() {
   loadActiveStore();
 }
 
-function loadActiveStore() {
-  const st = stores[activeStoreIdx];
+function loadActiveStore() { loadStoreRecord(stores[activeStoreIdx]); }
+// Load one store's saved record into the (current context's) globals.
+function loadStoreRecord(st) {
   const hadDemand = st.eco && typeof st.eco.demand === 'number';
   eco    = Object.assign(defEco(),  st.eco    || {});
   upg    = Object.assign(defUpg(),  st.upg    || {});

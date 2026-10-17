@@ -26,7 +26,7 @@ function rebuildPlayerMesh(){
 let pSkates = null;
 function applySkates(){
   if(pSkates){ pMesh.remove(pSkates); pSkates = null; }
-  const lv = (upg && upg.speedLv) || 0;
+  const lv = playerSkatesLv();   // the best pair you own, whichever store bought them
   if(lv <= 0) return;
   const t = lv >= 5 ? 2 : lv >= 3 ? 1 : 0;
   pSkates = bake('skates|'+t, ()=>{
@@ -72,7 +72,9 @@ function checkColl(nx,nz,skip=null){
   const pR = skip && skip.includes('robot') ? 0.0 : player.radius;
   const wt = .55, b = bounds;
 
-  if(nx<b.l-18||nx>b.r+18||nz<b.t-5||nz>b.b+30) return true;
+  // The player may walk out across the lawn toward a neighbouring store.
+  const [xLo, xHi] = skip === null ? playerXLimits() : [b.l-18, b.r+18];
+  if(nx<xLo||nx>xHi||nz<b.t-5||nz>b.b+30) return true;
 
   for(const e of collEdges) {
     let hw = 2.5; 

@@ -147,6 +147,7 @@ function adaptEndShift(perf){
 
 // Shift performance for adaptEndShift, from today's stats.
 function shiftPerformance(){
+  const stats = dayStats();   // every store's shift counts
   const served = stats.groupsServed || 0, walked = stats.walkouts || 0;
   if(served + walked === 0) return 0.5;
   const starQ = served ? (stats.totalStars / served) / 5 : 0;

@@ -158,8 +158,9 @@ const SHOP_DEFS = [
   {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>robotCost(upg.robotCount), max:()=>upg.robotCount>=10, size:[1.5,1.5], unlockDay:5, action:()=>{ 
       const rData = {role:'busser', hiredDay:eco.day};
       upg.robots.push(rData);
-      const id='robot'+upg.robotCount; const pos=getValidSpawn(); addStation(id,'robot',pos.x,pos.z,1.5,1.5, rData); 
-      if(upg.robotCount === 0) {
+      // Park new robots in an open spot, not stacked in the middle of the floor.
+      const id='robot'+upg.robotCount; const pos=freeSpot(1.5,1.5)||getValidSpawn(); addStation(id,'robot',pos.x,pos.z,1.5,1.5, rData); 
+      if(upg.robotCount === 0 && achvMetrics().robots === 0) {   // first robot in the whole chain
          setTimeout(() => {
             const p = document.getElementById('alert-popup');
             document.getElementById('alert-title').style.color = '#4CAF50';
@@ -219,7 +220,26 @@ function renderMenuPanel(){
   }
 }
 
+// With more than one store, the shop says which store's register it spends
+// from and lets you switch.
+function renderShopStoreRow(){
+  const row = document.getElementById('shop-store-row');
+  if(!row) return;
+  if(storeCtx.length < 2){ row.style.display = 'none'; return; }
+  const i = activeStoreIdx, n = storeCtx.length;
+  row.innerHTML = `<button onclick="shopSwitchStore(-1)">◀</button><span>🏪 Shopping for ${storeName(i)}</span><button onclick="shopSwitchStore(1)">▶</button>`;
+  row.style.display = 'flex';
+}
+function shopSwitchStore(dir){
+  const n = storeCtx.length;
+  manageStore((activeStoreIdx + dir + n) % n);
+  document.getElementById('shop-cash-display').textContent = '$' + eco.cash.toFixed(2);
+  updateShop();
+}
+window.shopSwitchStore = shopSwitchStore;
+
 function updateShop(){
+  renderShopStoreRow();
   renderMenuPanel();
   const cats = ['Upgrades', 'Building', 'Equipment', 'Automation'];
   if(!cats.includes(activeShopTab)) activeShopTab=cats[0];
@@ -240,7 +260,7 @@ function updateShop(){
   for(const def of items){
     const cost=def.cost();
     const isMax=def.max();
-    const locked=eco.day < def.unlockDay;
+    const locked=calendarDay() < def.unlockDay;   // unlocks follow the calendar, not a branch's age
     const canAfford=eco.cash>=cost;
 
     const div=document.createElement('div');
@@ -263,7 +283,7 @@ function doBuy(id){
   const def=SHOP_DEFS.find(d=>d.id===id);
   if(!def) return;
   const cost=def.cost();
-  if(eco.cash<cost||def.max()||eco.day<def.unlockDay) return;
+  if(eco.cash<cost||def.max()||calendarDay()<def.unlockDay) return;
 
   if(def.size && id !== 'robot') {
      if(!freeSpot(def.size[0], def.size[1])) {

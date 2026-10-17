@@ -20,7 +20,7 @@ function friesDemand(){
     else if(s.type === 'counter' && (s.item === 'fries' || s.item === 'fries_on_tray')) have++;
     else if(s.type === 'robot' && (s.holding === 'fries' || s.holding === 'fries_on_tray')) have++;
   }
-  if(player && (player.holding === 'fries' || player.holding === 'fries_on_tray')) have++;
+  if(player && !window._remoteSim && (player.holding === 'fries' || player.holding === 'fries_on_tray')) have++;
   return want - have;
 }
 

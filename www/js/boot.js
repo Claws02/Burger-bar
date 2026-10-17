@@ -10,7 +10,7 @@
 (function(){
   'use strict';
   var GAME_FILES = [
-    '00-settings-audio', '01-renderer', '01a-modelkit', '02-world', '03-items', '04-state-save',
+    '00-settings-audio', '01-renderer', '01a-modelkit', '02-world', '03-items', '04-state-save', '04a-stores',
     '05-player', '06-shop-edit', '07-progress', '07a-adaptive', '07b-grades', '08-home', '08a-characters', '09-menus-dayflow', '09a-gamecenter',
     '10-customers', '11-actions', '12-robots', '12a-robot-nav', '13-hud-input', '13a-tutorial', '14-main'
   ];

@@ -23,7 +23,7 @@ function scr(v){
   _scrOut.x=(p.x*.5+.5)*window.innerWidth; _scrOut.y=(p.y*-.5+.5)*window.innerHeight; _scrOut.z=p.z;
   return _scrOut;
 }
-function scrXYZ(x,y,z){ return scr(_scrW.set(x,y,z)); }
+function scrXYZ(x,y,z){ return scr(_scrW.set(x + storeOX,y,z)); }   // store-local -> screen
 
 // ── Pooled overlay nodes ─────────────────────────────────────────────────────
 // The overlay used to be rebuilt as one innerHTML string every frame: on a busy

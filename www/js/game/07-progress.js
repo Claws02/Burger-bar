@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 function getCumRating(){ return gStats.lifeGroups===0?0:(gStats.lifeStars/gStats.lifeGroups).toFixed(1); }
 function updateCashUI(){
+  if(window._remoteSim) return;    // the HUD shows the store you're standing in
   document.getElementById('cash-val').textContent='$'+eco.cash.toFixed(2);
   document.getElementById('rating-val').textContent='⭐ '+getCumRating();
 }
@@ -38,6 +39,8 @@ const ACHIEVEMENTS = [
   {id:'grillmax',  icon:'🔥', name:'Flame On',          desc:'Max out the Turbo Grill',   metric:'grillLv',    goal:3,    base:0.5, cash:200},
   {id:'robots3',   icon:'🤖', name:'Automation',        desc:'Hire 3 robots',             metric:'robots',     goal:3,    cash:200},
   {id:'serve250',  icon:'👨‍🍳', name:'Head Chef',         desc:'Serve 250 groups',          metric:'groups',     goal:250,  cash:400,  skin:'gold'},
+  {id:'store2',    icon:'🏪', name:'Branching Out',     desc:'Open a second store',       metric:'stores',     goal:2,    cash:300},
+  {id:'store3',    icon:'🏙️', name:'Main Street',       desc:'Run three stores at once',  metric:'stores',     goal:3,    cash:800},
   {id:'day30',     icon:'🗓️', name:'Established',        desc:'Reach Day 30',              metric:'maxDay',     goal:30,   cash:500,  skin:'fire'},
   {id:'rich5000',  icon:'🤑', name:'High Roller',       desc:'Hold $5,000 at once',       metric:'cash',       goal:5000, cash:0,    skin:'alien'},
   {id:'serve1000', icon:'🏅', name:'Burger Legend',     desc:'Serve 1,000 groups',        metric:'groups',     goal:1000, cash:1000},
@@ -46,15 +49,15 @@ const ACHIEVEMENTS = [
 
 function achvMetrics(){
   let groups=0, robots=0, maxDay=0;
-  stores.forEach((s,idx)=>{
-    const gs = idx===activeStoreIdx ? gStats : (s.gStats||{});
-    const up = idx===activeStoreIdx ? upg   : (s.upg||{});
-    const ec = idx===activeStoreIdx ? eco   : (s.eco||{});
-    groups += gs.lifeGroups||0;
-    robots += up.robotCount||0;
-    maxDay  = Math.max(maxDay, ec.day||0);
-  });
-  return { groups, robots, maxDay, cash:eco.cash, stores:stores.length,
+  const n = storeCtx.length || 1;
+  for(let idx = 0; idx < n; idx++){
+    const c = storeCtx.length ? ctxOf(idx) : {gStats, upg, eco};
+    groups += c.gStats.lifeGroups||0;
+    robots += c.upg.robotCount||0;
+    maxDay  = Math.max(maxDay, c.eco.day||0);
+  }
+  const stats = dayStats();
+  return { groups, robots, maxDay, cash:eco.cash, stores:n,
            tables:  upg.tableCount || 1,
            grillLv: upg.grillMult  || 0,
            // Only meaningful while a day is actually being scored; on the Home
@@ -104,6 +107,7 @@ let dailyGoals = [];
 
 // Today-scoped metrics (reset with `stats` each day).
 function dailyMetrics(){
+  const stats = dayStats();   // the whole chain's shift
   const groups = stats.groupsServed || 0;
   return {
     groups,
@@ -122,7 +126,7 @@ function dailyMetrics(){
 // soften on a returning player's ease-in shift.
 function dailyGoalPool(day){
   const { heat: h, easing } = projectedHeat(day);
-  const groupsToday = plannedGroupCount(day);
+  const groupsToday = totalPlannedGroups(day);   // every store's customers
   const reach = easing ? 0.7 : 0.78 + h * 0.012;             // share of groups to serve
   const serveGoal = Math.min(groupsToday, Math.max(3, Math.floor(groupsToday * reach)));
   const earnBase = 40 + Math.min(day, 28) * 14 + Math.max(0, day - 28) * 4;
@@ -237,7 +241,7 @@ function checkDailyGoals(){
     if(dailyGoalDone(dg, m)){ dg.done = true; earned += dg.reward; }
   }
   if(earned > 0){ eco.cash += earned; }
-  stats._dailyEarned = earned;
+  if(lastShift) lastShift._dailyEarned = earned;
   return earned;
 }
 
@@ -264,7 +268,7 @@ function checkAchievements(deferToasts){
     if((m[a.metric] || 0) >= a.goal){
       achievements.unlocked.push(a.id);
       gcReportAchievement(a.id);
-      if(a.cash){ eco.cash += a.cash; stats._achvEarned = (stats._achvEarned||0) + a.cash; }
+      if(a.cash){ eco.cash += a.cash; if(deferToasts && lastShift) lastShift._achvEarned = (lastShift._achvEarned||0) + a.cash; }
       if(a.skin && !cosm.ownedSkins.includes(a.skin)) cosm.ownedSkins.push(a.skin);
       unlockedNow.push(a);
     }

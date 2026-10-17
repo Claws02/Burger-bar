@@ -1167,6 +1167,108 @@ t('old saves get a starting demand from their lifetime rating', () => {
   eq(g.run('return eco.demand;'), 1.3);
 });
 
+// ── 15. Multiple stores on one street ──────────────────────────────────────
+section('15. Multiple live stores');
+
+// Achievements pay cash into the register; mark them earned so these tests
+// can check exact amounts.
+function noAchv(g){ g.run('achievements.unlocked = ACHIEVEMENTS.map(a=>a.id);'); }
+function twoStores(g){
+  noAchv(g);
+  g.run('eco.day = 20; eco.cash = 9000; openNewStore(); document.getElementById("alert-popup").style.display="none";');
+}
+
+t('a second store unlocks on Day 20 for $5,000 from the managing store, up to 3', () => {
+  const g = boot(); noAchv(g);
+  g.run('eco.day = 19; eco.cash = 99999;');
+  eq(g.run('return openNewStore();'), false, 'opened before Day 20:');
+  g.run('eco.day = 20; eco.cash = 4999;');
+  eq(g.run('return openNewStore();'), false, 'opened without $5,000:');
+  g.run('eco.cash = 20000;');
+  eq(g.run('return openNewStore();'), true);
+  eq(g.run('return [storeCtx.length, Math.round(ctxOf(0).eco.cash), ctxOf(1).eco.cash, ctxOf(1).eco.day].join();'), '2,15000,0,0',
+     'stores / HQ cash / new store cash / new store day:');
+  g.run('openNewStore();');
+  eq(g.run('return openNewStore();'), false, 'a fourth store:');
+  eq(g.run('return storeCtx.length;'), 3);
+  eq(g.run('return Object.values(ctxOf(2).stations).filter(s=>s.type==="fridge").length;'), 1, 'new store has a kitchen:');
+});
+
+t('transfers move cash between registers and never overdraw', () => {
+  const g = boot(); twoStores(g);
+  eq(g.run('return transferCash(0, 1, 1500);'), 1500);
+  eq(g.run('return [ctxOf(0).eco.cash, ctxOf(1).eco.cash].join();'), '2500,1500');
+  eq(g.run('return transferCash(1, 0, 99999);'), 1500, 'sending more than the register holds:');
+  eq(g.run('return ctxOf(1).eco.cash;'), 0);
+});
+
+t('every store trades in the same shift, and the shift ends when all are closed', () => {
+  const g = boot(); twoStores(g);
+  g.run(`useStore(1);
+    for(let i=0;i<3;i++){ upg.robots.push({role:['chef','waiter','busser'][i],hiredDay:0});
+      addStation('robot'+i,'robot',-4+i*2,0,1.5,1.5,{role:['chef','waiter','busser'][i],hiredDay:0}); }
+    upg.robotCount = 3; useStore(activeStoreIdx); executeDayStart();`);
+  eq(g.run('return [ctxOf(0).eco.day, ctxOf(1).eco.day, ctxOf(1).stats.groupsLeft].join();'), '21,1,2',
+     'calendar day / branch day / branch customers:');
+  let f = 0;
+  while(g.get('gameState') === 'playing' && f < 60000){ g.frame(60); f += 60; }
+  eq(g.get('gameState'), 'results', 'the shift never ended:');
+  ok(g.run('return ctxOf(1).stats.groupsServed;') > 0, 'the robot-staffed branch served nobody while the player was elsewhere');
+  ok(g.run('return ctxOf(1).eco.cash;') > 0, 'the branch kept none of its own takings');
+  eq(g.run('return lastShift.stores.length;'), 2, 'results rows:');
+  ok(g.run('return !!lastShift.stores[1].gradeInfo.grade;'), 'the branch got no grade');
+});
+
+t('walking past the midpoint makes the neighbour the active store', () => {
+  const g = boot(); twoStores(g);
+  g.run('executeDayStart(); player.pos.set(39.5, 0, 14); checkStoreCrossing();');
+  eq(g.run('return activeStoreIdx;'), 0);
+  g.run('player.pos.x = 40.5; checkStoreCrossing();');
+  eq(g.run('return activeStoreIdx;'), 1);
+  ok(Math.abs(g.run('return player.pos.x + storeOX;') - 40.5) < 1e-9, 'the player jumped in the world');
+  eq(g.run('return playerRoot.position.x;'), 80, 'player meshes follow the store root:');
+  eq(g.run('return checkColl(-45, 14, null);'), true, 'walked past the lawn edge');
+  eq(g.run('return checkColl(-35, 14, null);'), false, 'blocked on the lawn between stores');
+});
+
+t('the HUD money and HQ rewards stay with the right stores', () => {
+  const g = boot(); twoStores(g);
+  g.run('executeDayStart(); player.pos.x = 41; checkStoreCrossing(); updateCashUI();');
+  eq(g.text('cash-val'), '$0.00', 'HUD should show the store you are standing in:');
+});
+
+t('both stores survive save and reload', () => {
+  const g = boot(); twoStores(g);
+  g.run('transferCash(0,1,700); useStore(1); doBuy("xcounter"); useStore(activeStoreIdx); saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  const g2 = boot({ save });
+  eq(g2.run('return storeCtx.length;'), 2);
+  eq(g2.run('return [ctxOf(1).eco.cash, ctxOf(1).upg.extraCounters].join();'), '630,1', 'branch cash / counters after reload:');
+  eq(g2.run('return Object.values(ctxOf(1).stations).filter(s=>s.type==="counter").length;'), 3);
+});
+
+t('old multi-map saves park other map types instead of running them', () => {
+  const g = boot({ save: { v:6, stores:[
+    { id:0, name:'Burger Bar #1', type:'burger', eco:{cash:10, day:12}, upg:{}, gStats:{}, wings:[], layout:null },
+    { id:1, name:'Seafood Shack', type:'seafood', eco:{cash:99, day:3}, upg:{}, gStats:{}, wings:[], layout:null } ] } });
+  eq(g.run('return storeCtx.length;'), 1);
+  g.run('saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  eq(save.parkedStores.length, 1, 'the parked store was dropped from the save:');
+});
+
+t('quitting mid-shift rolls every store back', () => {
+  const g = boot(); twoStores(g);
+  g.run('transferCash(0,1,1000); executeDayStart(); useStore(1); eco.cash += 77; useStore(activeStoreIdx); quitToMenu();');
+  eq(g.run('return [ctxOf(0).eco.day, ctxOf(1).eco.day, ctxOf(1).eco.cash].join();'), '20,0,1000');
+});
+
+t("a young branch's shop follows the calendar, not the branch's age", () => {
+  const g = boot(); twoStores(g);
+  g.run('transferCash(0,1,4000); manageStore(1);');
+  eq(g.run('const c = eco.cash; doBuy("robot"); return c - eco.cash;'), 200, 'robot hire in a Day-0 branch on calendar Day 20:');
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){
