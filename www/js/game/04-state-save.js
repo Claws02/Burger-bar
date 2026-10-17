@@ -4,7 +4,7 @@
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
 function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}}; }
-function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, fryerCount:0}; }
+function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, fryerCount:0, priceLv:0, robotOC:0}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
 // ─── SKINS ───────────────────────────────────────────────────

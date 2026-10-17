@@ -126,7 +126,10 @@ function dailyGoalPool(day){
   const reach = easing ? 0.7 : 0.78 + h * 0.012;             // share of groups to serve
   const serveGoal = Math.min(groupsToday, Math.max(3, Math.floor(groupsToday * reach)));
   const earnBase = 40 + Math.min(day, 28) * 14 + Math.max(0, day - 28) * 4;
-  const earnGoal = Math.round(earnBase * (easing ? 0.8 : 1 + h * 0.04) / 5) * 5;
+  // Menu Prices raise every check, so the earn goal follows half of that boost:
+  // the upgrade still makes the goal easier, but it doesn't trivialise it.
+  const priceBoost = 1 + (menuPriceMult() - 1) * 0.5;
+  const earnGoal = Math.round(earnBase * priceBoost * (easing ? 0.8 : 1 + h * 0.04) / 5) * 5;
   const pay = r => Math.round(r * (1 + h * 0.06));
   const starGoal = h >= 5 ? 4.5 : 4;
   const pool = [

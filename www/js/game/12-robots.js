@@ -30,7 +30,7 @@ function updateRobots(ds){
     bot.mesh.position.y=Math.sin(Date.now()/180)*.15;
 
     const lvl = getRobotLevel(bot);
-    const botSpeed = 0.02 + (lvl * 0.025);
+    const botSpeed = (0.02 + (lvl * 0.025)) * robotOverclockMult();
 
     // Cooldown after each action to prevent thrashing
     if(bot._actionCooldown > 0) { bot._actionCooldown -= ds; }
@@ -419,7 +419,7 @@ function updateRobots(ds){
           if(t.type === 'table' && !bot.holding && t.dirtyTrays > 0) {
               t.dirtyTrays--; bot.holding = 'dirty_tray'; actionDone = true;
           } else if(t.type === 'sink' && bot.holding === 'dirty_tray') {
-              bot.holding = 'tray'; bot.timer = 100 - (lvl * 15); bot.state = 'washing'; actionDone = true;
+              bot.holding = 'tray'; bot.timer = (100 - (lvl * 15)) / robotOverclockMult(); bot.state = 'washing'; actionDone = true;
           } else if(t.type === 'trayrack' && bot.holding === 'tray') {
               t.cleanTrays++; bot.holding = null; actionDone = true;
           }

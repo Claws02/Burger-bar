@@ -98,6 +98,15 @@ scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(new THREE.Color(SKY).convertSRGBToLinear(), 60, 130);
 
 let frustumSize = 26;
+// How much of the world the camera shows. It used to grow 2.5 units per floor
+// expansion (26 -> 41 at full size), shrinking the characters to ~60% and
+// making the animations hard to read on a phone. The camera already follows
+// the player, so the view only needs to grow a little: enough that a typical
+// station cluster stays in frame. Capped at 30.
+const CAMERA_FRUSTUM_BASE = 26, CAMERA_FRUSTUM_PER_FLOOR = 0.7, CAMERA_FRUSTUM_MAX = 30;
+function cameraFrustumSize(){
+  return Math.min(CAMERA_FRUSTUM_MAX, CAMERA_FRUSTUM_BASE + (eco.floorLevel||0) * CAMERA_FRUSTUM_PER_FLOOR);
+}
 const camera = new THREE.OrthographicCamera(1,1,1,1,1,1000);
 camera.position.set(0,38,38); camera.lookAt(0,0,0);
 

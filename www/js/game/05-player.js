@@ -139,20 +139,37 @@ function getClosest(){
   return best;
 }
 
-function freeSpot(){
+// First open spot for a new station of footprint w x d. It used to demand 3.5
+// units between station CENTRES whatever their size, which wasted most of the
+// floor around small stations (counters, sinks) and threw "NO SPACE!" long
+// before the room was full. Now it checks real footprints and keeps a walkway
+// (FREE_SPOT_GAP) around the new station, so the player and robots can still
+// pass between it and its neighbours.
+const FREE_SPOT_GAP = 1.75;  // > 2 x player.radius (1.7): room to walk through
+function freeSpot(w=2, d=2){
   const b=bounds;
-  for(let z=b.t+2;z<b.b-2;z+=2) {
-    for(let x=b.l+2;x<b.r-2;x+=2) {
+  const probe = {id:'__probe', w:w+FREE_SPOT_GAP*2, d:d+FREE_SPOT_GAP*2};
+  for(let z=b.t+1;z<b.b-1;z+=1) {
+    for(let x=b.l+1;x<b.r-1;x+=1) {
+      // The station itself must fit inside the walls; its walkway may not.
+      if(x-w/2 < b.l+0.5 || x+w/2 > b.r-0.5 || z-d/2 < b.t+0.5 || z+d/2 > b.b-0.5) continue;
       let ok=true;
-      for(const k in stations){ 
-         const s=stations[k]; 
-         const dist = Math.sqrt((x-(s.pos?s.pos.x:s.x))**2+(z-(s.pos?s.pos.z:s.z))**2);
-         if(dist < 3.5) { ok=false; break; } 
+      for(const k in stations){
+         const s=stations[k];
+         if(s.type==='robot'){
+           if(Math.sqrt((x-s.pos.x)**2+(z-s.pos.z)**2) < Math.max(w,d)/2+1.2){ ok=false; break; }
+           continue;
+         }
+         if(s.type==='dumpster') continue;      // lives outside the walls
+         const pl=x-probe.w/2, pr=x+probe.w/2, pt=z-probe.d/2, pb=z+probe.d/2;
+         if(s.type==='table'){
+           if(Math.sqrt((x-s.x)**2+(z-s.z)**2) < s.r+Math.max(w,d)/2+FREE_SPOT_GAP){ ok=false; break; }
+         } else if(!(pr<=s.x-s.w/2||pl>=s.x+s.w/2||pb<=s.z-s.d/2||pt>=s.z+s.d/2)){ ok=false; break; }
       }
       if(ok&&!checkColl(x,z)) return {x,z};
     }
   }
-  return null; 
+  return null;
 }
 
 function getValidSpawn(){

@@ -17,16 +17,16 @@ if (loadedLayout && loadedLayout.length > 0) {
     });
 } else {
     initStations();
-    for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
-    for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
-    for(let i=1;i<=upg.extraCounters;i++) { const pos=freeSpot(); if(pos) addStation('counter'+(i+1),'counter',pos.x,pos.z,1.8,1.8); }
-    for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
+    for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(3.5,2); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
+    for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(2.2,2.2); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
+    for(let i=1;i<=upg.extraCounters;i++) { const pos=freeSpot(1.8,1.8); if(pos) addStation('counter'+(i+1),'counter',pos.x,pos.z,1.8,1.8); }
+    for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(5,5); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
     for(let i=0;i<upg.robotCount;i++)     { 
         const rData = upg.robots[i] || {role: 'busser', hiredDay: 1};
         const pos = getValidSpawn(); 
         if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role: rData.role, hiredDay: rData.hiredDay}); 
     }
-    for(let i=0;i<upg.sodaCount;i++) { const pos=freeSpot(); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
+    for(let i=0;i<upg.sodaCount;i++) { const pos=freeSpot(2,2); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
     saveGame();
 }
 
@@ -306,6 +306,7 @@ function animate(){
             // on Day 2 without inflating the rest of the curve.
             rawCash *= eco.day <= 4 ? 1.30 : eco.day <= 6 ? 1.15 : 1.0;
             rawCash *= diffPayoutMult();
+            rawCash *= menuPriceMult();
             // Heat pays: a hotter kitchen tips better, and rush-hour serves more so.
             rawCash *= heatTipMult() * rushTipMult();
 

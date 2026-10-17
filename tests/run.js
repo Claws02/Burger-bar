@@ -974,6 +974,82 @@ t('submits improvements once, and retries what Apple did not confirm', async () 
   eq(g.run('return __gcCalls.join();'), 'bb.days_in_business=13', 'only the improved board:');
 });
 
+// ── 12. Late-game balance ───────────────────────────────────────────────────
+section('12. Late-game balance (equipment caps, menu prices, camera)');
+
+// Buy an item until the shop refuses; returns how many were bought.
+function buyUntilStopped(g, id){
+  return g.run(`let n=0; for(let i=0;i<40;i++){ const c=eco.cash; doBuy("${id}"); if(eco.cash===c) break; n++; } return n;`);
+}
+
+t('equipment caps grow with each floor expansion', () => {
+  const g = boot();
+  g.run('eco.day = 18; eco.cash = 1e7;');
+  eq(g.run('return equipCap("counter");'), 3, 'counters at floor 0 (extras):');
+  eq(g.run('eco.floorLevel = 3; return equipCap("counter");'), 9, 'counters at floor 3:');
+  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 14, 'counters at full size (16 total):');
+  eq(g.run('return equipCap("grill") + "," + equipCap("sink") + "," + equipCap("soda") + "," + equipCap("table");'),
+     '9,9,6,14', 'grill/sink/soda/table caps at full size:');
+});
+
+t('a fully expanded bar has room for every counter, grill, sink, soda and table', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<6;i++) doBuy("expand");');
+  eq(g.run('return eco.floorLevel;'), 6);
+  const bought = {};
+  for(const id of ['table','xcounter','xgrill','xsink','soda']) bought[id] = buyUntilStopped(g, id);
+  eq(bought.xcounter, 14, 'extra counters bought:');
+  eq(bought.xgrill, 9, 'extra grills bought:');
+  eq(bought.xsink, 9, 'extra sinks bought:');
+  eq(bought.soda, 6, 'soda fountains bought:');
+  eq(g.run('return upg.tableCount;'), 14, 'tables:');
+  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 16, 'counters on the floor:');
+  // Nothing was placed overlapping another station.
+  const overlaps = g.run(`
+    const ss = Object.values(stations).filter(s=>s.type!=='robot' && s.type!=='dumpster'); let n=0;
+    for(const a of ss) for(const b of ss){ if(a===b || a.type==='table' || b.type==='table') continue;
+      if(Math.abs(a.x-b.x) < (a.w+b.w)/2 && Math.abs(a.z-b.z) < (a.d+b.d)/2) n++; }
+    return n;`);
+  eq(overlaps, 0, 'overlapping stations:');
+});
+
+t('the shop points at Expand while a cap can still grow', () => {
+  const g = boot();
+  g.run('eco.day = 18; eco.cash = 1e7;');
+  buyUntilStopped(g, 'xcounter');
+  g.run('activeShopTab = "Equipment"; updateShop();');
+  ok(g.run('return document.getElementById("shop-items").innerHTML.includes("EXPAND");'), 'capped counter should say EXPAND');
+});
+
+t('Menu Prices raise every payout and get pricier each level', () => {
+  const g = boot();
+  g.run('eco.day = 10; eco.cash = 1e6;');
+  eq(g.run('return menuPriceMult();'), 1);
+  const costs = g.run('const c=[]; for(let i=0;i<3;i++){ c.push(menuPriceCost(upg.priceLv)); doBuy("price"); } return c;');
+  eq(costs.join(','), '150,210,295', 'first three level prices:');
+  ok(Math.abs(g.run('return menuPriceMult();') - 1.45) < 1e-9, 'three levels = +45%');
+  // The earn goal follows half the boost, so it stays a goal.
+  const goal0 = g.run('upg.priceLv = 0; return dailyGoalPool(10).find(x=>x.id==="earn").goal;');
+  const goal4 = g.run('upg.priceLv = 4; return dailyGoalPool(10).find(x=>x.id==="earn").goal;');
+  ok(goal4 > goal0 && goal4 < goal0 * 1.6, `earn goal ${goal0} -> ${goal4} should rise by about +30%`);
+});
+
+t('robot hires climb gently; Overclock unlocks on Day 15 and speeds robots up', () => {
+  const g = boot();
+  eq(g.run('let t=0; for(let i=0;i<10;i++) t+=robotCost(i); return t;'), 4700, 'full crew price:');
+  g.run('eco.day = 14; eco.cash = 1e6;');
+  eq(buyUntilStopped(g, 'overclock'), 0, 'Overclock should be locked before Day 15:');
+  g.run('eco.day = 15;');
+  eq(buyUntilStopped(g, 'overclock'), 5, 'Overclock levels:');
+  ok(Math.abs(g.run('return robotOverclockMult();') - 1.6) < 1e-9, 'five levels = +60% robot speed');
+});
+
+t('the camera stays close enough to read characters at full size', () => {
+  const g = boot();
+  eq(g.run('eco.floorLevel = 0; return cameraFrustumSize();'), 26);
+  lte(g.run('eco.floorLevel = 6; return cameraFrustumSize();'), 30, 'fully expanded view size:');
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){

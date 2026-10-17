@@ -331,6 +331,7 @@ rawCash  = size * 16 * (stars/5)
 if stars>=4: rawCash += (stars-3) * size * 1.5  // mastery tip
 if VIP:      rawCash *= 3
 rawCash *= diffPayoutMult()                    // Casual mode etc.
+rawCash *= menuPriceMult()                     // 📈 Menu Prices: +15% per level, max 10
 streakBonus = 1 + min(serveStreak-1, 4) * 0.1  // up to +40%, ~6 s window
 cash = round(rawCash * streakBonus, 2)
 ```
@@ -387,7 +388,17 @@ Tiered by unlock day; all relevant to the single bar:
 | 1 | 🍱 Trays (+4), ⚡ Roller Skates (move speed ×5), 🔥 Turbo Grill (cook speed) |
 | 3 | 🪑 Add Table, 🌸 Fancy Decor (patience), 🍽️ Extra Counter |
 | 5 | 🥤 Soda Fountain (unlocks combos), 🏗️ Expand Floorplan, 🍳 Extra Grill, 🚿 Extra Sink, 🤖 Hire Robot |
+| 4 | 📈 Menu Prices (+15% on every order per level, 10 levels) |
 | 11 | 🍟 Fry Station (unlocks fries as a menu item) |
+| 15 | ⚙️ Robot Overclock (+12% robot speed per level, 5 levels; the late-game cash sink) |
+
+**Equipment caps grow with the floor** (`EQUIP_CAPS` / `equipCap()`): every
+Expand raises how many counters (+2), grills, sinks and tables (+1) and soda
+fountains (+1 per two) you can own, up to 16 counters / 10 grills / 10 sinks /
+6 fountains / 14 tables at full size. A capped item whose cap can still grow
+shows **🏗️ EXPAND** instead of MAX. New stations are placed by `freeSpot(w,d)`,
+which checks real footprints and keeps a walkway (`FREE_SPOT_GAP`) round them.
+Prices, the per-day buy plan and the reasoning are in `docs/BALANCE.md`.
 
 `unlockDay:N` means an item becomes buyable **after Day N is complete** (locked
 while `eco.day < N`). So the **Soda Fountain** (`unlockDay:5`) first appears in
@@ -396,7 +407,8 @@ before Day 6 starts. (There is intentionally no earlier mid-transition "Business
 Decision" popup; the fountain is a normal purchase.)
 
 Building/equipment items call `addStation(...)` so upgrades physically appear on
-the floor; the camera zooms out as `floorLevel` grows (`rebuildAll`).
+the floor; the camera follows the player and only zooms out slightly as
+`floorLevel` grows (`cameraFrustumSize()`, capped so characters stay readable).
 
 ---
 
