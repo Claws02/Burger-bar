@@ -116,6 +116,7 @@ const SOUND_HAPTICS = { coin:'light', serve:'success', error:'warning', dump:'me
 const _lastPlay = {};
 // `at` (audio-clock seconds) is only used by the offline preview renderer.
 function playSound(type, at) {
+  coopNoteSound(type);             // a co-op partner hears what happens near them
   if (window._remoteSim) return;   // a store you're not standing in trades quietly
   if (SOUND_HAPTICS[type] && at === undefined) haptic(SOUND_HAPTICS[type]);
   if (!audioCtx || (audioCtx.state !== 'running' && at === undefined)) return;

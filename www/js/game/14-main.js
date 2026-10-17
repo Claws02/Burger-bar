@@ -20,6 +20,8 @@ try { prewarmModels(); } catch(e){ console.warn('prewarm failed', e); }
 applyCrown();
 updateCashUI();
 showStartMenu();
+coopInstallNative();       // Game Center co-op invites (iPhone/iPad)
+sharedBarInstallNative();  // iCloud shared-bar invite links
 // Game Center sign-in shows Apple's banner; give the Home Screen a moment first.
 setTimeout(()=>{ try { gcSignIn(); } catch(e){} }, 1500);
 
@@ -148,11 +150,7 @@ function simulateStore(){
       g.target.set(g.tbl.x,0,g.tbl.z); 
       if(moveToTarget(g,ds)) { 
         g.state='ordering';
-        g.mesh.rotation.y = 0; 
-        g.mesh.children.forEach((c, idx) => {
-           c.position.set(idx === 0 ? -2.8 : 2.8, 0, 0); 
-           c.rotation.y = idx === 0 ? Math.PI/2 : -Math.PI/2; 
-        });
+        seatGroupMesh(g);
       }
     }
     else if(g.state==='ordering'){
@@ -196,7 +194,18 @@ function simulateStore(){
         const streakBonus = 1 + Math.min(serveStreak - 1, 4) * 0.1;
         rawCash *= streakBonus;
 
-        const cash = Math.round(rawCash * 100) / 100;
+        let cash = Math.round(rawCash * 100) / 100;
+        // Co-op: the visiting helper keeps the TIPS on the plates they served
+        // (everything above the menu price: mastery tip, heat, rush, streak).
+        if(coopHostSplitsTips() && g.servedBy && g.servedBy.some(Boolean)){
+          const sodaN = g.orders.filter(o => o==='burger_soda_on_tray' || o==='soda_on_tray').length;
+          const friesN = g.orders.filter(o => o==='fries_on_tray').length;
+          const check = (g.size*16 + sodaN*7 + friesN*5) * (stars/5) * (g.type === 'vip' ? 3 : 1)
+                      * (eco.day <= 4 ? 1.30 : eco.day <= 6 ? 1.15 : 1.0) * diffPayoutMult() * menuPriceMult();
+          const share = g.servedBy.filter(Boolean).length / g.size;
+          const tip = Math.max(0, Math.round((cash - check) * share * 100) / 100);
+          if(tip > 0){ cash = Math.round((cash - tip) * 100) / 100; coopSendTip(tip, g); }
+        }
         eco.cash += cash; stats.cashEarned += cash; stats.totalStars += stars; stats.groupsServed++;
         renderGoalsPanel();   // keep the top-left badge honest even when closed
         updateCashUI();
@@ -239,13 +248,7 @@ function simulateStore(){
       }
     }
     else if(g.state==='leave'){
-      if(!g.stoodUp) {
-         g.stoodUp = true;
-         g.mesh.children.forEach((c, idx) => {
-             c.position.set(idx * 1.7 - (g.size > 1 ? .85 : 0), 0, idx * .4);
-             c.rotation.y = 0;
-         });
-      }
+      if(!g.stoodUp) { g.stoodUp = true; standGroupMesh(g); }
       g.target.set(doorX(),0,bounds.b+2); if(moveToTarget(g,ds)) g.state='leaving';
     }
     else if(g.state==='leaving'){
@@ -291,6 +294,7 @@ function animate(){
 
   (window._clouds||[]).forEach(c=>{ c.position.x+=c._spd*ds; if(c.position.x>75) c.position.x=-75; });
 
+  coopTick();   // co-op: inputs, snapshots, the partner's chef
   if(gameState==='playing'||gameState==='edit'||gameState==='start_menu'){
 
     if(gameState==='edit'&&dragStation){
@@ -369,7 +373,11 @@ function animate(){
     camera.lookAt(camX+storeOX,0,camZ);
     fitSunToView(camX+storeOX, camZ);
 
-    if(gameState==='playing'){
+    if(gameState==='playing' && coopIsGuest()){
+      // A co-op guest doesn't run the restaurant: the host does, and sends it.
+      updateSinkHold(ds);
+      coopGuestFrame();
+    } else if(gameState==='playing'){
       updateSinkHold(ds);
       updateTutorial(ds);
       for(let si = 0; si < storeCtx.length; si++){

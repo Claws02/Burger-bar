@@ -200,5 +200,6 @@ function burgerDemand(){
     else if(s.type === 'robot' && carries(s.holding)) have++;
   }
   if(player && !window._remoteSim && carries(player.holding)) have++;
+  if(coopIsHost() && coop.remote && coop.remote.store === simIdx && carries(coop.remote.holding)) have++;   // the co-op partner's hands
   return want - have;
 }

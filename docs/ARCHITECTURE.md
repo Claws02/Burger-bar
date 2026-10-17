@@ -140,6 +140,15 @@ Up to `MAX_STORES` (3) Burger Bars stand side by side along one street,
 | Shared street | Grass, road and parked cars are built once across the whole street (`buildStreet`); each store builds only its own lot (apron, lamps, trees, sign). |
 | Saves | `saveGame()` writes every store (`writeStoreRecord`). On load, stores that aren't burger bars (or beyond `MAX_STORES`) from old multi-map saves go to `parkedStores`: kept, not run. |
 
+### Playing together
+
+Online co-op (Game Center, host-authoritative) and the shared partnership bar
+(CloudKit, one player at a time) are documented in
+[`MULTIPLAYER.md`](MULTIPLAYER.md). Both reuse the store contexts above: a co-op
+guest or a shared-bar session tears down the loaded stores
+(`teardownStores()`) and builds the other restaurant's in their place, and
+`saveGame()` routes accordingly.
+
 ### Resetting progress
 
 The Settings panel's **Reset All Progress** uses a **type-to-confirm** modal

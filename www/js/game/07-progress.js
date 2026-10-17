@@ -260,6 +260,7 @@ function flushAchvToasts(){
 
 // Pass deferToasts=true to hold the celebration toast for the Home Screen.
 function checkAchievements(deferToasts){
+  if(coopIsGuest()) return;   // a friend's bar doesn't earn your achievements
   if(!achievements.unlocked) achievements.unlocked=[];
   const m = achvMetrics();
   const unlockedNow = [];
