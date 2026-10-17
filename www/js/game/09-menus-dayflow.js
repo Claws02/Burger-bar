@@ -785,9 +785,9 @@ function queueNextDayHeadsUp(){
     color = '#FF7043'; title = '📣 TOMORROW: BIG APPETITES';
     parts.push("<b>Hungry regulars</b> (the big ones) order <b>three rounds</b> in a row. Keep a plate ready for their next order.");
   }
-  if(!SINGLE_BAR_MODE && upcoming === 30){
-    color = '#ab47bc'; title = '🏪 TOMORROW: EXPAND';
-    parts.push("After Day 30 you can <b>Open a New Store</b> ($3,000) from the Stores menu for passive income.");
+  if(upcoming === NEW_STORE_DAY && storeCtx.length < MAX_STORES){
+    color = '#ab47bc'; title = '🏪 A SECOND STORE';
+    parts.push(`From today you can <b>open a second Burger Bar</b> next door ($${NEW_STORE_COST.toLocaleString()}) from the <b>Stores</b> menu. Both trade during the same shift, and you can walk between them.`);
   }
 
   // Items whose unlock day is exactly today have just become buyable.

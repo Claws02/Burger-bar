@@ -100,14 +100,32 @@ function updateRobots(ds){
             const gCooked  = find(s => s.type==='grill' && s.slots.some(sl => sl && sl.state==='cooked'));
             const fryFree  = find(s => s.type==='fryer' && s.slots.includes(null));
             const gEmpty   = find(s => s.type==='grill' && s.slots.includes(null));
-            if(fryBurnt)      { bot.target = fryBurnt; bot.state = 'moving'; }
-            else if(gCharred) { bot.target = gCharred; bot.state = 'moving'; }
-            else if(fryDone)  { bot.target = fryDone;  bot.state = 'moving'; }
+            // Finished food that can still be saved comes before binning burnt
+            // food: a slow chef walking charcoal to the bin used to let the next
+            // patty burn too, and a fresh store could char every patty all day.
+            const fridge = find(s => s.type === 'fridge');
+            if(fryDone)       { bot.target = fryDone;  bot.state = 'moving'; }
             else if(gCooked)  { bot.target = gCooked;  bot.state = 'moving'; }
+            else if(fryBurnt) { bot.target = fryBurnt; bot.state = 'moving'; }
+            else if(gCharred) { bot.target = gCharred; bot.state = 'moving'; }
             else if(fryFree && friesDemand() > 0) { bot.target = fryFree; bot.state = 'moving'; }
-            else if(gEmpty && burgerDemand() > 0) {
-                const fridge = find(s => s.type === 'fridge');
-                if(fridge) { bot.target = fridge; bot.state = 'moving'; bot._grillTarget = gEmpty; }
+            else if(gEmpty && fridge && burgerDemand() > 0) {
+                // Don't leave for the fridge if a patty already on a grill would
+                // burn before this chef could get back: wait by the grill instead.
+                const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+                const trip = (dist(bot.pos, fridge) + dist(fridge, gEmpty)) / botSpeed + 45;
+                let deadline = Infinity, watch = null;
+                for(const k in stations){
+                    const g = stations[k];
+                    if(g.type !== 'grill' || !g.slots) continue;
+                    for(const sl of g.slots){
+                        if(!sl || sl.state !== 'raw') continue;
+                        const left = (200 - sl.progress) / Math.max(0.05, upg.grillMult) + 300;
+                        if(left < deadline){ deadline = left; watch = g; }
+                    }
+                }
+                if(deadline > trip) { bot.target = fridge; bot.state = 'moving'; bot._grillTarget = gEmpty; }
+                else if(watch && dist(bot.pos, watch) > 2) { bot.target = watch; bot.state = 'moving'; }
             }
             {
             }

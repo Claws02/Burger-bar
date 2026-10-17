@@ -6,7 +6,7 @@ from the model in `tools/balance-sim.js`. Re-run the model after any retune:
 
 ```
 node tools/balance-sim.js 4.0 0.85 1.0   # average player: ~4.0★, 85% of groups served
-node tools/balance-sim.js 4.4 0.92 1.3   # strong player: 4★+ rating brings 1.3x groups
+node tools/balance-sim.js 4.4 0.92 1.3   # strong player: good grades hold demand at 1.3x
 ```
 
 ---
@@ -27,13 +27,14 @@ node tools/balance-sim.js 4.4 0.92 1.3   # strong player: 4★+ rating brings 1.
 
 | Change | Detail |
 |---|---|
-| **Equipment caps grow with floor size** | Each Expand adds +2 counters, +1 grill, +1 sink, +1 table, and +1 soda fountain per two expansions. Full size (floor 6): **16 counters, 10 grills, 10 sinks, 6 fountains, 14 tables**. A capped item shows **🏗️ EXPAND** while more floor would raise its cap |
+| **Equipment caps grow with floor size** | Each Expand adds +2 counters, +1 grill, +1 sink, +1 table, and +1 soda fountain per two expansions. Floors 1–6 widen and deepen the lot; floors 7–10 only deepen it (stores sit side by side on the street). Full size (floor 10, 50×90): **22 counters, 14 grills, 14 sinks, 8 fountains, 18 tables**. A capped item shows **🏗️ EXPAND** while more floor would raise its cap |
 | Extra Counter price | `70 + 35n` (was `70 + 50n`), since you now buy up to 14 |
 | **📈 Menu Prices** (new, Day 4+) | +15% on every order per level, 10 levels (up to 2.5×). Cost `150 × 1.4^level`: $150, 210, 295, 410, 575, 805, 1,125, 1,575, 2,205, 3,085. The daily "Earn $X" goal follows half the boost |
 | **🤖 Robot hire price** | `200 + 60n` (was `200 + 120n`). The full crew of 10 costs $4,700 (was $7,400) |
 | **⚙️ Robot Overclock** (new, Day 15+) | +12% robot move speed and faster washing per level, 5 levels: $600, 1,000, 1,600, 2,400, 3,500. This is the late-game cash sink |
 | **Station spacing** | `freeSpot(w, d)` checks each station's real footprint and keeps a 1.75-unit walkway around it (wider than the player). Stations never overlap now. With everything bought, every cap fits from floor 4 up (on smaller floors, rearrange in Edit Mode or Expand) |
 | **Camera** | View size is `26 + 0.7 × floor`, capped at **30** (was up to 41). The camera already follows the player, so a big bar scrolls instead of shrinking |
+| **Robots** | A* pathfinding, nearest-free-station choice, one counter kept free for the player, cooking to demand, trays returned (see `docs/ARCHITECTURE.md` §9). On the same staffed shift, counters sit ~20% full instead of ~50% |
 
 Existing saves pick everything up automatically. A Day-18 bar can buy more
 counters right away (caps depend on its current floor level), and Menu Prices
@@ -52,10 +53,11 @@ The model buys along the plan in §4. "Average" means ~4.0★ and 85% of groups 
 | 18 | 19–24 | $1,257 | $10,153 | $1,868 | $15,200 |
 | 20 | 21–27 | $1,494 | $12,968 | $2,264 | $19,645 |
 | 25 | 26–28 | $1,974 | $21,738 | $2,540 | $32,126 |
-| 30 | 28 | $2,279 | $32,734 | $2,911 | $46,112 |
+| 30 | 31–40 | $2,506 | $33,187 | $4,086 | $52,564 |
 
 Before this change an average Day-18 bar made about $1,000/day, flat from
-there on. Menu Prices make the late game grow: about +80% by Day 25.
+there on. Menu Prices make the late game grow: about +80% by Day 25. From Day
+30 growth comes from grades (§5) and from more stores (§6).
 
 ## 4. Suggested bar by day
 
@@ -89,7 +91,57 @@ Rules of thumb behind the plan:
   goal: there's always something worth saving for. A strong player stays on
   plan and builds savings for Overclock and the Day-100 Crown.
 
-## 5. Tuning knobs
+## 5. Grades and demand (the post-Day-30 game)
+
+A shift never gets longer just because the calendar moves on: the base is
+`day + 1` groups, and it stops at **31 groups on Day 30**. What keeps growing
+is each store's **demand**, driven by its grades.
+
+| Grade | Service score (stars, walkouts as half-weight 1★) | Demand change for tomorrow |
+|---|---|---|
+| A+ | 4.6+ | +10% |
+| A | 4.2+ | +6% |
+| B | 3.6+ | +2% |
+| C | 3.0+ | 0 |
+| D | 2.3+ | −8% |
+| F | below 2.3 | −15% |
+
+Losing more than 15% of the room to walkouts costs one more letter.
+Customers per shift = base × demand. Demand is held to 0.6–1.3× before Day 30,
+then only the 0.6× floor applies (a 4× safety rail sits far above anything
+reachable). Higher demand also brings arrivals closer together (÷√demand) and
+more groups at once (+3 per 1.0 of demand above 1), still limited by your table
+count.
+
+What that means for a store that keeps earning A grades after Day 30:
+
+| Days past 30 at A (+6%/day) | Demand | Customers per shift | Tables to seat the rush |
+|---:|---:|---:|---:|
+| 0 | 1.3× | 40 | 12+ |
+| 5 | 1.6× | 50 | 14+ |
+| 10 | 1.9× | 59 | 16+ |
+| 15 | 2.2× | 68 | 18 (cap) |
+
+Past ~2.2× demand a single store is at full size, and the next lever is a
+second store.
+
+## 6. Multiple stores
+
+| Rule | Value |
+|---|---|
+| Unlock | Calendar Day 20, $5,000 paid by the store you're managing |
+| Most stores | 3, side by side on one street (walk between them during a shift) |
+| Money | Each store keeps its own takings. Move cash on the Stores screen ($100–$5,000 steps). Daily-goal and achievement cash goes to the first store |
+| A new store | Starts at its own Day 1 (2 customers) and ramps like a new bar did, but every shop item unlocked on the calendar is available from day one |
+| Failing | Only the first store can end the run. A struggling branch drops toward 0.6× demand (fewer customers) until it recovers |
+
+In the model a strong player has ~$5,000 spare around Day 18–20, right when
+the second store unlocks; an average player is still buying along §4 and gets
+there nearer Day 30. A sensible start for a branch: send it ~$1,500, buy two
+tables, a counter and a chef + waiter robot, and let it grow while you work the
+busier store.
+
+## 7. Tuning knobs
 
 | Constant | File | Controls |
 |---|---|---|
@@ -100,6 +152,10 @@ Rules of thumb behind the plan:
 | `FREE_SPOT_GAP` | `05-player.js` | Walkway left around auto-placed stations |
 | `CAMERA_FRUSTUM_*` | `01-renderer.js` | How far the camera zooms out per expansion |
 | `priceBoost` in `dailyGoalPool` | `07-progress.js` | How much Menu Prices raise the Earn goal |
+| `BASE_GROUPS_CAP_DAY`, `DEMAND` | `07b-grades.js` | Where the base day stops growing; demand range and per-grade steps |
+| `gradeFor()` | `07b-grades.js` | Grade thresholds |
+| `MAX_STORES`, `NEW_STORE_DAY`, `NEW_STORE_COST`, `STORE_SPACING` | `04a-stores.js` | Multi-store unlock, price and street layout |
 
 `tests/run.js` §12 locks in the caps, that every cap fits on a fully expanded
-floor with no overlaps, the price curves, and the camera limit.
+floor with no overlaps, the price curves, and the camera limit; §13 the robot
+behaviour; §14 grades and demand; §15 multiple stores.

@@ -40,7 +40,7 @@ const plan = [
 ];
 const level = k=>({trays:st.trays,speed:st.speed,grill:st.grill,table:st.tables,decor:st.decor,counter:st.counters,price:st.price,soda:st.soda,expand:st.floor,xgrill:st.grills,xsink:st.sinks,robot:st.robots,fryer:st.fryer,overclock:st.oc})[k];
 function income(day){
-  const groups = Math.min(28, Math.floor(Math.min(day+1,28)*(day===1?1:P.ratingMult)));
+  const groups = day===1 ? 2 : Math.round(Math.min(day+1,31)*P.ratingMult);   // base stops at Day 30; demand (grades) is the multiplier
   const s=P.stars;
   let pp = 16*(s/5) + (s>=4?(s-3)*1.5:0);
   if(st.soda) pp += 0.7*7*(s/5);

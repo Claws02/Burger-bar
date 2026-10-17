@@ -9,11 +9,10 @@ more locations. Nothing here is loaded by the live game.
 
 ## Why it's archived
 
-The live `index.html` now runs in **single-bar mode** (Burger Bar #1 only). The
-other "maps" and the multi-store empire were disabled — not deleted — so we can
-fully test and tune one bar's cook/deliver loops first. See
-[`../ARCHITECTURE.md`](../ARCHITECTURE.md) → *Single-bar mode* for exactly what
-changed and how to re-enable the other maps later.
+The live game runs up to three **Burger Bars** on one street (see
+[`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) → *Multiple stores*). The
+other map types (the Seafood Shack and the franchise reskins) were retired, not
+deleted; this backup is the reference for their scene and recipe code.
 
 ## Restoring a map
 

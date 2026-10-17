@@ -1269,6 +1269,21 @@ t("a young branch's shop follows the calendar, not the branch's age", () => {
   eq(g.run('const c = eco.cash; doBuy("robot"); return c - eco.cash;'), 200, 'robot hire in a Day-0 branch on calendar Day 20:');
 });
 
+t('a slow new-store chef does not burn every patty fetching the next one', () => {
+  // Seeds that used to char every patty: level-1 robots at a base-speed grill.
+  for(const seed of [7, 18]){
+    const g = boot(); twoStores(g);
+    g.run(`let s=${seed}; Math.random=()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; };
+      useStore(1);
+      for(let i=0;i<3;i++){ upg.robots.push({role:['chef','waiter','busser'][i],hiredDay:0});
+        addStation('robot'+i,'robot',-4+i*2,0,1.5,1.5,{role:['chef','waiter','busser'][i],hiredDay:0}); }
+      upg.robotCount = 3; useStore(activeStoreIdx); executeDayStart();`);
+    let f = 0;
+    while(g.get('gameState') === 'playing' && f < 60000){ g.frame(60); f += 60; }
+    eq(g.run('return ctxOf(1).stats.walkouts;'), 0, `seed ${seed}: walkouts at a 2-customer branch:`);
+  }
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){

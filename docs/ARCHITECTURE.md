@@ -5,11 +5,11 @@
 > robots, shop, achievements, and save format — written so the single bar can be
 > mastered and then *adapted* into a continuously-played game.
 >
-> The game currently runs in **single-bar mode**: only **Burger Bar #1** is
-> active. The Seafood Shack and the three franchise reskins are archived in
-> [`archive/index-multimap-backup.html`](archive/index-multimap-backup.html)
-> (a full, runnable copy of the previous multi-map build) and are intentionally
-> not created at boot. See [Single-bar mode](#single-bar-mode) below.
+> The game starts with **Burger Bar #1** and can grow to **three Burger Bars on
+> one street**, all trading live during the same shift (see
+> [Multiple stores](#3-multiple-stores)). The Seafood Shack and the franchise
+> reskins of the old multi-map build stay archived in
+> [`archive/index-multimap-backup.html`](archive/index-multimap-backup.html).
 
 > **Layout update:** the single `index.html` script has been split into ordered
 > files under [`www/js/game/`](../www/js/game/) (see the table in the
@@ -122,26 +122,23 @@ The render loop always runs; `gameState==='playing'` gates simulation
 
 ---
 
-## 3. Single-bar mode
+## 3. Multiple stores
 
-The multi-store empire is paused so the first bar can be perfected. A single
-flag — **`const SINGLE_BAR_MODE = true`** (declared next to `stores`/
-`activeStoreIdx`) — gates every path that could reach another map:
+Up to `MAX_STORES` (3) Burger Bars stand side by side along one street,
+`STORE_SPACING` (80) apart. All of them trade during every shift. Code:
+`04a-stores.js`.
 
-| Concern                | Behaviour now                                                             | Code |
-|------------------------|---------------------------------------------------------------------------|------|
-| New saves              | `bootstrapNewSave()` creates **only** `Burger Bar #1` (`type:'burger'`).   | ~L1910 |
-| Old multi-map saves    | Extra stores are **kept** in the `stores[]` array but `activeStoreIdx` is pinned to `0`; nothing is deleted. | `loadSave` else-branch ~L1898 |
-| Preview swipe gesture  | `initRestaurantSwipe()` + `homeSwipeStore()` early-return under the flag.  | ~L2956, ~L2970 |
-| PLAY button            | `homePlaySelected()` always launches store `0` under the flag.            | ~L3682 |
-| Stores screen          | `showStores()` redirects home under the flag; its VISIT/buy buttons never render. | ~L3434 |
-| Stores button / arrows / dots | Hidden in `showStartMenu()` / Home markup.                         | ~L3070, ~L614 |
-| Seafood / franchise code | Untouched and dormant (`isSeafood()` is simply never true with one burger store). | throughout |
-
-To **re-enable** more locations later: flip `SINGLE_BAR_MODE` to `false`,
-restore the extra `defStore(...)` calls in `bootstrapNewSave()`, and unhide the
-Stores button + swipe controls. The archived backup is the reference
-implementation.
+| Concern | How it works |
+|---|---|
+| Per-store state | Each store has a context (`storeCtx[i]`) holding its own `eco`, `upg`, `gStats`, `stations`, `groups`, `stats`, bounds, wall edges, nav grid and scene groups. `useStore(i)` swaps those into the globals the rest of the game already uses; `withStore(i, fn)` runs `fn` in a store and swaps back. |
+| Coordinates | Game logic runs in the current store's **local** frame (door at x=0, same as a single bar). Each store's scene groups sit under a root at `x = i * STORE_SPACING`; `storeOX` is the current store's offset (used by `scrXYZ`, floaters, the camera). |
+| The player | Lives in the local frame of the **active** store (`activeStoreIdx`). `playerRoot` carries the player, highlight ring, edit ghost and trail to that store's offset. `checkStoreCrossing()` re-bases the player into the neighbour when they cross the midpoint; `playerXLimits()` lets them walk out across the lawn. |
+| Simulation | The main loop calls `simulateStore()` once per store per frame (robots, cooking, arrivals, customers, payouts). `window._remoteSim` is set while simulating a store you're not in: its sounds are muted and it doesn't write the HUD. |
+| Shift | `executeDayStart()` runs `storeShiftStart()` in every store; the shift ends when `allStoresClosed()`. `endDay()` runs `storeShiftEnd()` per store (grade, demand, rolling rating) and builds `lastShift` (whole-chain totals + a row per store) for the results screen. Only store 0 can end the run. |
+| Days | The **calendar** is store 0's day (`calendarDay()`): shop unlocks, daily goals and heads-ups follow it. Each store's own `eco.day` is its age: a new branch starts at Day 1 and ramps up (customer count, VIPs, arrival pace). |
+| Money | Each store has its own register. Sales go to the store that made them; the shop spends the store you're managing (◀ ▶ in the shop header). Daily-goal and achievement cash goes to store 0. The Stores screen moves cash between registers (`transferCash`) and opens new stores (`openNewStore`: calendar Day 20, $5,000 from the managing store). |
+| Shared street | Grass, road and parked cars are built once across the whole street (`buildStreet`); each store builds only its own lot (apron, lamps, trees, sign). |
+| Saves | `saveGame()` writes every store (`writeStoreRecord`). On load, stores that aren't burger bars (or beyond `MAX_STORES`) from old multi-map saves go to `parkedStores`: kept, not run. |
 
 ### Resetting progress
 
@@ -354,7 +351,23 @@ Hired from the Shop, role-set in Edit Mode by facing one and pressing ACT
 - **Busser** — pulls dirty trays → sink (washes) → tray rack.
 
 Robots **level 1→5** with in-store days (`getRobotLevel`), which raises their
-move speed. Idle stores also pay a small passive income per robot.
+move speed (and ⚙️ Robot Overclock multiplies it).
+
+**Navigation and coordination** (`12a-robot-nav.js`):
+- A walkability grid of the store (walls with the door gap, padded station
+  footprints) is rebuilt when the layout changes; robots walk an A* path to
+  their target and replan once if they stall. The phase-through watchdog below
+  is the last resort, not the normal way around obstacles.
+- `pickNear` chooses the **nearest** matching station and skips a counter (or a
+  busser's table) another robot is already heading to.
+- `stageCounter` keeps one counter free for the player once there are three or
+  more, unless a robot has been stuck holding food for ~2 s.
+- Chefs start a patty only when `burgerDemand()` is positive (orders waiting
+  minus patties already on the grill, staged or carried), plate at the tray rack
+  when every counter is busy, and any robot delivers a plated order a table is
+  waiting for.
+- Trays go home: held trays to the rack, dirty trays to the sink, and idle
+  bussers clear trays left on counters.
 
 ### Robot FSM invariants (do not break these)
 
@@ -429,9 +442,9 @@ used to order them by *how achievable* they are.
 - **Full screen** (`showAchievements`): locked (closest first, with progress
   bars) then earned, under the lifetime-records banner.
 
-17 achievements span the whole first-bar journey (first day → serve 1,000 →
-Day 100), with cash and three skin unlocks (gold / fire / alien). The old
-multi-store "Empire" achievement was removed for single-bar mode.
+19 achievements span the whole journey (first day → serve 1,000 → Day 100,
+plus opening a second and third store), with cash and three skin unlocks
+(gold / fire / alien).
 
 ---
 

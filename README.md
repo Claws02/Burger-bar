@@ -2,7 +2,8 @@
 
 A 3D cooking & restaurant tycoon game for iPhone (and the web). Grill burgers,
 serve impatient customers, earn stars and tips, and grow a tiny diner into a
-staffed, neon-lit Day-20 machine.
+staffed, neon-lit machine, then open up to three Burger Bars on one street and
+walk between them while they all trade.
 
 Built with [Three.js](https://threejs.org/) r128 and plain JavaScript (no
 bundler), wrapped for iOS with [Capacitor](https://capacitorjs.com/) 8.
@@ -22,7 +23,7 @@ ios/                    Xcode project (Swift Package Manager, no CocoaPods)
 store/                  App Store icon (1024, opaque) and 6.9" screenshots
 tests/                  headless test suite (real game code, stubbed THREE + DOM)
 tools/                  browser smoke/perf runs, art + screenshot renderers, checks
-docs/                   architecture, audits, App Store release guide
+docs/                   architecture, balance, audits, App Store release guide
 archive/                the parked multi-map build (incl. the removed Seafood Shack)
 ```
 
@@ -38,14 +39,17 @@ earlier file; `npm run check` enforces that.
 | `02-world` | scenery, room + decor tiers, station models, upgrade tiers, station batching |
 | `03-items` | food/tray models (baked) |
 | `04-state-save` | game data, save/load with backup recovery |
+| `04a-stores` | up to three live stores on one street: per-store state, walking between them, transfers |
 | `05-player` … `06-shop-edit` | player, collision, edit mode, shop |
 | `07-progress` | achievements, daily goals |
 | `07a-adaptive` | **Kitchen Heat** adaptive difficulty, lunch rushes |
+| `07b-grades` | store grades and the demand they drive (customer count past Day 30) |
 | `08-home` | home screen chef + live bar showcase |
 | `08a-characters` | the 12 player characters on one rig (walk cycle, carry pose, skins, crown) |
 | `09-menus-dayflow` | menus, settings, day start/end, results |
 | `09a-gamecenter` | Game Center leaderboards (score sync), achievements flag |
 | `10-customers` … `12-robots` | customers, actions, robot AI |
+| `12a-robot-nav` | robot A* pathfinding, station claims, cook-to-demand |
 | `13-hud-input` | pooled floating UI, touch/keyboard input |
 | `13a-tutorial` | hands-on first-shift tutorial |
 | `14-main` | boot sequence and main loop |

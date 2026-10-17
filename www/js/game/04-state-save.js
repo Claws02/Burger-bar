@@ -29,10 +29,7 @@ const SKIN_DEFS = [
 let stores = [];
 let activeStoreIdx = 0;
 
-// Multiple stores are live again (04a-stores.js): up to three Burger Bars on
-// one street, all trading during the same shift. The old swipe-between-maps
-// empire (other map types, passive income) stays retired.
-const SINGLE_BAR_MODE = false;
+// Multiple stores run live on one street: see 04a-stores.js.
 
 function defStore(id, name, type='burger') {
   return {
