@@ -46,6 +46,7 @@ function coopPartnerHere(){ return !!(coop.role && coop.peer); }
 function coopHostSplitsTips(){ return coopIsHost() && !coop.shared && !!coop.peer; }
 function coopSend(msg){ if(coop.link){ try { coop.link.send(msg); } catch(e){ console.warn('co-op send failed', e); } } }
 function coopMyName(){
+  try { const n = localStorage.getItem('burgerBoss_coopName'); if(n && n.trim()) return n.trim().slice(0, 16); } catch(e){}
   try { if(gcState && gcState.name) return gcState.name; } catch(e){}
   return (SKIN_DEFS.find(s => s.id === cosm.equippedSkin) || {}).name || 'Chef';   // e.g. "Ninja Chef"
 }
@@ -98,7 +99,14 @@ function coopBegin(role, link, opts){
   Object.assign(coop, { role, link, peer: null, shared: !!opts.shared || sharedBarActive(), remote: null, hostAv: null,
                         events: [], gotWorld: false, frame: 0, lastRecv: performance.now(), tipsTotal: 0 });
   link.onmessage = coopOnMessage;
-  link.onclose = why => { if(coop.link === link) coopEnd(why === 'left' ? 'Your partner left.' : 'Lost the connection to your partner.'); };
+  link.onclose = why => {
+    if(coop.link !== link) return;
+    coopEnd(why === 'left' ? 'Your partner left.'
+          : why === 'full' ? 'That room already has two chefs.'
+          : why === 'offline' ? "Couldn't reach the co-op lobby. Check your connection and try again."
+          : 'Lost the connection to your partner.');
+  };
+  coop.startedAt = performance.now();
   if(role === 'host'){
     coop.remote = { pos: new THREE.Vector3(0, 0, 14), dir: Math.PI, holding: null, store: 0, moving: false, wash: null };
   } else {
@@ -116,7 +124,7 @@ function coopEnd(reason){
   coop.link = null;
   if(link){ try { link.close(); } catch(e){} }
   coopRemoveAvatar();
-  coop.role = null; coop.peer = null; coop.remote = null; coop.hostAv = null; coop.events = [];
+  coop.role = null; coop.peer = null; coop.remote = null; coop.hostAv = null; coop.events = []; coop.netStatus = '';
   coopHideWait();
   if(wasGuest){
     teardownStores();
@@ -321,7 +329,7 @@ function coopGuestDayStart(){
   document.getElementById('pause-btn').style.display = 'flex';
   { const gh = document.getElementById('goals-hud'); if(gh) gh.style.display = 'none'; }
   document.getElementById('day-banner').innerHTML = `DAY ${calendarDay()}<br>` +
-    `<span id="day-store" style="font-size:11px;color:#FFD54F;">👥 ${coopPeerName()}'s ${coop.shared ? 'shared bar' : 'bar'}</span>` +
+    `<span id="day-store" style="font-size:11px;color:#FFD54F;">👥 ${coopPeerName()}</span>` +
     `<span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${stats.groupsLeft || 0}</span>`;
   player.holding = null; updateHolding();
   manageStore(0);
@@ -457,7 +465,13 @@ function coopGuestFrame(){
 function coopTick(){
   if(!coop.role) return;
   coop.frame++;
-  if(performance.now() - coop.lastRecv > COOP_TIMEOUT_MS){ coopEnd('Lost the connection to your partner.'); return; }
+  // Only a partner who has gone quiet times out; a host can wait for a friend
+  // as long as they like, and a guest gives up on a room nobody answers.
+  if(coop.peer && performance.now() - coop.lastRecv > COOP_TIMEOUT_MS){ coopEnd('Lost the connection to your partner.'); return; }
+  if(coopIsGuest() && !coop.peer && performance.now() - coop.startedAt > 25000){
+    coopEnd(coop.link && coop.link.code ? `No one answered in room ${coop.link.code}. Check the code with your friend.` : "Couldn't reach your friend.");
+    return;
+  }
   const now = performance.now();
   if(now - (coop.lastPing || 0) > COOP_PING_MS){ coop.lastPing = now; coopSend({ t: 'ping' }); }
   if(coopIsGuest()){
@@ -474,7 +488,8 @@ function coopTick(){
     if(!coop.peer) return;
     if(gameState === 'playing'){
       coopHostWashTick();
-      if(coop.frame % COOP_SNAP_EVERY === 0) coopSend(coopSnapshot());
+      // Through a relay (no direct phone-to-phone link) send half as often.
+      if(coop.frame % (coop.link && coop.link.slow ? COOP_SNAP_EVERY * 2 : COOP_SNAP_EVERY) === 0) coopSend(coopSnapshot());
       coopDrawAvatar(r.store, r.pos.x, r.pos.z, r.dir, r.holding, r.moving);
     } else coopHideAvatar();
   }
@@ -579,14 +594,26 @@ function renderCoop(){
   if(!box) return;
   let h = '';
   if(coop.role){
-    h += `<div class="cp-status">${coopIsHost()
-      ? (coop.peer ? `👥 <b>${coopPeerName()}</b> is in your ${coop.shared ? 'shared ' : ''}bar.` : 'Waiting for your friend to join…')
+    const code = coop.link && coop.link.code;
+    h += `${coopIsHost() && code ? `<div class="cp-codebox"><div class="cp-label">Room code</div><div class="cp-code">${code}</div></div>` : ''}
+      <div class="cp-status">${coopIsHost()
+      ? (coop.peer ? `👥 <b>${coopPeerName()}</b> is in your ${coop.shared ? 'shared ' : ''}bar. Press PLAY when you're ready.` : 'Tell your friend the code. Waiting for them to join…')
       : `You're helping in <b>${coopPeerName()}</b>'s bar.`}</div>
+      ${coop.netStatus && (coop.peer || coopIsGuest()) ? `<div class="cp-note">${coop.netStatus}</div>` : ''}
       <button class="cp-btn danger" onclick="coopLeave()">End session</button>`;
   } else if(coopNative()){
     h += `<div class="cp-text">Invite a Game Center friend to work your bar with you. You both cook, serve and clean; the money goes to your bar and your friend keeps the tips on the plates they serve.</div>
       <button class="cp-btn" onclick="coopInvite()">🎮 Invite a friend</button>
       <div class="cp-note">To join a friend, accept their invite from the Game Center notification.</div>`;
+  } else if(typeof RTCPeerConnection !== 'undefined' || typeof WebSocket !== 'undefined'){
+    const name = (() => { try { return localStorage.getItem('burgerBoss_coopName') || ''; } catch(e){ return ''; } })();
+    h += `<div class="cp-text">Play in the same bar with a friend on their own phone. You both cook, serve and clean; the money goes to the host's bar and the helper keeps the tips on the plates they serve.</div>
+      <label class="cp-label">Your chef's name</label>
+      <input id="coop-name" class="cp-input" maxlength="16" placeholder="${coopMyName()}" value="${name.replace(/"/g,'&quot;')}" oninput="coopSaveName(this.value)">
+      <button class="cp-btn" onclick="coopHostRoom()">🏠 Host my bar</button>
+      <div class="cp-row"><input id="coop-code" class="cp-input code" maxlength="10" placeholder="CODE" autocapitalize="characters" autocomplete="off">
+        <button class="cp-btn join" onclick="coopJoinRoom()">Join</button></div>
+      <div class="cp-note">The host taps "Host my bar" and reads out the 4-letter code; the friend types it here and taps Join.</div>`;
   } else if(coopDevTabs()){
     h += `<div class="cp-text">Developer mode: open this page in two tabs to play together.</div>
       <button class="cp-btn" onclick="coopBegin('host', coopTabLink('dev')); renderCoop();">Host in this tab</button>
@@ -597,6 +624,31 @@ function renderCoop(){
   h += renderSharedBarSection();
   box.innerHTML = h;
 }
+// Web: host a room / join one with its code (13d-weblink.js).
+function coopSaveName(v){ try { localStorage.setItem('burgerBoss_coopName', String(v || '').slice(0, 16)); } catch(e){} }
+function coopNetStatus(text){
+  coop.netStatus = text;
+  if(coopIsGuest() && !coop.gotWorld) coopShowWait(text);
+  const el = document.getElementById('coop-screen');
+  if(el && el.style.display === 'flex') renderCoop();
+}
+function coopHostRoom(){
+  if(coop.role) return;
+  const code = coopNewCode();
+  coop.netStatus = '';
+  coopBegin('host', coopRoomLink('host', code, coopNetStatus));
+  renderCoop();
+}
+function coopJoinRoom(){
+  if(coop.role) return;
+  const code = coopCleanCode(document.getElementById('coop-code').value);
+  if(code.length !== 4){ showToast('Type the 4-letter code from your friend', 2400); return; }
+  coop.netStatus = '';
+  closeCoop();
+  coopBegin('guest', coopRoomLink('guest', code, coopNetStatus));
+}
+window.coopHostRoom = coopHostRoom; window.coopJoinRoom = coopJoinRoom; window.coopSaveName = coopSaveName;
+
 function coopInvite(){
   if(!coopNative()) return;
   window.NativeBridge.coop.invite().then(r => { if(r && r.error) showToast(r.error, 3000); }).catch(() => {});

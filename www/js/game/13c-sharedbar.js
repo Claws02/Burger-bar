@@ -74,8 +74,9 @@ function refreshSharedBarInfo(){
 // The Play Together screen's shared-bar section (rendered by renderCoop()).
 function renderSharedBarSection(){
   const be = sbBackend();
+  // The shared bar needs iCloud, so the web version leaves it out for now.
+  if(!be) return '';
   let h = '<div class="cp-sep"></div><div class="cp-title">🤝 Shared bar</div>';
-  if(!be) return h + '<div class="cp-text">A bar you and a partner own together, saved in iCloud. Available in the iPhone/iPad app.</div>';
   const i = sharedBar.info;
   if(sharedBar.active){
     return h + `<div class="cp-status">You're running <b>${sharedBar.name || 'the shared bar'}</b>. Invite your partner above to play it together.</div>

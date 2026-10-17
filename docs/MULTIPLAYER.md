@@ -1,11 +1,50 @@
 # Burger Bar — Playing Together
 
-Two ways to play with someone else, both free (no servers, no fees beyond the
-Apple Developer Program you already have). Both are iPhone/iPad only; the web
-version stays single-player.
+Two ways to play with someone else. Both are free: there are no servers to run
+and nothing to sign up for.
 
 | | Live co-op | Shared bar |
 |---|---|---|
+| What | Two phones in the **same restaurant at the same time** | A restaurant **two players own**; either can run it |
+| Web version (GitHub Pages / home screen) | ✅ **Room codes**: no setup at all | — (not on the web yet) |
+| iPhone/iPad app (App Store build) | ✅ Game Center invites | ✅ iCloud (CloudKit) |
+| Whose bar | The host's | Both partners' |
+| Money | Sales go to the host's bar; the helper keeps the **tips** on plates they serve, paid into the helper's own bar | All of it stays in the shared bar |
+
+## Web version: room codes
+
+1. Both players open the game (the home-screen icon works) and tap **👥 Together**.
+2. Type a chef name (optional).
+3. One player taps **🏠 Host my bar** and reads out the 4-letter code.
+4. The other types the code and taps **Join**.
+5. The host presses PLAY. Both of you are in the host's bar.
+
+How it connects (`www/js/game/13d-weblink.js`):
+
+- **Lobby:** both phones connect over secure WebSockets to free public MQTT
+  brokers (HiveMQ, EMQX, Mosquitto). No accounts are needed, and they try all
+  three at once so one being down doesn't matter. The host listens on
+  `burgerbar/coop/v1/<CODE>/h`; the guest announces "join" there until the host
+  answers. A third player trying the same code is told the room is full.
+- **Direct link:** through the lobby the phones swap WebRTC offers (public STUN
+  only) and open a data channel straight between them, so play doesn't touch
+  the lobby (about 45 KB/s for a busy bar).
+- **Relay fallback:** until the direct link opens, or on networks where it
+  can't (some cellular carriers), game messages go through the broker instead,
+  at half the update rate (about 22 KB/s). The Together screen shows
+  "Connected directly ⚡" or "Connected through the relay".
+- Messages on the public brokers are visible to anyone who knows the room's
+  topic. All they contain is game state and the chef name you typed.
+
+Checked end to end with `node tools/coop-web-check.js` (two separate Chromium
+"phones", a local MQTT broker standing in for the public ones, a real WebRTC
+link; `RELAY=1` forces the relay path) and in `npm test` §17 (an in-memory
+broker exercising the game's own MQTT client, the lobby, the relay, wrong
+codes and full rooms). The one thing not testable from the build machine is
+the public brokers themselves (its network blocks them), so the first real
+two-phone game is the final check.
+
+---|---|---|
 | What | Two phones in the **same restaurant at the same time** | A restaurant **two players own**; either can run it |
 | Apple service | Game Center (real-time match, Apple relays the traffic) | iCloud / CloudKit (a shared record zone) |
 | Whose bar | The inviter's (host) | Both partners' |
@@ -14,7 +53,7 @@ version stays single-player.
 
 ---
 
-## How live co-op works
+## How live co-op works (both versions)
 
 - **Host-authoritative.** The host's phone runs the restaurant exactly as in
   single player. The guest's phone loads a copy of the host's stores, moves its
@@ -64,6 +103,7 @@ version stays single-player.
 | File | What |
 |---|---|
 | `www/js/game/13b-coop.js` | Co-op session, links (Game Center, browser tabs, tests), snapshots, the partner's chef, screens |
+| `www/js/game/13d-weblink.js` | Web room codes: MQTT lobby client, WebRTC data channel, relay fallback |
 | `www/js/game/13c-sharedbar.js` | Shared-bar mode, save routing, lock heartbeat, the dev/test stand-in backend |
 | `ios/App/App/CoopPlugin.swift` | Game Center: invite-only matchmaking, accepting invites, send/receive, disconnects |
 | `ios/App/App/SharedBarPlugin.swift` | CloudKit: create + share, invite sheet, open/lock, save, close |
@@ -72,7 +112,9 @@ version stays single-player.
 
 ---
 
-## One-time setup in Xcode and Apple's portals
+## App Store build only: one-time setup in Xcode and Apple's portals
+
+None of this is needed for the web version.
 
 1. **Xcode → App target → Signing & Capabilities**
    - **Game Center**: already on.
