@@ -501,8 +501,8 @@ function refreshUpgradeVisuals(){
     if(s.type==='grill' && s.mesh._tier !== gt) mesh = buildGrill();
     else if(s.type==='table' && s.mesh._tv !== tv) mesh = buildTable();
     else if(s.type==='robot'){
-      const lvl = getRobotLevel(s), lt = lvl >= 5 ? 2 : lvl >= 3 ? 1 : 0;
-      if(s.mesh._lvlTier !== lt) mesh = buildRobot(s.role, lvl);
+      const lvl = getRobotLevel(s);
+      if(s.mesh._lvlTier !== robotTier(lvl)) mesh = buildRobot(s.role, lvl);
     }
     if(!mesh) continue;
     const old = s.mesh;
@@ -516,21 +516,21 @@ function refreshUpgradeVisuals(){
 }
 function buildRobot(role, lvl){
   lvl = lvl || 1;
-  const lt = lvl >= 5 ? 2 : lvl >= 3 ? 1 : 0;
+  const lt = robotTier(lvl);   // 0 plain · 1 chrome · 2 gold · 3 trained elite (Lv.7+)
   const g = bake('robot|'+role+'|'+lt, ()=>{
     const g=new THREE.Group();
     const body = role==='chef'?'#00acc1':role==='waiter'?'#d81b60':'#fb8c00';
-    const trim = lt===2 ? MP('#ffca28',150) : lt===1 ? CHROME() : MP('#90a4ae',60);
+    const trim = lt===3 ? MP('#b388ff',160) : lt===2 ? MP('#ffca28',150) : lt===1 ? CHROME() : MP('#90a4ae',60);
     addMesh(g, GCylT(.55,.62,.25,20), M('#263238'), 0,.28,0);                 // wheel base
     addMesh(g, GTor(.6,.08,8,24), trim, 0,.28,0, Math.PI/2,0,0,false);
     addMesh(g, GRBox(1.15,1.15,1.0,.38), MP(body,70), 0,1.05,0);              // body
     addMesh(g, GRBox(.7,.5,.05,.12), MP('#eceff1',90), 0,1.05,.5, 0,0,0,false); // chest plate
-    addMesh(g, GSph(.07,8), ME(lt===2?'#ffd54f':'#76ff03'), .2,1.15,.53, 0,0,0,false);
+    addMesh(g, GSph(.07,8), ME(lt===3?'#e040fb':lt===2?'#ffd54f':'#76ff03'), .2,1.15,.53, 0,0,0,false);
     addMesh(g, GRBox(.95,.62,.85,.24), MP('#f5f7f8',90), 0,1.95,0);           // head
     addMesh(g, GRBox(.78,.38,.06,.14), MP('#0f1a20',140), 0,1.97,.42, 0,0,0,false); // visor
     for(const ex of [-.17,.17]) addMesh(g, GRBox(.14,.16,.04,.06), ME('#4dd0e1'), ex,2.0,.46, 0,0,0,false);
     addMesh(g, GCyl(.04,.4,8), trim, 0,2.45,0);
-    addMesh(g, GSph(.1,10), ME(lt===2?'#ffd54f':body), 0,2.7,0, 0,0,0,false);
+    addMesh(g, GSph(.1,10), ME(lt===3?'#e040fb':lt===2?'#ffd54f':body), 0,2.7,0, 0,0,0,false);
     for(const ax of [-.68,.68]){                                               // arms
       addMesh(g, GSph(.15,10), trim, ax,1.3,0, 0,0,0,false);
       addMesh(g, GCap(.11,.45), MP('#b0bec5',60), ax*1.05,1.0,.12, -.5,0,0,false);
@@ -611,7 +611,7 @@ function addStation(id,type,x,z,w,d,opts={}){
   if(type==='trash')   mesh=buildTrash();
   if(type==='dumpster')mesh=buildDumpster();
   if(type==='table')   mesh=buildTable();
-  if(type==='robot')   mesh=buildRobot(opts.role||'busser', getRobotLevel({hiredDay:opts.hiredDay}));
+  if(type==='robot')   mesh=buildRobot(opts.role||'busser', getRobotLevel({hiredDay:opts.hiredDay, trained:opts.trained}));
   mesh.position.set(x,0,z);
   stGrp.add(mesh);
   const s={id,type,x,z,w,d,mesh,visuals:[],...opts};

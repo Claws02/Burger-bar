@@ -615,7 +615,7 @@ function storeShiftStart(){
     if(s.type==='table')   { s.group=null; s.served=0; s.dirtyTrays=0; }
   }
   groups.forEach(g=>discard(actGrp, g.mesh)); groups=[];
-  for(const k in stations) if(stations[k].type==='robot') { stations[k].state='idle'; stations[k].holding=null; }
+  for(const k in stations) if(stations[k].type==='robot') { const b=stations[k]; b.state='idle'; b.holding=null; b.target=null; b.job=null; b.work={}; }
 
   updateStationVisuals();
   // Robots level up overnight; swap their models and call it out.

@@ -358,7 +358,15 @@
 
   <div id="edit-hud">
     EDIT MODE — face item + act to move/cycle role<br>
+    <button id="staff-btn" onclick="showStaff()">👥 STAFF</button>
     <button id="finish-edit-btn" onclick="saveEditMode()">DONE ✓</button>
+  </div>
+
+  <div id="staff-panel">
+    <div class="sf-top"><h1>👥 STAFF</h1><div id="staff-cash"></div></div>
+    <div class="sf-sub">Change jobs here, set what each chef cooks, and pay to train robots up to level 8. Levels 1–5 also come free with days on the job.</div>
+    <div id="staff-list"></div>
+    <button class="btn-green" onclick="closeStaff()" style="margin-top:12px;">DONE</button>
   </div>
 
   <div id="expand-picker">

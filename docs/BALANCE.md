@@ -149,6 +149,7 @@ busier store.
 | `MENU_PRICE_STEP`, `MENU_PRICE_MAX`, `menuPriceCost()` | `06-shop-edit.js` | Menu Prices strength and price curve |
 | `OVERCLOCK_COSTS`, `robotOverclockMult()` | `06-shop-edit.js` | Late-game sink |
 | `robotCost()` | `06-shop-edit.js` | Robot hire price |
+| `ROBOT_TRAIN_COST`, `ROBOT_MAX_LEVEL`, `robotSpeed()` | `12b-robot-jobs.js` | Robot training prices (Lv1→2 $150 … Lv7→8 $2,600; $7,350 for 1→8) and level effects |
 | `FREE_SPOT_GAP` | `05-player.js` | Walkway left around auto-placed stations |
 | `CAMERA_FRUSTUM_*` | `01-renderer.js` | How far the camera zooms out per expansion |
 | `priceBoost` in `dailyGoalPool` | `07-progress.js` | How much Menu Prices raise the Earn goal |

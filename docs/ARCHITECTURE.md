@@ -367,16 +367,40 @@ move speed (and ⚙️ Robot Overclock multiplies it).
   footprints) is rebuilt when the layout changes; robots walk an A* path to
   their target and replan once if they stall. The phase-through watchdog below
   is the last resort, not the normal way around obstacles.
-- `pickNear` chooses the **nearest** matching station and skips a counter (or a
-  busser's table) another robot is already heading to.
+- Claims keep two robots off one counter (or one busser's table).
 - `stageCounter` keeps one counter free for the player once there are three or
   more, unless a robot has been stuck holding food for ~2 s.
-- Chefs start a patty only when `burgerDemand()` is positive (orders waiting
-  minus patties already on the grill, staged or carried), plate at the tray rack
-  when every counter is busy, and any robot delivers a plated order a table is
-  waiting for.
-- Trays go home: held trays to the rack, dirty trays to the sink, and idle
-  bussers clear trays left on counters.
+
+**Jobs** (`12b-robot-jobs.js`). Each job is one object with `ok(bot, s)` (can
+this robot do it at station `s` now?) and `act(bot, s)` (do it). The planner
+(`robotPlan`) scores every (job, station) pair that passes `ok`, minus
+distance, and walks to the best. `ok` is re-checked every 20 frames on the way
+and again on arrival; if the job vanished, the robot avoids that job at that
+station for ~2 s and plans again at once. Planning and acting can no longer
+disagree, which is what used to loop robots forever (e.g. a waiter with an
+empty tray walking back and forth to a counter holding a plated burger).
+- **Chefs:** take cooked food first (it burns), then bin burnt food, drop fries
+  baskets when fries are owed (`friesDemand`), fetch patties when burgers are
+  owed (`burgerDemand`) and no patty on the grill would burn before they got
+  back. They plate at the tray rack when the plate is needed and has somewhere
+  to go; otherwise they stage the loose patty.
+- **Waiters:** deliver, pick up ready plates, build plates with a tray
+  (counter or grill patty, fries, soda), finish combos, and return an unused
+  tray. With nothing to serve they clear tables, bag trash and tidy stray trays.
+- **Bussers:** tables → sink (wash) → rack, stray trays, trash.
+- **No over-making:** `wantCount(item)` (orders from seated and queued
+  customers) minus `inFlight(item)` (in hands or on counters) gates sodas, trays
+  and plating, so two waiters don't pour two sodas for one order.
+- **Swap:** a robot holding a plate nobody wants can swap it for the plate a
+  table is waiting on, so full hands plus full counters can't stall the crew.
+- Anything still unusable is binned after ~3 s and dropped after ~7 s.
+
+**Staff** (`12c-staff.js`). Robots keep `role`, `hiredDay`, `trained` and `spec`
+(a chef's Grill / Fryer / Both) on the station object, in the saved layout and in
+`upg.robots`. `getRobotLevel` = time level (1–5) + paid training, capped at 8;
+`trainRobot` charges `ROBOT_TRAIN_COST[level]`. Entering Edit Mode lines robots
+up in a grid at the front of the room (`arrangeRobotGrid`); the 👥 STAFF button
+opens the Staff list (role, specialty, level, today's work, Train).
 
 ### Robot FSM invariants (do not break these)
 
