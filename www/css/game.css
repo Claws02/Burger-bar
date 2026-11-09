@@ -765,3 +765,26 @@ body.bigtext #tut-text{font-size:15px;} body.bigtext #tut-title{font-size:19px;}
 #coop-body .cp-codebox{text-align:center;margin:8px 0 4px;}
 #coop-body .cp-code{font-size:52px;font-weight:900;letter-spacing:12px;color:#FFD54F;line-height:1.1;}
 #day-banner #day-store{max-width:96px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle;}
+
+/* ── Staff list (Edit Mode) ── */
+#staff-btn{margin:8px 6px 0 0;cursor:pointer;font-family:inherit;font-weight:900;font-size:14px;border-radius:14px;border:0;background:linear-gradient(135deg,#00ACC1,#00838F);color:#fff;padding:8px 16px;box-shadow:0 3px 0 #004d55;}
+#staff-panel{position:absolute;inset:0;background:rgba(8,10,20,.97);color:#fff;display:none;flex-direction:column;align-items:center;z-index:12;pointer-events:auto;padding:16px;overflow-y:auto;}
+#staff-panel .sf-top{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:460px;}
+#staff-panel h1{font-size:24px;margin:0;color:#26C6DA;}
+#staff-cash{font-weight:900;font-size:18px;color:#66BB6A;}
+#staff-panel .sf-sub{font-size:12px;color:rgba(255,255,255,.55);max-width:460px;margin:6px 0 12px;line-height:1.4;}
+#staff-list{width:100%;max-width:460px;}
+.sf-card{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 12px;margin-bottom:10px;}
+.sf-head{display:flex;align-items:center;gap:10px;}
+.sf-icon{font-size:28px;}
+.sf-name{flex:1;font-weight:900;font-size:15px;}
+.sf-meta{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);margin-top:2px;}
+.sf-row{display:flex;gap:6px;margin-top:8px;}
+.sf-seg{flex:1;cursor:pointer;font-family:inherit;font-weight:900;font-size:12px;border-radius:10px;border:1.5px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.7);padding:7px 4px;}
+.sf-seg.small{font-size:11px;padding:5px 4px;}
+.sf-seg.on{border-color:#26C6DA;background:rgba(38,198,218,.2);color:#fff;}
+.sf-train{cursor:pointer;font-family:inherit;font-weight:900;font-size:12px;border-radius:12px;border:0;background:linear-gradient(135deg,#FFB300,#F57C00);color:#fff;padding:6px 12px;line-height:1.2;box-shadow:0 3px 0 #a04a00;}
+.sf-train span{font-size:11px;opacity:.9;}
+.sf-train:disabled{opacity:.4;cursor:default;}
+.sf-train.max{background:rgba(255,255,255,.12);box-shadow:none;}
+.sf-empty{font-size:13px;color:rgba(255,255,255,.6);text-align:center;margin:20px 0;}

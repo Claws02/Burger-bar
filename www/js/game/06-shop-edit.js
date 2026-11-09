@@ -18,6 +18,7 @@ function startEditMode(){
   document.getElementById('edit-hud').style.display='block';
   player.pos=getValidSpawn(); pMesh.position.copy(player.pos);
   dragStation=null; gridH.visible=true;
+  arrangeRobotGrid();   // robots line up so their jobs are easy to change (12c-staff.js)
   actionBtn.innerHTML='🔧'; actionBtn.style.background='rgba(3,169,244,.8)';
 }
 function saveEditMode(){
@@ -156,7 +157,7 @@ const SHOP_DEFS = [
   {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=equipCap('sink'),  capKind:'sink', size:[2.2,2.2], unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=freeSpot(2.2,2.2); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
   {id:'fryer',     label:'🍟 Fry Station',         desc:'Add fries to your menu — a new item!',  cat:'Equipment', cost:()=>170,                    max:()=>(upg.fryerCount||0)>=1, size:[3.2,2], unlockDay:11, action:()=>{ const pos=freeSpot(3.2,2); addStation('fryer0','fryer',pos.x,pos.z,3.2,2); upg.fryerCount=1; if(!eco.menu)eco.menu={}; eco.menu.fries=true; }},
   {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>robotCost(upg.robotCount), max:()=>upg.robotCount>=10, size:[1.5,1.5], unlockDay:5, action:()=>{ 
-      const rData = {role:'busser', hiredDay:eco.day};
+      const rData = {role:'busser', hiredDay:eco.day, trained:0, spec:'both'};
       upg.robots.push(rData);
       // Park new robots in an open spot, not stacked in the middle of the floor.
       const id='robot'+upg.robotCount; const pos=freeSpot(1.5,1.5)||getValidSpawn(); addStation(id,'robot',pos.x,pos.z,1.5,1.5, rData); 
@@ -165,7 +166,7 @@ const SHOP_DEFS = [
             const p = document.getElementById('alert-popup');
             document.getElementById('alert-title').style.color = '#4CAF50';
             document.getElementById('alert-title').textContent = 'NEW STAFF';
-            document.getElementById('alert-desc').innerHTML = "You hired your first Robot!<br><br>Enter <b>EDIT MODE</b> and face it to switch its job:<br><br>🧹 <b>Busser</b> (Cleans dishes)<br>👨‍🍳 <b>Chef</b> (Cooks patties)<br>🛎️ <b>Waiter</b> (Serves food)<br><br><i>Note: New robots are slow, but level up each day!</i>";
+            document.getElementById('alert-desc').innerHTML = "You hired your first Robot!<br><br>In <b>EDIT MODE</b>, tap <b>👥 STAFF</b> (or face a robot and tap ✋) to set its job:<br><br>🧹 <b>Busser</b> (Cleans dishes)<br>👨‍🍳 <b>Chef</b> (Cooks burgers &amp; fries)<br>🛎️ <b>Waiter</b> (Serves food)<br><br><i>New robots are slow but level up with each day on the job, or pay to train them in the Staff list (up to level 8).</i>";
             p.style.display = 'flex';
          }, 100);
       }

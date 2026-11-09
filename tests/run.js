@@ -1517,6 +1517,126 @@ t('a third player is turned away from a full room', async () => {
   eq(p.H.run('return coop.peer && coop.peer.name;'), p.G.run('return coopMyName();'), 'the host lost its partner');
 });
 
+// ── 18. Robot jobs, training and the Staff list ────────────────────────────
+section('18. Robot jobs, training and the Staff list');
+
+// A bar with one seated group that wants `orders`, patient forever.
+function seatOrder(g, orders){
+  g.run(`
+    var tbl = Object.values(stations).find(s=>s.type==='table' && !s.group && s.dirtyTrays===0);
+    var m = new THREE.Group(); ${JSON.stringify(orders)}.forEach(()=>m.add(new THREE.Group()));
+    var grp = {id:Math.random(), size:${orders.length}, type:'normal', state:'ordering', looks:[0,0],
+      orders:${JSON.stringify(orders)}, unservedOrders:${JSON.stringify(orders)}, servedMask:${JSON.stringify(orders.map(()=>false))},
+      foodPatience:1e9, maxFood:1e9, waitPatience:1e9, maxWait:1e9, eatTimer:0,
+      mesh:m, pos:new THREE.Vector3(tbl.x,0,tbl.z), target:new THREE.Vector3(tbl.x,0,tbl.z), tbl:tbl, heavyCount:1};
+    tbl.group = grp; tbl.served = 0; groups.push(grp); gameState='playing';`);
+}
+function quietDay(g, extra){
+  g.run(`eco.day = 12; eco.cash = 5000; upg.sodaCount = 1; addStation('soda0','sodafountain',8,-4,2,2); eco.menu={combos:true};
+    for(let i=2;i<5;i++) addStation('counter'+i,'counter',-8+i*2.6,-3.5,1.8,1.8);
+    ${extra || ''}
+    executeDayStart(); groups.forEach(x=>discard(actGrp,x.mesh)); groups.length = 0; stats.groupsLeft = 1; stats.spawnTimer = 1e9;`);
+}
+function addBot(g, i, role, x, z, opts){ g.run(`addStation('robot${i}','robot',${x},${z},1.5,1.5,Object.assign({role:'${role}',hiredDay:1}, ${JSON.stringify(opts || {})}));`); }
+
+t('a waiter holding an empty tray still serves a plated burger waiting on a counter', () => {
+  // The old loop: tray in hand, plate on the counter, no rule for the pair.
+  const g = boot(); quietDay(g);
+  g.run("stations.counter2.item = 'burger_on_tray';");
+  seatOrder(g, ['burger_on_tray']);
+  addBot(g, 0, 'waiter', 0, 0); g.run("stations.robot0.holding = 'tray';");
+  for(let i = 0; i < 60 && !g.run('return groups[0].unservedOrders.length === 0;'); i++) g.frame(20);
+  eq(g.run('return groups[0].unservedOrders.length;'), 0, 'the burger was never served');
+});
+
+t('full hands and full counters: a robot swaps its plate for the one a table wants', () => {
+  const g = boot(); quietDay(g);
+  g.run(`Object.values(stations).filter(s=>s.type==='counter').forEach((c,i)=> c.item = i===0 ? 'burger_soda_on_tray' : 'burger_on_tray');`);
+  seatOrder(g, ['burger_soda_on_tray']);
+  addBot(g, 0, 'waiter', 0, 0); g.run("stations.robot0.holding = 'soda_on_tray';");
+  for(let i = 0; i < 60 && g.run('return groups[0].unservedOrders.length;'); i++) g.frame(20);
+  eq(g.run('return groups[0].unservedOrders.length;'), 0, 'the combo sat on a counter while the waiter held a soda');
+});
+
+t('a chef set to Fryer never touches the grill, and a Grill chef never fries', () => {
+  const g = boot();
+  quietDay(g, "upg.fryerCount = 1; eco.menu.fries = true; addStation('fryer0','fryer',5,-8.5,3.2,2);");
+  seatOrder(g, ['burger_on_tray', 'fries_on_tray']);
+  addBot(g, 0, 'chef', -2, 0, { spec: 'fryer' });
+  g.run('globalThis.__touch = {grill:0, fryer:0, fridge:0}; const b = stations.robot0;');
+  for(let i = 0; i < 200; i++){ g.frame(5); g.run('const b = stations.robot0; if(b.target && __touch[b.target.type] !== undefined) __touch[b.target.type]++;'); }
+  const fryChef = g.run('return __touch;');
+  ok(fryChef.fryer > 0, 'the fryer chef never went to the fryer');
+  eq(fryChef.grill + fryChef.fridge, 0, 'the fryer chef went to the grill or fridge:');
+  g.run("setRobotSpec(stations.robot0, 'grill'); __touch = {grill:0, fryer:0, fridge:0};");
+  for(let i = 0; i < 200; i++){ g.frame(5); g.run('const b = stations.robot0; if(b.target && __touch[b.target.type] !== undefined) __touch[b.target.type]++;'); }
+  const grillChef = g.run('return __touch;');
+  ok(grillChef.fridge + grillChef.grill > 0, 'the grill chef never cooked a burger');
+  eq(grillChef.fryer, 0, 'the grill chef went to the fryer:');
+});
+
+t('an idle waiter clears dirty tables when nobody is waiting on food', () => {
+  const g = boot(); quietDay(g);
+  g.run("const t = Object.values(stations).find(s=>s.type==='table'); t.dirtyTrays = 2;");
+  addBot(g, 0, 'waiter', 0, 0);
+  g.frame(1500);
+  eq(g.run("return Object.values(stations).find(s=>s.type==='table').dirtyTrays;"), 0, 'dirty trays left on the table');
+});
+
+t('training: pay per level, up to level 8, and it survives a reload', () => {
+  const g = boot(); g.run('achievements.unlocked = ACHIEVEMENTS.map(a=>a.id); eco.day = 10; eco.cash = 20000;');
+  g.run("doBuy('robot'); document.getElementById('alert-popup').style.display='none';");
+  eq(g.run('return getRobotLevel(stations.robot0);'), 1);
+  const spent = g.run('const c = eco.cash; for(let i=0;i<10;i++) trainRobot(stations.robot0); return c - eco.cash;');
+  eq(g.run('return getRobotLevel(stations.robot0);'), 8, 'level after training:');
+  eq(spent, 150 + 300 + 500 + 800 + 1200 + 1800 + 2600, 'total training cost:');
+  ok(g.run('return robotSpeed(8) > robotSpeed(5) * 1.3;'), 'level 8 should be clearly faster than level 5');
+  g.run('saveGame();');
+  const g2 = boot({ save: JSON.parse(g.dom.localStorage.getItem('burgerBoss_save')) });
+  eq(g2.run('return getRobotLevel(stations.robot0);'), 8, 'level after reload:');
+});
+
+t('entering Edit Mode lines robots up in a grid, clear of every station', () => {
+  const g = boot(); quietDay(g);
+  for(let i = 0; i < 7; i++) addBot(g, i, ['chef','waiter','busser'][i % 3], -8 + i * 2.3, -5 + (i % 2) * 6);
+  g.run('showStartMenu(); startEditMode();');
+  const r = g.run(`const bots = Object.values(stations).filter(s=>s.type==='robot');
+    const keys = new Set(bots.map(b => b.pos.x.toFixed(1)+','+b.pos.z.toFixed(1)));
+    // On the grid: rows 2.4 apart from the front, columns 2.4 apart (centred).
+    const cols = Math.max(1, Math.floor((bounds.r - bounds.l - 3) / 2.4));
+    const onGrid = b => Math.abs(((bounds.b - 3 - b.pos.z) / 2.4) % 1) < 1e-6 &&
+                        Math.abs(((b.pos.x / 2.4 + (cols - 1) / 2) % 1 + 1) % 1) < 1e-6;
+    return { distinct: keys.size, n: bots.length, off: bots.filter(b => !onGrid(b)).length, blocked: bots.filter(b => navBlockedAt(b.pos.x, b.pos.z)).length };`);
+  eq(r.distinct, r.n, 'robots share a spot:');
+  eq(r.off, 0, 'robots off the grid:');
+  eq(r.blocked, 0, 'a robot stands inside a station:');
+});
+
+t('the Staff list changes jobs and specialties, and keeps the save in step', () => {
+  const g = boot(); quietDay(g, "upg.fryerCount = 1; addStation('fryer0','fryer',5,-8.5,3.2,2);");
+  addBot(g, 0, 'busser', 0, 0); g.run("upg.robots = [{role:'busser', hiredDay:1}];");
+  g.run('showStaff(); staffRole(0, "chef"); staffSpec(0, "fryer");');
+  eq(g.run('return [stations.robot0.role, stations.robot0.spec, upg.robots[0].role, upg.robots[0].spec].join();'), 'chef,fryer,chef,fryer');
+  ok(g.html('staff-list').includes('Fryer'), 'the specialty buttons are missing for a chef');
+});
+
+t('a staffed shift serves the room: at least 80% of groups', () => {
+  let served = 0, walked = 0;
+  for(const seed of [3, 5]){
+    const g = boot();
+    g.run(`let s=${seed}; Math.random=()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; };
+      achievements.unlocked = ACHIEVEMENTS.map(a=>a.id);
+      eco.day=14; eco.cash=1e6; eco.totalTrays=16; upg.grillMult=1.55; eco.floorLevel=1; updateBoundsFromLevel(); rebuildAll();
+      doBuy('soda'); doBuy('fryer'); doBuy('xgrill'); for(let i=0;i<4;i++) doBuy('xcounter'); for(let i=0;i<4;i++) doBuy('table');
+      eco.menu={combos:true,fries:true};
+      ['chef','chef','waiter','waiter','busser'].forEach((r,i)=>{ upg.robots.push({role:r,hiredDay:1}); const p=freeSpot(1.5,1.5)||getValidSpawn(); addStation('robot'+i,'robot',p.x,p.z,1.5,1.5,{role:r,hiredDay:1}); });
+      upg.robotCount=5; document.getElementById('alert-popup').style.display='none'; executeDayStart();`);
+    let f = 0; while(g.get('gameState') === 'playing' && f < 90000){ g.frame(60); f += 60; }
+    served += g.run('return stats.groupsServed;'); walked += g.run('return stats.walkouts;');
+  }
+  ok(served / (served + walked) >= 0.8, `robots served only ${served} of ${served + walked} groups`);
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){

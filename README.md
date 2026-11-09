@@ -52,6 +52,8 @@ earlier file; `npm run check` enforces that.
 | `09a-gamecenter` | Game Center leaderboards (score sync), achievements flag |
 | `10-customers` … `12-robots` | customers, actions, robot AI |
 | `12a-robot-nav` | robot A* pathfinding, station claims, cook-to-demand |
+| `12b-robot-jobs` | what each robot does next: jobs whose check and action can't disagree |
+| `12c-staff` | robot training (to level 8), roles, chef specialties, Staff list, edit-mode grid |
 | `13-hud-input` | pooled floating UI, touch/keyboard input |
 | `13a-tutorial` | hands-on first-shift tutorial |
 | `13b-coop` | online co-op: host runs the bar, guest's chef joins over Game Center |

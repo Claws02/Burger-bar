@@ -90,14 +90,15 @@ function spawnFloater(pos, txt, color='#66BB6A'){
   coopNoteFloater(f);   // a co-op partner sees it too
 }
 
+// Levels 1-5 come with days on the job; paid training (12c-staff.js) adds
+// levels on top, up to 8.
 function getRobotLevel(bot) {
-    if(bot.hiredDay === undefined) return 1;
-    const d = eco.day - bot.hiredDay;
-    if(d < 2) return 1;
-    if(d < 5) return 2;
-    if(d < 9) return 3;
-    if(d < 14) return 4;
-    return 5;
+    let base = 1;
+    if(bot.hiredDay !== undefined){
+      const d = eco.day - bot.hiredDay;
+      base = d < 2 ? 1 : d < 5 ? 2 : d < 9 ? 3 : d < 14 ? 4 : 5;
+    }
+    return Math.min(8, base + (bot.trained || 0));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -145,7 +146,8 @@ function writeStoreRecord(rec, c){
   for(const k in c.stations){
     const s = c.stations[k];
     const lData = {id: s.id, type: s.type, w: s.w, d: s.d};
-    if(s.type === 'robot') { lData.x = s.pos.x; lData.z = s.pos.z; lData.role = s.role; lData.hiredDay = s.hiredDay; }
+    if(s.type === 'robot') { lData.x = s.pos.x; lData.z = s.pos.z; lData.role = s.role; lData.hiredDay = s.hiredDay;
+                             lData.trained = s.trained || 0; lData.spec = s.spec || 'both'; }
     else { lData.x = s.x; lData.z = s.z; }
     layout.push(lData);
   }

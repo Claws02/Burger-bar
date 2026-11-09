@@ -158,7 +158,7 @@ function buildStreet(){
 // Stations for a store with no saved layout (a brand-new store, or an old save).
 function buildStoreStations(st){
   if(st.layout && st.layout.length > 0){
-    st.layout.forEach(l => addStation(l.id, l.type, l.x, l.z, l.w, l.d, {role:l.role, hiredDay:l.hiredDay}));
+    st.layout.forEach(l => addStation(l.id, l.type, l.x, l.z, l.w, l.d, {role:l.role, hiredDay:l.hiredDay, trained:l.trained||0, spec:l.spec||'both'}));
     return;
   }
   initStations();
@@ -169,7 +169,7 @@ function buildStoreStations(st){
   for(let i=0;i<upg.robotCount;i++){
     const rData = upg.robots[i] || {role: 'busser', hiredDay: 1};
     const pos = freeSpot(1.5,1.5) || getValidSpawn();
-    if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role: rData.role, hiredDay: rData.hiredDay});
+    if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role: rData.role, hiredDay: rData.hiredDay, trained: rData.trained||0, spec: rData.spec||'both'});
   }
   for(let i=0;i<upg.sodaCount;i++) { const pos=freeSpot(2,2); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
 }
