@@ -391,6 +391,12 @@ empty tray walking back and forth to a counter holding a plated burger).
 - **No over-making:** `wantCount(item)` (orders from seated and queued
   customers) minus `inFlight(item)` (in hands or on counters) gates sodas, trays
   and plating, so two waiters don't pour two sodas for one order.
+- **Sodas just in time:** a soda is only poured for a seated customer who ordered
+  one (`sodaNeed`); combos are built burger-first (plated burger → fountain). A
+  soda nobody seated can use (`sodaSurplus`) is cleared off the counter and poured
+  back out at the fountain, and the tray goes back on the rack. A chef holding a
+  patty finishes a combo by putting it on a soda waiting on a counter. Players can
+  pour a soda out at the fountain too.
 - **Swap:** a robot holding a plate nobody wants can swap it for the plate a
   table is waiting on, so full hands plus full counters can't stall the crew.
 - Anything still unusable is binned after ~3 s and dropped after ~7 s.
