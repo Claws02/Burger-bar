@@ -78,7 +78,25 @@ function inFlight(item){
   });
 }
 const comboNeed  = () => wantCount('burger_soda_on_tray') - inFlight('burger_soda_on_tray');
-const sodaNeed   = () => wantCount('soda_on_tray') + comboNeed() - inFlight('soda_on_tray');
+// Sodas go flat-on-a-counter fast: a waiter used to pour one for every combo
+// customer still queueing outside, and the counters (and every clean tray)
+// filled with drinks while the chef stood holding a burger with nowhere to
+// put it. Now a soda is only poured for a SEATED customer who ordered one.
+// Combos are built burger-first (plated burger -> fountain), so they never
+// need a soda poured ahead of time.
+function seatedWant(item){
+  return rmemo('sw:' + item, () => {
+    let n = 0;
+    for(const k in stations){ const t = stations[k];
+      if(t.type === 'table' && t.group && t.group.state === 'ordering') n += t.group.unservedOrders.filter(o => o === item).length; }
+    return n;
+  });
+}
+const sodaNeed   = () => seatedWant('soda_on_tray') - inFlight('soda_on_tray');
+// Sodas nobody seated can use (a waiting combo can still use one). These get
+// poured out at the fountain and the tray goes back on the rack.
+const sodaSurplus = () => inFlight('soda_on_tray') - seatedWant('soda_on_tray') -
+  Math.max(0, seatedWant('burger_soda_on_tray') - inFlight('burger_soda_on_tray'));
 const plateNeed  = () => wantCount('burger_on_tray') + comboNeed() - inFlight('burger_on_tray');
 const friesPlateNeed = () => wantCount('fries_on_tray') - inFlight('fries_on_tray');
 const robotsWithRole = role => Object.values(stations).filter(s => s.type === 'robot' && s.role === role).length;
@@ -169,6 +187,15 @@ const J = {
   pourSoda:    job('pourSoda', 90, 'sodafountain', (b, s) => (b.holding === 'tray' && sodaNeed() > 0) ||
                    (b.holding === 'burger_on_tray' && comboNeed() > 0 && !tableWants('burger_on_tray')),
                    (b, s) => { b.holding = b.holding === 'tray' ? 'soda_on_tray' : 'burger_soda_on_tray'; playSound('pour'); }),
+  // Pour an unwanted soda back out and keep the tray.
+  pourOut:     job('pourOut', 85, 'sodafountain', (b, s) => b.holding === 'soda_on_tray' && sodaSurplus() > 0,
+                   (b, s) => { b.holding = 'tray'; playSound('pour'); }),
+  clearSoda:   job('clearSoda', 45, 'counter', (b, s) => !b.holding && s.item === 'soda_on_tray' && sodaSurplus() > 0,
+                   (b, s) => { b.holding = 'soda_on_tray'; s.item = null; }),
+  // A chef with a burger and a soda waiting on a counter: put the burger on
+  // it and the combo is done, instead of hunting for a free counter.
+  cookedOnSoda: job('cookedOnSoda', 92, 'counter', (b, s) => b.holding === 'cooked' && s.item === 'soda_on_tray' && comboNeed() > 0,
+                   (b, s) => { s.item = 'burger_soda_on_tray'; b.holding = null; }),
   comboOnCounter: job('comboOnCounter', 96, 'counter', (b, s) => wantsCombo() &&
                    ((b.holding === 'burger_on_tray' && s.item === 'soda_on_tray') ||
                     (b.holding === 'soda_on_tray' && (s.item === 'burger_on_tray' || s.item === 'cooked'))),
@@ -209,19 +236,19 @@ function robotJobs(bot){
   if(bot.role === 'chef'){
     if(grillWork) list.push(J.takeCooked, J.binCharred, J.fetchPatty, J.grillRaw);
     if(fryWork) list.push(J.takeFries, J.binBurnt, J.dropBasket);
-    list.push(J.plateBurger, J.plateFries, J.onCounterTray, J.deliver, J.pourSoda);
+    list.push(J.cookedOnSoda, J.plateBurger, J.plateFries, J.onCounterTray, J.deliver, J.pourSoda);
   } else if(bot.role === 'waiter'){
     list.push(J.deliver, J.pickPlate, J.pickForCombo, J.fetchTray, J.trayOnCooked, J.trayAtGrill,
-              J.trayOnFries, J.trayAtFryer, J.pourSoda, J.comboOnCounter, J.returnTray);
+              J.trayOnFries, J.trayAtFryer, J.pourSoda, J.comboOnCounter, J.returnTray, J.clearSoda);
     // Idle helping: lower scores than any serving job, so they only happen
     // when nobody is waiting on this waiter.
     list.push(Object.assign({}, J.clearTable, { score: 30 }), Object.assign({}, J.bagTrash, { score: 25 }),
               Object.assign({}, J.strayTray, { score: 20 }));
   } else {
-    list.push(J.clearTable, J.bagTrash, J.strayTray);
+    list.push(J.clearTable, J.bagTrash, J.strayTray, J.clearSoda);
   }
   // Everyone can finish what's in their hands.
-  list.push(J.wash, J.dump, J.binWaste, J.returnTray, J.deliver, J.swapForPlate, J.grillRaw, J.plateBurger, J.plateFries, J.stage, J.binFood);
+  list.push(J.wash, J.dump, J.binWaste, J.returnTray, J.deliver, J.swapForPlate, J.pourOut, J.grillRaw, J.plateBurger, J.plateFries, J.stage, J.binFood);
   return list;
 }
 

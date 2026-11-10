@@ -17,7 +17,7 @@ function actionPromptFor(t){
     return '';
   }
   if(ty==='trayrack')      return h==='tray'?'Return tray':((!h&&t.cleanTrays>0)?'Take tray':(h==='cooked'?'Plate burger':(h==='fries'?'Plate fries':'')));
-  if(ty==='sodafountain')  return (h==='tray'||h==='burger_on_tray')?'Add soda':'';
+  if(ty==='sodafountain')  return (h==='tray'||h==='burger_on_tray')?'Add soda':(h==='soda_on_tray'?'Pour out':'');
   if(ty==='counter')       return (!t.item&&h)?'Place down':((t.item&&!h)?'Pick up':'Combine');
   if(ty==='trash')         return (t.contents>=4&&!h)?'Bag trash':(h?'Toss':'');
   if(ty==='dumpster')      return h==='trash_bag'?'Dump bag':'';
@@ -127,6 +127,7 @@ function handleAction(){
   else if(type==='sodafountain'){
     if(player.holding==='tray'){ player.holding='soda_on_tray'; ok=true; playSound('pour'); }
     else if(player.holding==='burger_on_tray'){ player.holding='burger_soda_on_tray'; ok=true; playSound('pour'); }
+    else if(player.holding==='soda_on_tray'){ player.holding='tray'; ok=true; playSound('pour'); }   // pour it back out
   }
   else if(type==='grill'){
     if(player.holding==='raw'){ 

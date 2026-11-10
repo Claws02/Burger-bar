@@ -1637,6 +1637,52 @@ t('a staffed shift serves the room: at least 80% of groups', () => {
   ok(served / (served + walked) >= 0.8, `robots served only ${served} of ${served + walked} groups`);
 });
 
+// ── 19. Sodas don't flood the counters ─────────────────────────────────────
+section('19. Sodas: made just in time, poured out when nobody needs them');
+
+t('a small crew never fills the counters with sodas, and the chef keeps cooking', () => {
+  let worst = 0, served = 0, walked = 0;
+  for(const seed of [1, 4]){
+    const g = boot();
+    g.run(`let s=${seed}; Math.random=()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; };
+      achievements.unlocked = ACHIEVEMENTS.map(a=>a.id); eco.day=10; eco.cash=1e5; eco.totalTrays=8;
+      doBuy('soda'); for(let i=0;i<2;i++) doBuy('xcounter'); for(let i=0;i<2;i++) doBuy('table'); eco.menu={combos:true};
+      ['chef','waiter'].forEach((r,i)=>{ upg.robots.push({role:r,hiredDay:1}); const p=freeSpot(1.5,1.5)||getValidSpawn(); addStation('robot'+i,'robot',p.x,p.z,1.5,1.5,{role:r,hiredDay:1}); });
+      upg.robotCount=2; document.getElementById('alert-popup').style.display='none'; executeDayStart();`);
+    let f = 0;
+    while(g.get('gameState') === 'playing' && f < 60000){ g.frame(30); f += 30;
+      worst = Math.max(worst, g.run("return Object.values(stations).filter(s=>s.type==='counter'&&s.item==='soda_on_tray').length;")); }
+    served += g.run('return stats.groupsServed;'); walked += g.run('return stats.walkouts;');
+  }
+  lte(worst, 1, 'sodas sitting on counters at once:');
+  ok(served > walked * 2, `the small crew served ${served} and lost ${walked}`);
+});
+
+t('a robot pours an unwanted soda back out and returns the tray', () => {
+  const g = boot(); quietDay(g);
+  g.run("stations.counter2.item = 'soda_on_tray'; stations.counter3.item = 'soda_on_tray'; globalThis.__r0 = stations.rack0.cleanTrays;");
+  addBot(g, 0, 'waiter', 0, 0);
+  g.frame(2400);
+  eq(g.run("return Object.values(stations).filter(s=>s.type==='counter'&&s.item==='soda_on_tray').length;"), 0, 'sodas left on counters:');
+  eq(g.run('return stations.rack0.cleanTrays - __r0;'), 2, 'trays back on the rack:');
+});
+
+t('a chef finishes a combo by putting the burger on a waiting soda', () => {
+  const g = boot(); quietDay(g);
+  g.run("Object.values(stations).filter(s=>s.type==='counter').forEach((c,i)=> c.item = i === 0 ? 'soda_on_tray' : 'fries');");
+  seatOrder(g, ['burger_soda_on_tray']);
+  addBot(g, 0, 'chef', 4, -5); g.run("stations.robot0.holding = 'cooked';");
+  g.frame(600);
+  eq(g.run("return Object.values(stations).filter(s=>s.type==='counter').map(c=>c.item).filter(x=>x==='burger_soda_on_tray').length;"), 1, 'no combo was made');
+  eq(g.run('return stations.robot0.holding;'), null);
+});
+
+t('the player can pour a soda back out at the fountain', () => {
+  const g = boot(); quietDay(g);
+  g.run(`const f = stations.soda0; player.pos.set(f.x, 0, f.z + 3.2); player.dir = Math.PI; player.holding = 'soda_on_tray'; handleAction();`);
+  eq(g.run('return player.holding;'), 'tray');
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){
