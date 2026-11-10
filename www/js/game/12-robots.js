@@ -86,7 +86,7 @@ function updateRobots(ds){
     const dz_direct = tz - bot.pos.z;
     const dist = Math.sqrt(dx_direct*dx_direct + dz_direct*dz_direct);
     
-    const tDist = bot.target.type === 'table' ? 3.0 : 2.0;
+    const tDist = robotReach(bot.target);
 
     if(dist>tDist){
         // Walk an A* path (12a-robot-nav.js) around stations and walls. The
