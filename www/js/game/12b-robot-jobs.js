@@ -95,6 +95,26 @@ function seatedWant(item){
 const sodaNeed   = () => seatedWant('soda_on_tray') - inFlight('soda_on_tray');
 // Sodas nobody seated can use (a waiting combo can still use one). These get
 // poured out at the fountain and the tray goes back on the rack.
+// Waiters plate and finish combos for SEATED customers only. The chef cooks
+// ahead for the queue (loose patties wait on the counter), but plates and
+// combos made for people still in line used to fill the counters while the
+// tables stayed dirty and nobody could sit down.
+const seatedComboNeed = () => seatedWant('burger_soda_on_tray') - inFlight('burger_soda_on_tray');
+const seatedPlateNeed = () => seatedWant('burger_on_tray') + Math.max(0, seatedComboNeed()) - inFlight('burger_on_tray');
+const seatedFriesNeed = () => seatedWant('fries_on_tray') - inFlight('fries_on_tray');
+// Trays worth setting out for the chef: food still to cook for waiting
+// customers, minus trays already set out and loose food already waiting.
+function counterItems(item){ return rmemo('ci:' + item, () => Object.values(stations).filter(s => s.type === 'counter' && s.item === item).length); }
+const freeCounters = () => rmemo('free', () => Object.values(stations).filter(s => s.type === 'counter' && !s.item).length);
+function traysWanted(){
+  const food = Math.max(0, wantCount('burger_on_tray') + wantCount('burger_soda_on_tray') - inFlight('burger_on_tray') - inFlight('burger_soda_on_tray'))
+             + Math.max(0, wantCount('fries_on_tray') - inFlight('fries_on_tray'));
+  return Math.min(2, food) - counterItems('tray') - counterItems('cooked') - counterItems('fries');
+}
+// Customers are queueing and every table is taken or dirty: clearing a table
+// is the most useful thing a waiter can do.
+const seatingBlocked = () => rmemo('blocked', () => groups.some(g => g.state === 'queue') &&
+  !anyStation(t => t.type === 'table' && !t.group && !(t.dirtyTrays > 0)));
 const sodaSurplus = () => inFlight('soda_on_tray') - seatedWant('soda_on_tray') -
   Math.max(0, seatedWant('burger_soda_on_tray') - inFlight('burger_soda_on_tray'));
 const plateNeed  = () => wantCount('burger_on_tray') + comboNeed() - inFlight('burger_on_tray');
@@ -104,8 +124,8 @@ const robotsWithRole = role => Object.values(stations).filter(s => s.type === 'r
 // Would a clean tray let a waiter make progress on some order right now?
 function trayUseful(){
   if(sodaNeed() > 0 && hasType('sodafountain')) return true;
-  if(plateNeed() > 0 && cookedAvailable()) return true;
-  if(friesPlateNeed() > 0 && friesAvailable()) return true;
+  if(seatedPlateNeed() > 0 && cookedAvailable()) return true;
+  if(seatedFriesNeed() > 0 && friesAvailable()) return true;
   return false;
 }
 
@@ -156,7 +176,8 @@ const J = {
   plateFries:  job('plateFries', 90, 'trayrack', (b, s) => b.holding === 'fries' && s.cleanTrays > 0 && friesPlateNeed() > 0 &&
                    (tableWants('fries_on_tray') || !!stageCounter(b)),
                    (b, s) => { s.cleanTrays--; b.holding = 'fries_on_tray'; }),
-  onCounterTray: job('onCounterTray', 88, 'counter', (b, s) => (b.holding === 'cooked' || b.holding === 'fries') && s.item === 'tray',
+  // A tray waiting on a counter beats a bare counter: the food becomes a plate.
+  onCounterTray: job('onCounterTray', 100, 'counter', (b, s) => (b.holding === 'cooked' || b.holding === 'fries') && s.item === 'tray',
                    (b, s) => { s.item = b.holding === 'cooked' ? 'burger_on_tray' : 'fries_on_tray'; b.holding = null; }),
 
   // Front of house
@@ -170,22 +191,22 @@ const J = {
   swapForPlate: job('swapForPlate', 99, 'counter', (b, s) => DELIVERABLE.includes(b.holding) && !tableWants(b.holding) &&
                    DELIVERABLE.includes(s.item) && s.item !== b.holding && tableWants(s.item),
                    (b, s) => { const mine = b.holding; b.holding = s.item; s.item = mine; }),
-  pickForCombo: job('pickForCombo', 92, 'counter', (b, s) => !b.holding && comboNeed() > 0 &&
+  pickForCombo: job('pickForCombo', 92, 'counter', (b, s) => !b.holding && seatedComboNeed() > 0 &&
                    ((s.item === 'burger_on_tray' && hasType('sodafountain')) || (s.item === 'soda_on_tray' && cookedAvailable())),
                    (b, s) => { b.holding = s.item; s.item = null; }),
   fetchTray:   job('fetchTray', 70, 'trayrack', (b, s) => !b.holding && s.cleanTrays > 0 && trayUseful(),
                    (b, s) => { s.cleanTrays--; b.holding = 'tray'; }),
-  trayOnCooked: job('trayOnCooked', 95, 'counter', (b, s) => b.holding === 'tray' && s.item === 'cooked' && plateNeed() > 0,
+  trayOnCooked: job('trayOnCooked', 95, 'counter', (b, s) => b.holding === 'tray' && s.item === 'cooked' && seatedPlateNeed() > 0,
                    (b, s) => { s.item = null; b.holding = 'burger_on_tray'; }),
   trayAtGrill: job('trayAtGrill', 93, 'grill', (b, s) => (b.holding === 'tray' || b.holding === 'soda_on_tray') && slotOf(s, 'cooked') !== -1 &&
-                   (b.holding === 'tray' ? plateNeed() > 0 : comboNeed() > 0),
+                   (b.holding === 'tray' ? seatedPlateNeed() > 0 : seatedComboNeed() > 0),
                    (b, s) => { s.slots[slotOf(s, 'cooked')] = null; b.holding = b.holding === 'tray' ? 'burger_on_tray' : 'burger_soda_on_tray'; }),
-  trayOnFries: job('trayOnFries', 95, 'counter', (b, s) => b.holding === 'tray' && s.item === 'fries' && friesPlateNeed() > 0,
+  trayOnFries: job('trayOnFries', 95, 'counter', (b, s) => b.holding === 'tray' && s.item === 'fries' && seatedFriesNeed() > 0,
                    (b, s) => { s.item = null; b.holding = 'fries_on_tray'; }),
-  trayAtFryer: job('trayAtFryer', 93, 'fryer', (b, s) => b.holding === 'tray' && slotOf(s, 'fries') !== -1 && friesPlateNeed() > 0,
+  trayAtFryer: job('trayAtFryer', 93, 'fryer', (b, s) => b.holding === 'tray' && slotOf(s, 'fries') !== -1 && seatedFriesNeed() > 0,
                    (b, s) => { s.slots[slotOf(s, 'fries')] = null; b.holding = 'fries_on_tray'; }),
   pourSoda:    job('pourSoda', 90, 'sodafountain', (b, s) => (b.holding === 'tray' && sodaNeed() > 0) ||
-                   (b.holding === 'burger_on_tray' && comboNeed() > 0 && !tableWants('burger_on_tray')),
+                   (b.holding === 'burger_on_tray' && seatedComboNeed() > 0 && !tableWants('burger_on_tray')),
                    (b, s) => { b.holding = b.holding === 'tray' ? 'soda_on_tray' : 'burger_soda_on_tray'; playSound('pour'); }),
   // Pour an unwanted soda back out and keep the tray.
   pourOut:     job('pourOut', 85, 'sodafountain', (b, s) => b.holding === 'soda_on_tray' && sodaSurplus() > 0,
@@ -208,7 +229,8 @@ const J = {
                    (b, s) => { s.dirtyTrays--; b.holding = 'dirty_tray'; }),
   wash:        job('wash', 90, 'sink', (b, s) => b.holding === 'dirty_tray',
                    (b, s) => { b.holding = 'tray'; b.timer = robotWashFrames(getRobotLevel(b)); b.state = 'washing'; b.stat('washed'); }),
-  strayTray:   job('strayTray', 50, 'counter', (b, s) => !b.holding && (s.item === 'tray' || s.item === 'dirty_tray'),
+  // (Trays set out for the chef stay put unless there are more than wanted.)
+  strayTray:   job('strayTray', 50, 'counter', (b, s) => !b.holding && (s.item === 'dirty_tray' || (s.item === 'tray' && traysWanted() < 0)),
                    (b, s) => { b.holding = s.item; s.item = null; }),
   bagTrash:    job('bagTrash', 70, 'trash', (b, s) => !b.holding && s.contents >= 4,
                    (b, s) => { s.contents = 0; b.holding = 'trash_bag'; }),
@@ -219,6 +241,22 @@ const J = {
                    (b, s) => { if(s.contents < 4){ s.contents++; b.holding = null; } else { s.contents = 0; b.holding = 'trash_bag'; } }),
 
   // Last resorts for anything in hand
+  // The chef's hand-off: a cooked patty or a basket of fries goes down on a
+  // counter, and waiters plate and serve it from there.
+  putDown:     job('putDown', 90, 'counter', (b, s) => (b.holding === 'cooked' || b.holding === 'fries') && !s.item && stageCounter(b) === s,
+                   (b, s) => { s.item = b.holding; b.holding = null; }),
+  // A chef only bins food nobody is waiting on; a wanted burger waits for a
+  // counter instead (after ~2 s it may use the player's reserved one).
+  chefBin:     job('chefBin', 1, 'trash', (b, s) => (b._stuck || 0) > 200 &&
+                   ((b.holding === 'cooked' && burgerNeed() < 0) || (b.holding === 'fries' && friesNeed() < 0)),
+                   (b, s) => { if(s.contents < 4){ s.contents++; b.holding = null; } else { s.contents = 0; b.holding = 'trash_bag'; } }),
+  // Bussers (and idle waiters) set a clean tray out on a free counter so the
+  // chef's next burger or fries lands straight on it, ready for a waiter to
+  // carry. At most two waiting trays, and never the last free counters.
+  setTray:     job('setTray', 50, 'counter', (b, s) => b.holding === 'tray' && !s.item && traysWanted() > 0 && freeCounters() >= 3,
+                   (b, s) => { s.item = 'tray'; b.holding = null; }),
+  fetchTrayToSet: job('fetchTrayToSet', 40, 'trayrack', (b, s) => !b.holding && s.cleanTrays > 0 && traysWanted() > 0 && freeCounters() >= 3,
+                   (b, s) => { s.cleanTrays--; b.holding = 'tray'; }),
   stage:       job('stage', 15, 'counter', (b, s) => !!b.holding && !['tray', 'dirty_tray', 'trash_bag', 'raw'].includes(b.holding) &&
                    !WASTE.includes(b.holding) && !s.item && stageCounter(b) === s,
                    (b, s) => { s.item = b.holding; b.holding = null; }),
@@ -234,18 +272,22 @@ function robotJobs(bot){
   const grillWork = !fryer || spec !== 'fryer', fryWork = fryer && spec !== 'grill';
   const list = [];
   if(bot.role === 'chef'){
+    // Chefs stay in the kitchen: fridge -> grill -> counter, fryer -> counter.
+    // No trays, no plating, no delivering; waiters take it from the counter.
     if(grillWork) list.push(J.takeCooked, J.binCharred, J.fetchPatty, J.grillRaw);
     if(fryWork) list.push(J.takeFries, J.binBurnt, J.dropBasket);
-    list.push(J.cookedOnSoda, J.plateBurger, J.plateFries, J.onCounterTray, J.deliver, J.pourSoda);
+    list.push(J.putDown, J.onCounterTray, J.cookedOnSoda, J.binWaste, J.dump, J.returnTray, J.chefBin);
+    return list;
   } else if(bot.role === 'waiter'){
     list.push(J.deliver, J.pickPlate, J.pickForCombo, J.fetchTray, J.trayOnCooked, J.trayAtGrill,
               J.trayOnFries, J.trayAtFryer, J.pourSoda, J.comboOnCounter, J.returnTray, J.clearSoda);
     // Idle helping: lower scores than any serving job, so they only happen
     // when nobody is waiting on this waiter.
-    list.push(Object.assign({}, J.clearTable, { score: 30 }), Object.assign({}, J.bagTrash, { score: 25 }),
-              Object.assign({}, J.strayTray, { score: 20 }));
+    list.push(Object.assign({}, J.clearTable, { kind: 'clearTableUrgent', score: 98, ok: (b, s) => J.clearTable.ok(b, s) && seatingBlocked() }),
+              Object.assign({}, J.clearTable, { score: 30 }), Object.assign({}, J.bagTrash, { score: 25 }),
+              Object.assign({}, J.strayTray, { score: 20 }), Object.assign({}, J.fetchTrayToSet, { score: 15 }), J.setTray);
   } else {
-    list.push(J.clearTable, J.bagTrash, J.strayTray, J.clearSoda);
+    list.push(J.clearTable, J.bagTrash, J.setTray, J.fetchTrayToSet, J.strayTray, J.clearSoda);
   }
   // Everyone can finish what's in their hands.
   list.push(J.wash, J.dump, J.binWaste, J.returnTray, J.deliver, J.swapForPlate, J.pourOut, J.grillRaw, J.plateBurger, J.plateFries, J.stage, J.binFood);

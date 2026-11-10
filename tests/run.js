@@ -1683,6 +1683,46 @@ t('the player can pour a soda back out at the fountain', () => {
   eq(g.run('return player.holding;'), 'tray');
 });
 
+// ── 20. Chefs stay in the kitchen, and can always reach it ─────────────────
+section('20. Chefs only cook; kitchen stations are always reachable');
+
+t('a chef only goes to the fridge, grill, fryer, counters and bin', () => {
+  const g = boot();
+  g.run(`let s=2; Math.random=()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; };
+    achievements.unlocked = ACHIEVEMENTS.map(a=>a.id); eco.day=12; eco.cash=1e5; eco.totalTrays=8;
+    doBuy('soda'); doBuy('fryer'); for(let i=0;i<2;i++) doBuy('xcounter'); for(let i=0;i<2;i++) doBuy('table'); eco.menu={combos:true,fries:true};
+    ['chef','waiter','busser'].forEach((r,i)=>{ upg.robots.push({role:r,hiredDay:1}); const p=freeSpot(1.5,1.5)||getValidSpawn(); addStation('robot'+i,'robot',p.x,p.z,1.5,1.5,{role:r,hiredDay:1}); });
+    upg.robotCount=3; document.getElementById('alert-popup').style.display='none'; executeDayStart(); globalThis.__went = {};`);
+  let f = 0;
+  while(g.get('gameState') === 'playing' && f < 60000){ g.frame(10); f += 10;
+    g.run("const b = stations.robot0; if(b.target) __went[b.target.type] = 1; if(b.holding && !['raw','cooked','fries','charred','burnt_fries','trash_bag'].includes(b.holding)) __went['holding:' + b.holding] = 1;"); }
+  const went = Object.keys(g.run('return __went;')).sort();
+  const allowed = ['counter', 'dumpster', 'fridge', 'fryer', 'grill', 'trash'];
+  eq(went.filter(x => !allowed.includes(x)).join(), '', 'the chef went to / carried:');
+  ok(went.includes('fryer') && went.includes('grill'), 'the chef never cooked both burgers and fries');
+});
+
+t('the fridge and a counter against a wall can be reached by a path', () => {
+  const g = boot();
+  g.run("eco.day = 5; executeDayStart(); addStation('counterW','counter', -8.5, -3, 1.8, 1.8);");
+  const r = g.run(`const g0 = stations.grill0, fr = stations.fridge, cw = stations.counterW;
+    return [ !!navPath(g0.x, g0.z + 2, fr, robotReach(fr) - 0.2), !!navPath(0, 0, cw, robotReach(cw) - 0.2),
+             !!navPath(-3.5, -8, fr, robotReach(fr) - 0.2) ];`);
+  eq(r.join(), 'true,true,true', 'paths (grill->fridge, room->wall counter, wedged between sink and rack->fridge):');
+});
+
+t('a busser sets out a clean tray and the chef puts the burger on it', () => {
+  const g = boot(); quietDay(g);
+  seatOrder(g, ['burger_on_tray']);
+  addBot(g, 0, 'busser', 0, 0);
+  for(let i = 0; i < 80 && !g.run("return Object.values(stations).some(s=>s.type==='counter'&&s.item==='tray');"); i++) g.frame(15);
+  ok(g.run("return Object.values(stations).some(s=>s.type==='counter'&&s.item==='tray');"), 'the busser never set a tray out');
+  addBot(g, 1, 'chef', 4, -5); g.run("stations.robot1.holding = 'cooked';");
+  g.frame(600);
+  ok(g.run("return Object.values(stations).some(s=>s.type==='counter'&&s.item==='burger_on_tray') || groups[0].unservedOrders.length === 0;"),
+     "the chef's burger didn't land on the waiting tray");
+});
+
 // ── run + summary ───────────────────────────────────────────────────────────
 (async () => {
 for(const q of queue){

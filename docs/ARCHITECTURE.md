@@ -367,6 +367,11 @@ move speed (and ⚙️ Robot Overclock multiplies it).
   footprints) is rebuilt when the layout changes; robots walk an A* path to
   their target and replan once if they stall. The phase-through watchdog below
   is the last resort, not the normal way around obstacles.
+- `robotReach(station)`: how close a robot must get. It scales with the
+  station's size (half its footprint + padding + one grid cell), so the first
+  walkable cell in front of the fridge or a counter against a wall always
+  counts as arrived. A robot standing in a tight gap starts its path from the
+  nearest open cell.
 - Claims keep two robots off one counter (or one busser's table).
 - `stageCounter` keeps one counter free for the player once there are three or
   more, unless a robot has been stuck holding food for ~2 s.
@@ -379,15 +384,21 @@ and again on arrival; if the job vanished, the robot avoids that job at that
 station for ~2 s and plans again at once. Planning and acting can no longer
 disagree, which is what used to loop robots forever (e.g. a waiter with an
 empty tray walking back and forth to a counter holding a plated burger).
-- **Chefs:** take cooked food first (it burns), then bin burnt food, drop fries
-  baskets when fries are owed (`friesDemand`), fetch patties when burgers are
-  owed (`burgerDemand`) and no patty on the grill would burn before they got
-  back. They plate at the tray rack when the plate is needed and has somewhere
-  to go; otherwise they stage the loose patty.
+- **Chefs** stay in the kitchen: fridge → grill → counter, fryer → counter. They
+  take cooked food first (it burns), bin burnt food, drop fries baskets when
+  fries are owed (`friesDemand`), and fetch patties when burgers are owed
+  (`burgerDemand`) and no patty on the grill would burn before they got back.
+  Food goes down on a counter, onto a tray waiting there if there is one. They
+  never carry trays, plate at the rack or deliver; a wanted burger waits for a
+  free counter rather than being binned.
 - **Waiters:** deliver, pick up ready plates, build plates with a tray
   (counter or grill patty, fries, soda), finish combos, and return an unused
   tray. With nothing to serve they clear tables, bag trash and tidy stray trays.
-- **Bussers:** tables → sink (wash) → rack, stray trays, trash.
+- **Bussers:** tables → sink (wash) → rack, stray trays, trash. They also set a
+  clean tray out on a free counter (at most two, never the last free counters)
+  so the chef's next burger or fries lands on it as a ready plate.
+- **Waiters plate for seated customers only** (`seatedPlateNeed`); clearing a
+  dirty table becomes urgent when customers are queueing and no table is free.
 - **No over-making:** `wantCount(item)` (orders from seated and queued
   customers) minus `inFlight(item)` (in hands or on counters) gates sodas, trays
   and plating, so two waiters don't pour two sodas for one order.

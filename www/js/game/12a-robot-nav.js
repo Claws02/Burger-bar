@@ -71,6 +71,19 @@ function navGrid(){
   return _nav;
 }
 
+// How close a robot must get to a station's centre to use it. It used to be a
+// flat 2.0, but the padded footprint of the 3x3 fridge reaches 1.95, so no
+// walkable cell counted as "there": every trip to the fridge found no path and
+// fell back to sliding along the back wall into the sink and tray rack. Big
+// stations now get room in front of them.
+function robotReach(s){
+  if(s.type === 'table') return 3.0;
+  // Half the footprint + padding + one grid cell: the first walkable cell in
+  // front of the station is always close enough (a counter against a wall
+  // used to be out of reach from every side).
+  return Math.max(2.0, Math.max(s.w || 0, s.d || 0) / 2 + NAV_PAD + 1.2);
+}
+
 // Path from (sx,sz) to any free cell within `reach` of the target centre.
 // Returns an array of {x,z} waypoints (excluding the start), or null.
 function navPath(sx, sz, target, reach){
@@ -78,7 +91,22 @@ function navPath(sx, sz, target, reach){
   const { x0, z0, nx, nz, blocked } = g;
   const ci = x => Math.max(0, Math.min(nx-1, Math.round((x - x0) / NAV_CELL)));
   const cj = z => Math.max(0, Math.min(nz-1, Math.round((z - z0) / NAV_CELL)));
-  const start = cj(sz)*nx + ci(sx);
+  let start = cj(sz)*nx + ci(sx);
+  // Standing in a tight gap between stations (a robot stops right at a
+  // station's edge): start from the nearest open cell instead, or the search
+  // can't get out and the robot slides blindly into the next station.
+  let escape = null;
+  if(blocked[start]){
+    const si = start % nx, sj = Math.floor(start / nx);
+    let bestD = Infinity;
+    for(let dj = -3; dj <= 3; dj++) for(let di = -3; di <= 3; di++){
+      const i = si + di, j = sj + dj;
+      if(i < 0 || j < 0 || i >= nx || j >= nz || blocked[j*nx + i]) continue;
+      const d = di*di + dj*dj;
+      if(d < bestD){ bestD = d; start = j*nx + i; }
+    }
+    if(bestD < Infinity) escape = { x: x0 + (start % nx)*NAV_CELL, z: z0 + Math.floor(start / nx)*NAV_CELL };
+  }
   const isGoal = idx => {
     const x = x0 + (idx % nx)*NAV_CELL, z = z0 + Math.floor(idx / nx)*NAV_CELL;
     return (x - target.x)**2 + (z - target.z)**2 <= reach*reach;
@@ -129,6 +157,7 @@ function navPath(sx, sz, target, reach){
   cells.reverse();
   // Drop collinear waypoints so robots walk straight lines between turns.
   const pts = cells.map(c => ({ x: x0 + (c % nx)*NAV_CELL, z: z0 + Math.floor(c / nx)*NAV_CELL }));
+  if(escape) pts.unshift(escape);
   const out = [];
   for(let i = 0; i < pts.length; i++){
     const a = out.length ? out[out.length-1] : { x: sx, z: sz }, b = pts[i], c = pts[i+1];
