@@ -27,7 +27,7 @@ node tools/balance-sim.js 4.4 0.92 1.3   # strong player: good grades hold deman
 
 | Change | Detail |
 |---|---|
-| **Equipment caps grow with floor size** | Each Expand adds +2 counters, +1 grill, +1 sink, +1 table, and +1 soda fountain per two expansions. Floors 1–6 widen and deepen the lot; floors 7–10 only deepen it (stores sit side by side on the street). Full size (floor 10, 50×90): **22 counters, 14 grills, 14 sinks, 8 fountains, 18 tables**. A capped item shows **🏗️ EXPAND** while more floor would raise its cap |
+| **Equipment caps grow with floor size** | Each Expand adds +2 counters, +1 grill, +1 sink, +1 table, and +1 soda fountain per two expansions. Every floor alternately widens and deepens the lot, ending square (floor 10, **70×70**, so a phone held upright sees the kitchen and the door). Full size: **28 counters, 18 grills, 16 sinks, 10 fountains, 6 fry stations, 28 tables, 30 robots** (`EQUIP_CAPS`, `ROBOT_CAP`: 10 + 2 per floor). Fry stations cost `170 + 140n`. A capped item shows **🏗️ EXPAND** while more floor would raise its cap |
 | Extra Counter price | `70 + 35n` (was `70 + 50n`), since you now buy up to 14 |
 | **📈 Menu Prices** (new, Day 4+) | +15% on every order per level, 10 levels (up to 2.5×). Cost `150 × 1.4^level`: $150, 210, 295, 410, 575, 805, 1,125, 1,575, 2,205, 3,085. The daily "Earn $X" goal follows half the boost |
 | **🤖 Robot hire price** | `200 + 60n` (was `200 + 120n`). The full crew of 10 costs $4,700 (was $7,400) |
@@ -125,15 +125,45 @@ What that means for a store that keeps earning A grades after Day 30:
 Past ~2.2× demand a single store is at full size, and the next lever is a
 second store.
 
-## 6. Multiple stores
+## 6. Multiple stores: the empire
 
 | Rule | Value |
 |---|---|
-| Unlock | Calendar Day 20, $5,000 paid by the store you're managing |
-| Most stores | 3, side by side on one street (walk between them during a shift) |
+| Unlock | Calendar Day 20 |
+| Price | `newStoreCost(n)` = $5,000 × 2^(n−1) with n stores open: $5k, $10k, $20k, $40k, $80k, $160k, $320k, $640k, $1.28M … Paid from **every** register, richest first (`payFromEmpire`) |
+| Most stores | No cap (99 is a save-size rail). Side by side on one street; walk, or tap the 🏪 chip to ride to any store's door |
+| Live vs autopilot | The store you're in and its neighbours run live. Further stores run on autopilot: only the robot crew works |
+| Grade | Average of the last 7 shifts (letter + score, e.g. **A 4.4★**). Today's grade still sets tomorrow's demand |
 | Money | Each store keeps its own takings. Move cash on the Stores screen ($100–$5,000 steps). Daily-goal and achievement cash goes to the first store |
 | A new store | Starts at its own Day 1 (2 customers) and ramps like a new bar did, but every shop item unlocked on the calendar is available from day one |
 | Failing | Only the first store can end the run. A struggling branch drops toward 0.6× demand (fewer customers) until it recovers |
+
+### Autopilot
+
+A far store serves `autopilotRate()` = crew capacity ÷ today's customers
+(capped at 100%) of its groups; the rest walk out. Stars run from 1.5 (no
+capacity) to 4.6 (full); each served group pays the store's own recent 5-star
+check (`eco.apHist`, learned on live shifts) scaled by stars. Capacity is the
+smallest of:
+
+| Limit | Groups per shift |
+|---|---|
+| Waiters | 6.3 × waiter power |
+| Chefs | 13 × chef power (at most 1.5 chefs per grill) × Turbo Grill speed |
+| Bussers | 14 × busser power (no busser: one serve per clean tray) |
+| Tables | 4 per table |
+
+A robot's power is 0.6 + 0.1 × level (0.7 at Lv.1, 1.4 at Lv.8), × Overclock
+(+12%/level). The constants come from robot-only live shifts at Day 30
+(`AUTOPILOT` in `07c-empire.js`); waiters are the real bottleneck: 2 chefs, 2
+waiters and a busser at Lv.6 serve ~40% of 40 groups, live or on autopilot. A
+Day-30 store at 1.3× demand (40 groups) needs about **5 Lv.8 waiters, 3 chefs,
+2 bussers and 10 tables** to run alone. The Stores screen shows each store's
+"crew alone handles X% of tomorrow's customers".
+
+Saving for store n while n−1 stores each make ~$3–4k a day takes about a week
+at every step up to store 6; past that the doubling outruns the chain unless
+the stores' demand keeps climbing (A grades, up to 4×), which is the late game.
 
 In the model a strong player has ~$5,000 spare around Day 18–20, right when
 the second store unlocks; an average player is still buying along §4 and gets
@@ -155,8 +185,12 @@ busier store.
 | `priceBoost` in `dailyGoalPool` | `07-progress.js` | How much Menu Prices raise the Earn goal |
 | `BASE_GROUPS_CAP_DAY`, `DEMAND` | `07b-grades.js` | Where the base day stops growing; demand range and per-grade steps |
 | `gradeFor()` | `07b-grades.js` | Grade thresholds |
-| `MAX_STORES`, `NEW_STORE_DAY`, `NEW_STORE_COST`, `STORE_SPACING` | `04a-stores.js` | Multi-store unlock, price and street layout |
+| `MAX_STORES`, `NEW_STORE_DAY`, `NEW_STORE_COST`, `newStoreCost()`, `STORE_SPACING` | `04a-stores.js` | Store unlock, doubling price and street layout |
+| `AUTOPILOT`, `LIVE_RADIUS`, `GRADE_WINDOW` | `07c-empire.js` | Autopilot capacity per role, live window, shifts in a grade |
+| `ROBOT_CAP` | `06-shop-edit.js` | Robots per store by floor (10 + 2/floor, max 30) |
+| `CAMERA_HUD_PAD` | `01-renderer.js` | Extra view behind the back wall so the HUD never covers the kitchen |
 
 `tests/run.js` §12 locks in the caps, that every cap fits on a fully expanded
 floor with no overlaps, the price curves, and the camera limit; §13 the robot
-behaviour; §14 grades and demand; §15 multiple stores.
+behaviour; §14 grades and demand; §15 multiple stores; §21 the full-size layout; §22
+autopilot, the doubling store price and rolling grades.

@@ -63,7 +63,7 @@ function spawnGroup(){
   fillGroupMesh(g);
   actGrp.add(g.mesh); groups.push(g);
   playSound('doorbell');
-  stats.groupsLeft--; if(!window._remoteSim) document.getElementById('day-sub').textContent=`Customers: ${stats.groupsLeft}`;
+  stats.groupsLeft--; if(!window._remoteSim) document.getElementById('day-sub').textContent=`👥 ${stats.groupsLeft}`;
 }
 
 // The group's people, standing in a line (also used to rebuild a partner's

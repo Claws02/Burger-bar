@@ -104,6 +104,7 @@ let frustumSize = 26;
 // the player, so the view only needs to grow a little: enough that a typical
 // station cluster stays in frame. Capped at 30.
 const CAMERA_FRUSTUM_BASE = 26, CAMERA_FRUSTUM_PER_FLOOR = 0.7, CAMERA_FRUSTUM_MAX = 30;   // reached at floor 6
+const CAMERA_HUD_PAD = 0.09;   // share of the view height under the top HUD
 function cameraFrustumSize(){
   return Math.min(CAMERA_FRUSTUM_MAX, CAMERA_FRUSTUM_BASE + (eco.floorLevel||0) * CAMERA_FRUSTUM_PER_FLOOR);
 }
@@ -282,9 +283,13 @@ function updateBoundsFromLevel() {
   if (eco.floorLevel >= 4) { t -= 10; }        // 40w x 40d
   if (eco.floorLevel >= 5) { l -= 5; r += 5; } // 50w x 40d
   if (eco.floorLevel >= 6) { t -= 10; }        // 50w x 50d
-  // Past 6 the lot only grows BACK: stores on the same street sit side by
-  // side, so width is fixed at 50 and every later level adds 10 of depth.
-  if (eco.floorLevel > 6) { t -= 10 * (eco.floorLevel - 6); }   // up to 50w x 90d
+  // Floors 7-10 keep alternating (they used to only add depth, ending in a
+  // 50x90 corridor with the kitchen out of sight of the door). A square room
+  // fits a phone held upright; STORE_SPACING leaves room on the street.
+  if (eco.floorLevel >= 7) { l -= 5; r += 5; } // 60w x 50d
+  if (eco.floorLevel >= 8) { t -= 10; }        // 60w x 60d
+  if (eco.floorLevel >= 9) { l -= 5; r += 5; } // 70w x 60d
+  if (eco.floorLevel >= 10) { t -= 10; }       // 70w x 70d
   baseBounds = {l, r, t, b};
   bounds = computeBounds();
 }

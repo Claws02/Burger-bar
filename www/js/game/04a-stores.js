@@ -3,9 +3,10 @@
 // ─────────────────────────────────────────────────────────────
 //  MULTIPLE LIVE STORES ON ONE STREET
 // ─────────────────────────────────────────────────────────────
-// Up to MAX_STORES bars stand side by side along the street, STORE_SPACING
-// apart. Every store runs live during a shift: its own customers, robots,
-// grills and cash register. The player walks out of one front door and into
+// Any number of bars stand side by side along the street, STORE_SPACING
+// apart. The store you're in and its neighbours run live during a shift: their
+// own customers, robots, grills and cash register; stores further away run on
+// autopilot (07c-empire.js). The player walks out of one front door and into
 // the next and can work in any of them.
 //
 // How it works: the game was written around ONE set of globals (eco, upg,
@@ -21,11 +22,14 @@
 // player's meshes to that store's offset, and crossing the midpoint between
 // two stores re-bases the player into the neighbour's frame.
 
-const STORE_SPACING = 80;            // world units between store centres
-const MAX_STORES = 3;
+const STORE_SPACING = 110;           // world units between store centres
+const MAX_STORES = 99;               // a safety rail on save size, not a game limit
 const NEW_STORE_DAY = 20;            // calendar day a second store unlocks
-const NEW_STORE_COST = 5000;         // paid from the store you're managing
-const STORE_NAMES = ['Burger Bar #1', 'Burger Bar #2', 'Burger Bar #3'];
+const NEW_STORE_COST = 5000;         // the second store; each later one costs double
+const STORE_NAMES = ['Burger Bar #1'];
+// What opening the next store costs with n stores already open: $5k, $10k,
+// $20k, $40k ... paid from the whole chain's cash (payFromEmpire).
+function newStoreCost(n){ n = n === undefined ? storeCtx.length : n; return NEW_STORE_COST * Math.pow(2, Math.max(0, n - 1)); }
 const TRANSFER_STEPS = [100, 500, 1000, 5000];
 
 let storeCtx = [];                   // runtime context per store
@@ -165,13 +169,14 @@ function buildStoreStations(st){
   for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(3.5,2); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
   for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(2.2,2.2); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
   for(let i=1;i<=upg.extraCounters;i++) { const pos=freeSpot(1.8,1.8); if(pos) addStation('counter'+(i+1),'counter',pos.x,pos.z,1.8,1.8); }
-  for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(5,5); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
+  for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(5,5,true); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
   for(let i=0;i<upg.robotCount;i++){
     const rData = upg.robots[i] || {role: 'busser', hiredDay: 1};
     const pos = freeSpot(1.5,1.5) || getValidSpawn();
     if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role: rData.role, hiredDay: rData.hiredDay, trained: rData.trained||0, spec: rData.spec||'both'});
   }
   for(let i=0;i<upg.sodaCount;i++) { const pos=freeSpot(2,2); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
+  for(let i=0;i<(upg.fryerCount||0);i++) { const pos=freeSpot(3.2,2); if(pos) addStation('fryer'+i,'fryer',pos.x,pos.z,3.2,2); }
 }
 
 function addStoreContext(i){
@@ -182,6 +187,9 @@ function addStoreContext(i){
   loadStoreRecord(stores[i]);
   buildStoreStations(stores[i]);
   rebuildAll();
+  // Old saves: a store laid out for the deep 50-wide floor (or a crowded
+  // one) gets a clean layout instead of stations stuck in the walls.
+  if(layoutOutOfBounds()) autoArrangeStore();
   stashGlobals(c);
   return c;
 }
@@ -215,8 +223,15 @@ function initStoreContexts(){
   // The player's meshes travel with whichever store they're standing in.
   for(const o of [pMesh, hlRing, placeGhost, gridH]) playerRoot.add(o);
   playerRoot.position.x = 0;
+  updateStoreVisibility();
   buildStreet();
   frustumSize = cameraFrustumSize(); resize();
+}
+
+// Only the live window is drawn: a long street of stores would otherwise
+// cost every frame for scenery nobody can see.
+function updateStoreVisibility(){
+  for(let i = 0; i < storeCtx.length; i++) storeCtx[i].root.visible = isLiveStore(i);
 }
 
 // ── Walking between stores ───────────────────────────────────────────────────
@@ -241,12 +256,17 @@ function switchActiveStore(j){
     dragStation = null; placeGhost.visible = false;
   }
   activeStoreIdx = j;
+  // Stores that just left the live window hand their customers to autopilot.
+  if(gameState === 'playing'){
+    for(let i = 0; i < storeCtx.length; i++) if(!isLiveStore(i) && ctxOf(i).groups.length){ useStore(i); toAutopilot(); }
+  }
   useStore(j);
+  updateStoreVisibility();
   playerRoot.position.x = to.ox;
   frustumSize = cameraFrustumSize(); resize();
   updateCashUI();
   const sub = document.getElementById('day-sub');
-  if(sub && gameState === 'playing') sub.textContent = `Customers: ${stats.groupsLeft}`;
+  if(sub && gameState === 'playing') sub.textContent = `👥 ${stats.groupsLeft}`;
   const nt = document.getElementById('day-store'); if(nt) nt.textContent = storeName(j);
   if(gameState === 'playing' || gameState === 'edit') showToast(`🏪 ${storeName(j)}`, 1400);
 }
@@ -257,46 +277,90 @@ function checkStoreCrossing(){
   if(j !== activeStoreIdx) switchActiveStore(j);
 }
 
-// ── Stores HUD: how the other stores are doing, at a glance ──────────────────
+// ── Stores HUD: one chip, tap to see every store and travel ──────────────────
+// A chip per store covered the top of the screen once a chain had more than
+// two. Now one chip names the store you're in, its grade and how many other
+// stores need help; tapping it opens the store list.
 let _storesHudT = 0;
+function storeTrouble(c){
+  const waiting = c.groups.filter(g => g.state === 'queue' || g.state === 'approach_door').length;
+  return (c.stats.walkouts || 0) >= 3 || waiting >= 3;
+}
 function updateStoresHud(){
   let el = document.getElementById('stores-hud');
-  if(storeCtx.length < 2){ if(el && el.style.display !== 'none') el.style.display = 'none'; return; }
+  if(!el) return;
+  if(storeCtx.length < 2){ if(el.style.display !== 'none') el.style.display = 'none'; return; }
   if((_storesHudT -= ds) > 0) return;
   _storesHudT = 20;
-  if(!el){ el = document.createElement('div'); el.id = 'stores-hud'; document.body.appendChild(el); }
-  let html = '';
-  for(let i = 0; i < storeCtx.length; i++){
-    const c = ctxOf(i), here = i === activeStoreIdx;
-    const waiting = c.groups.filter(g => g.state === 'queue' || g.state === 'approach_door').length;
-    const hungry  = c.groups.filter(g => g.state === 'ordering').length;
-    const walked = c.stats.walkouts || 0;
-    const warn = walked > 0 || waiting >= 3;
-    const dir = here ? '📍' : (i < activeStoreIdx ? '◀' : '▶');
-    html += `<div class="sh-chip${here?' here':''}${warn?' warn':''}">${dir} #${i+1} · $${Math.floor(c.eco.cash)}` +
-            ` · ⏳${waiting} 🍽️${hungry}${walked?` · 🚶${walked}`:''}</div>`;
-  }
+  const gi = storeGrade(ctxOf(activeStoreIdx).eco);
+  let trouble = 0;
+  for(let i = 0; i < storeCtx.length; i++) if(i !== activeStoreIdx && storeTrouble(ctxOf(i))) trouble++;
+  const html = `🏪 ${activeStoreIdx + 1}/${storeCtx.length}` +
+    (gi.grade ? ` · <b style="color:${GRADE_COLORS[gi.grade]}">${gi.grade}</b>` : '') +
+    (trouble ? ` <span class="sh-warn">⚠️${trouble}</span>` : '') + ' ▾';
   if(el._html !== html){ el._html = html; el.innerHTML = html; }
+  el.classList.toggle('warn', trouble > 0);
   if(el.style.display !== 'flex') el.style.display = 'flex';
 }
+// The store list during a shift. The shift pauses while it's open (unless a
+// co-op partner is playing too).
+function showStorePicker(){
+  if(gameState !== 'playing' || storeCtx.length < 2) return;
+  if(!coopPartnerHere()) gamePaused = true;
+  renderStorePicker();
+  document.getElementById('store-picker').style.display = 'flex';
+}
+function renderStorePicker(){
+  const box = document.getElementById('store-picker-list');
+  if(!box) return;
+  let html = '';
+  for(let i = 0; i < storeCtx.length; i++){
+    const c = ctxOf(i), gi = storeGrade(c.eco), here = i === activeStoreIdx;
+    const waiting = c.groups.filter(g => g.state === 'queue' || g.state === 'approach_door').length;
+    const left = c.stats.groupsLeft + c.groups.length;
+    const mode = here ? '📍 You are here' : isLiveStore(i) ? '🟢 Live' : '🤖 Autopilot';
+    html += `<div class="sp-row${here ? ' here' : ''}${storeTrouble(c) ? ' warn' : ''}">
+      <div class="sp-grade" style="color:${GRADE_COLORS[gi.grade] || 'rgba(255,255,255,.5)'}">${gi.grade || '–'}<small>${gi.score !== null ? gi.score.toFixed(1) + '★' : ''}</small></div>
+      <div class="sp-info"><b>${storeName(i)}</b><span>${mode} · ${fmtMoney(c.eco.cash)}</span>
+        <span>👥 ${left} to go · ⏳ ${waiting} waiting · 🚶 ${c.stats.walkouts || 0} walked out</span></div>
+      ${here ? '' : `<button class="buy-btn" onclick="travelToStore(${i})">GO ➜</button>`}
+    </div>`;
+  }
+  box.innerHTML = html;
+}
+function closeStorePicker(){
+  document.getElementById('store-picker').style.display = 'none';
+  if(gameState === 'playing' && !document.getElementById('pause-screen').style.display.includes('flex')) gamePaused = false;
+}
+// Ride over to another store: the player appears at its front door.
+function travelToStore(j){
+  if(!storeCtx[j] || gameState !== 'playing') return;
+  switchActiveStore(j);
+  player.pos.set(doorX(), 0, bounds.b + 3);
+  pMesh.position.copy(player.pos);
+  closeStorePicker();
+  playSound('coin');
+}
+window.showStorePicker = showStorePicker; window.closeStorePicker = closeStorePicker; window.travelToStore = travelToStore;
 function hideStoresHud(){ const el = document.getElementById('stores-hud'); if(el) el.style.display = 'none'; }
 
 // ── Opening a store & moving money ───────────────────────────────────────────
 function canOpenStore(){
-  return storeCtx.length < MAX_STORES && calendarDay() >= NEW_STORE_DAY && eco.cash >= NEW_STORE_COST;
+  return storeCtx.length < MAX_STORES && calendarDay() >= NEW_STORE_DAY && empireCash() >= newStoreCost();
 }
 function openNewStore(){
   if(!canOpenStore()) return false;
-  eco.cash -= NEW_STORE_COST;
+  payFromEmpire(newStoreCost());
   const i = storeCtx.length;
   stores[i] = defStore(i, STORE_NAMES[i] || ('Burger Bar #' + (i+1)), 'burger');
   const back = activeStoreIdx;
   addStoreContext(i);
   useStore(back);
+  updateStoreVisibility();
   buildStreet();
   saveGame();
   if(typeof checkAchievements === 'function') checkAchievements();
-  showToast(`🎉 ${storeName(i)} is open next door! Send it some cash to get started.`, 3200);
+  showToast(`🎉 ${storeName(i)} is open at the end of the street! Send it some cash to get started.`, 3200);
   return true;
 }
 // Move cash between two stores' registers.
@@ -315,7 +379,7 @@ function transferCash(from, to, amount){
 function manageStore(i){
   if(!storeCtx[i]) return;
   if(i !== activeStoreIdx){
-    activeStoreIdx = i; useStore(i);
+    activeStoreIdx = i; useStore(i); updateStoreVisibility();
     playerRoot.position.x = storeCtx[i].ox;
     player.pos = getValidSpawn(); pMesh.position.copy(player.pos);
     frustumSize = cameraFrustumSize(); resize();
@@ -330,29 +394,54 @@ function showStores(){
   renderStoresScreen();
   document.getElementById('stores-screen').style.display = 'flex';
 }
+// How a store's own crew would cope with tomorrow's customers (0-1).
+function storeCoverage(i){
+  return withStore(i, () => Math.min(1, autopilotCapacity() / Math.max(1, plannedGroupCount(eco.day + 1))));
+}
+function coverageText(cov){
+  const pct = Math.round(cov * 100);
+  const col = cov >= 0.8 ? '#66BB6A' : cov >= 0.5 ? '#FFB74D' : '#EF5350';
+  return `<b style="color:${col}">${pct}%</b>`;
+}
 function renderStoresScreen(){
   const list = document.getElementById('stores-list');
   if(!list) return;
-  const cur = activeStoreIdx;
+  const cur = activeStoreIdx, n = storeCtx.length;
   let html = '';
-  if(storeCtx.length > 1){
+  // The empire at a glance.
+  if(n > 1){
+    let robots = 0, sum = 0, cnt = 0;
+    for(let i = 0; i < n; i++){
+      const c = ctxOf(i), gi = storeGrade(c.eco);
+      robots += c.upg.robotCount || 0;
+      if(gi.score !== null){ sum += gi.score; cnt++; }
+    }
+    const avg = cnt ? sum / cnt : null;
+    const g = avg !== null ? gradeFor(10, 0, avg * 10) : null;
+    html += `<div class="st-empire">
+      <div><span>🏦 Chain cash</span><b>${fmtMoney(empireCash())}</b></div>
+      <div><span>🏪 Stores</span><b>${n}</b></div>
+      <div><span>🤖 Robots</span><b>${robots}</b></div>
+      <div><span>📊 Avg grade</span><b style="color:${GRADE_COLORS[g] || '#fff'}">${avg !== null ? g + ' ' + avg.toFixed(1) : '–'}</b></div>
+    </div>`;
     html += `<div class="st-transfer">Move cash in steps of ` +
       TRANSFER_STEPS.map(v => `<button class="st-step${v===transferStep?' on':''}" onclick="setTransferStep(${v})">$${v.toLocaleString()}</button>`).join('') +
       `</div>`;
   }
-  for(let i = 0; i < storeCtx.length; i++){
+  for(let i = 0; i < n; i++){
     const c = ctxOf(i), here = i === cur;
-    const grades = (c.eco.grades || []).slice(-5);
-    const g = grades.length ? grades[grades.length-1] : '–';
-    const rating = c.gStats.lifeGroups ? (c.gStats.lifeStars / c.gStats.lifeGroups).toFixed(1) : '–';
+    const gi = storeGrade(c.eco);
+    const g = gi.grade || '–';
     const demand = Math.round((typeof c.eco.demand === 'number' ? c.eco.demand : 1) * 100);
+    const cov = storeCoverage(i);
     html += `<div class="store-card${here ? ' active-store' : ''}">
-      <div class="st-grade" style="color:${GRADE_COLORS[g] || 'rgba(255,255,255,.5)'}">${g}</div>
+      <div class="st-grade" style="color:${GRADE_COLORS[g] || 'rgba(255,255,255,.5)'}">${g}<small>${gi.score !== null ? gi.score.toFixed(1) + '★' : 'new'}</small></div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:900;font-size:16px;">${storeName(i)}</div>
-        <div class="st-meta">💰 $${c.eco.cash.toFixed(2)} · ⭐ ${rating} · 👥 ${demand}% demand</div>
-        <div class="st-meta">🤖 ${c.upg.robotCount || 0} robots · 🪑 ${c.upg.tableCount || 1} tables · 🏗️ floor ${c.eco.floorLevel || 0} · ${grades.length ? 'last grades ' + grades.join(' ') : 'no shifts yet'}</div>
-        ${storeCtx.length > 1 && !here ? `<div class="st-actions">
+        <div class="st-meta">💰 ${fmtMoney(c.eco.cash)} · 👥 ${demand}% demand · ${gi.n ? gi.n + '-shift grade' : 'no shifts yet'}</div>
+        <div class="st-meta">🤖 ${c.upg.robotCount || 0}/${robotCap(c.eco.floorLevel || 0)} robots · 🪑 ${c.upg.tableCount || 1} tables · 🏗️ floor ${c.eco.floorLevel || 0}</div>
+        <div class="st-meta">Crew alone handles ${coverageText(cov)} of tomorrow's customers${cov < 0.8 ? ' · hire waiters' : ''}</div>
+        ${n > 1 && !here ? `<div class="st-actions">
           <button class="st-btn" onclick="storesTransfer(${cur},${i})">Send $${transferStep.toLocaleString()} ➡</button>
           <button class="st-btn" onclick="storesTransfer(${i},${cur})">⬅ Take $${transferStep.toLocaleString()}</button>
         </div>` : ''}
@@ -360,16 +449,18 @@ function renderStoresScreen(){
       <div>${here ? '<span class="st-here">MANAGING</span>' : `<button class="buy-btn" onclick="storesManage(${i})">MANAGE</button>`}</div>
     </div>`;
   }
-  if(storeCtx.length < MAX_STORES){
-    const day = calendarDay(), ready = day >= NEW_STORE_DAY, afford = eco.cash >= NEW_STORE_COST;
+  if(n < MAX_STORES){
+    const day = calendarDay(), ready = day >= NEW_STORE_DAY, cost = newStoreCost(), have = empireCash();
     const why = !ready ? `Unlocks on Day ${NEW_STORE_DAY} (${NEW_STORE_DAY - day} to go)` :
-                !afford ? `${storeName(cur)} needs $${NEW_STORE_COST.toLocaleString()} in its register` :
-                `Paid by ${storeName(cur)}. Built next door; walk over during a shift.`;
-    html += `<div class="store-card locked-store">
+                have < cost ? `Save ${fmtMoney(cost - have)} more across your stores (${fmtMoney(have)} of ${fmtMoney(cost)})` :
+                `Paid from your stores' combined cash, richest first. Each store after this costs double.`;
+    const pct = ready ? Math.min(100, Math.round(have / cost * 100)) : 0;
+    html += `<div class="store-card${canOpenStore() ? '' : ' locked-store'}">
       <div style="font-size:34px;">${ready ? '🏗️' : '🔒'}</div>
-      <div style="flex:1;"><div style="font-weight:900;font-size:16px;">Open ${STORE_NAMES[storeCtx.length]}</div>
-        <div class="st-meta">${why}</div></div>
-      <button class="buy-btn" ${canOpenStore() ? '' : 'disabled'} onclick="storesOpen()">$${NEW_STORE_COST.toLocaleString()}</button>
+      <div style="flex:1;"><div style="font-weight:900;font-size:16px;">Open ${storeName(n)}</div>
+        <div class="st-meta">${why}</div>
+        ${ready ? `<div class="st-save"><div style="width:${pct}%"></div></div>` : ''}</div>
+      <button class="buy-btn" ${canOpenStore() ? '' : 'disabled'} onclick="storesOpen()">${fmtMoney(cost)}</button>
     </div>`;
   }
   list.innerHTML = html;

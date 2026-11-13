@@ -986,11 +986,11 @@ t('equipment caps grow with each floor expansion', () => {
   const g = boot();
   g.run('eco.day = 18; eco.cash = 1e7;');
   eq(g.run('return equipCap("counter");'), 3, 'counters at floor 0 (extras):');
-  eq(g.run('eco.floorLevel = 3; return equipCap("counter");'), 9, 'counters at floor 3:');
-  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 15, 'counters at floor 6:');
-  eq(g.run('eco.floorLevel = 10; return equipCap("counter");'), 20, 'counters at full size (22 total):');
-  eq(g.run('return equipCap("grill") + "," + equipCap("sink") + "," + equipCap("soda") + "," + equipCap("table");'),
-     '13,13,8,18', 'grill/sink/soda/table caps at full size:');
+  eq(g.run('eco.floorLevel = 3; return equipCap("counter");'), 11, 'counters at floor 3:');
+  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 18, 'counters at floor 6:');
+  eq(g.run('eco.floorLevel = 10; return equipCap("counter");'), 26, 'counters at full size (28 total):');
+  eq(g.run('return equipCap("grill") + "," + equipCap("sink") + "," + equipCap("soda") + "," + equipCap("table") + "," + equipCap("fryer");'),
+     '17,15,10,28,6', 'grill/sink/soda/table/fryer caps at full size:');
 });
 
 t('a fully expanded bar (floor 10) has room for every counter, grill, sink, soda and table', () => {
@@ -998,13 +998,14 @@ t('a fully expanded bar (floor 10) has room for every counter, grill, sink, soda
   g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<12;i++) doBuy("expand");');
   eq(g.run('return eco.floorLevel;'), 10);
   const bought = {};
-  for(const id of ['table','xcounter','xgrill','xsink','soda']) bought[id] = buyUntilStopped(g, id);
-  eq(bought.xcounter, 20, 'extra counters bought:');
-  eq(bought.xgrill, 13, 'extra grills bought:');
-  eq(bought.xsink, 13, 'extra sinks bought:');
-  eq(bought.soda, 8, 'soda fountains bought:');
-  eq(g.run('return upg.tableCount;'), 18, 'tables:');
-  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 22, 'counters on the floor:');
+  for(const id of ['table','xcounter','xgrill','xsink','soda','fryer']) bought[id] = buyUntilStopped(g, id);
+  eq(bought.xcounter, 26, 'extra counters bought:');
+  eq(bought.xgrill, 17, 'extra grills bought:');
+  eq(bought.xsink, 15, 'extra sinks bought:');
+  eq(bought.soda, 10, 'soda fountains bought:');
+  eq(bought.fryer, 6, 'fry stations bought:');
+  eq(g.run('return upg.tableCount;'), 28, 'tables:');
+  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 28, 'counters on the floor:');
   // Nothing was placed overlapping another station.
   const overlaps = g.run(`
     const ss = Object.values(stations).filter(s=>s.type!=='robot' && s.type!=='dumpster'); let n=0;
@@ -1043,6 +1044,13 @@ t('robot hires climb gently; Overclock unlocks on Day 15 and speeds robots up', 
   g.run('eco.day = 15;');
   eq(buyUntilStopped(g, 'overclock'), 5, 'Overclock levels:');
   ok(Math.abs(g.run('return robotOverclockMult();') - 1.6) < 1e-9, 'five levels = +60% robot speed');
+});
+
+t('the robot crew can grow with the floor: 10 in a small bar, 30 at full size', () => {
+  const g = boot();
+  eq(g.run('return [robotCap(0), robotCap(5), robotCap(10)].join();'), '10,20,30', 'robot caps:');
+  g.run('eco.day = 30; eco.cash = 1e8; for(let i=0;i<12;i++) doBuy("expand"); document.getElementById("alert-popup").style.display="none";');
+  eq(buyUntilStopped(g, 'robot'), 30, 'robots hired at full size:');
 });
 
 t('the camera stays close enough to read characters at full size', () => {
@@ -1178,7 +1186,7 @@ function twoStores(g){
   g.run('eco.day = 20; eco.cash = 9000; openNewStore(); document.getElementById("alert-popup").style.display="none";');
 }
 
-t('a second store unlocks on Day 20 for $5,000 from the managing store, up to 3', () => {
+t('a second store unlocks on Day 20 for $5,000; each later store costs double, with no cap', () => {
   const g = boot(); noAchv(g);
   g.run('eco.day = 19; eco.cash = 99999;');
   eq(g.run('return openNewStore();'), false, 'opened before Day 20:');
@@ -1188,12 +1196,21 @@ t('a second store unlocks on Day 20 for $5,000 from the managing store, up to 3'
   eq(g.run('return openNewStore();'), true);
   eq(g.run('return [storeCtx.length, Math.round(ctxOf(0).eco.cash), ctxOf(1).eco.cash, ctxOf(1).eco.day].join();'), '2,15000,0,0',
      'stores / HQ cash / new store cash / new store day:');
-  g.run('openNewStore();');
-  eq(g.run('return openNewStore();'), false, 'a fourth store:');
-  eq(g.run('return storeCtx.length;'), 3);
-  eq(g.run('return Object.values(ctxOf(2).stations).filter(s=>s.type==="fridge").length;'), 1, 'new store has a kitchen:');
+  eq(g.run('return [newStoreCost(2), newStoreCost(3), newStoreCost(4), newStoreCost(9)].join();'), '10000,20000,40000,1280000', 'prices:');
+  g.run('ctxOf(0).eco.cash = 1e7; for(let i=0;i<4;i++) openNewStore();');
+  eq(g.run('return storeCtx.length;'), 6, 'stores past the old cap of 3:');
+  eq(g.run('return Object.values(ctxOf(5).stations).filter(s=>s.type==="fridge").length;'), 1, 'new store has a kitchen:');
 });
 
+t('a new store is paid from the whole chain, richest register first', () => {
+  const g = boot(); twoStores(g);                     // HQ keeps $4,000
+  g.run('ctxOf(1).eco.cash = 7000;');                 // chain: $11,000; the third store costs $10,000
+  eq(g.run('return empireCash();'), 11000);
+  eq(g.run('return openNewStore();'), true, 'the chain could afford it together:');
+  eq(g.run('return [ctxOf(0).eco.cash, ctxOf(1).eco.cash].join();'), '1000,0', 'HQ / branch cash after paying (richest first):');
+  eq(g.run('return openNewStore();'), false, 'opened with $1,000 for a $20,000 store:');
+  eq(g.run('return empireCash();'), 1000, 'a refused purchase took nothing:');
+});
 t('transfers move cash between registers and never overdraw', () => {
   const g = boot(); twoStores(g);
   eq(g.run('return transferCash(0, 1, 1500);'), 1500);
@@ -1221,19 +1238,20 @@ t('every store trades in the same shift, and the shift ends when all are closed'
 
 t('walking past the midpoint makes the neighbour the active store', () => {
   const g = boot(); twoStores(g);
-  g.run('executeDayStart(); player.pos.set(39.5, 0, 14); checkStoreCrossing();');
+  const half = g.run('return STORE_SPACING / 2;');
+  g.run(`executeDayStart(); player.pos.set(${half - 0.5}, 0, 14); checkStoreCrossing();`);
   eq(g.run('return activeStoreIdx;'), 0);
-  g.run('player.pos.x = 40.5; checkStoreCrossing();');
+  g.run(`player.pos.x = ${half + 0.5}; checkStoreCrossing();`);
   eq(g.run('return activeStoreIdx;'), 1);
-  ok(Math.abs(g.run('return player.pos.x + storeOX;') - 40.5) < 1e-9, 'the player jumped in the world');
-  eq(g.run('return playerRoot.position.x;'), 80, 'player meshes follow the store root:');
-  eq(g.run('return checkColl(-45, 14, null);'), true, 'walked past the lawn edge');
-  eq(g.run('return checkColl(-35, 14, null);'), false, 'blocked on the lawn between stores');
+  ok(Math.abs(g.run('return player.pos.x + storeOX;') - (half + 0.5)) < 1e-9, 'the player jumped in the world');
+  eq(g.run('return playerRoot.position.x;'), half * 2, 'player meshes follow the store root:');
+  eq(g.run(`return checkColl(${-half - 5}, 14, null);`), true, 'walked past the lawn edge');
+  eq(g.run(`return checkColl(${-half + 5}, 14, null);`), false, 'blocked on the lawn between stores');
 });
 
 t('the HUD money and HQ rewards stay with the right stores', () => {
   const g = boot(); twoStores(g);
-  g.run('executeDayStart(); player.pos.x = 41; checkStoreCrossing(); updateCashUI();');
+  g.run('executeDayStart(); player.pos.x = STORE_SPACING / 2 + 1; checkStoreCrossing(); updateCashUI();');
   eq(g.text('cash-val'), '$0.00', 'HUD should show the store you are standing in:');
 });
 
@@ -1721,6 +1739,176 @@ t('a busser sets out a clean tray and the chef puts the burger on it', () => {
   g.frame(600);
   ok(g.run("return Object.values(stations).some(s=>s.type==='counter'&&s.item==='burger_on_tray') || groups[0].unservedOrders.length === 0;"),
      "the chef's burger didn't land on the waiting tray");
+});
+
+section('21. Store layout at full size');
+
+const LAYOUT_CHECK = `
+  const ss = Object.values(stations).filter(s=>s.type!=='robot' && s.type!=='dumpster'); let overlap=0, out=0;
+  const box = s => s.type==='table' ? {w:s.r*2, d:s.r*2} : s;
+  for(const a of ss) for(const b of ss){ if(a===b) continue; const A=box(a), B=box(b);
+    if(Math.abs(a.x-b.x) < (A.w+B.w)/2 && Math.abs(a.z-b.z) < (A.d+B.d)/2) overlap++; }
+  for(const s of ss) if(s.x-s.w/2 < bounds.l || s.x+s.w/2 > bounds.r || s.z-s.d/2 < bounds.t || s.z+s.d/2 > bounds.b) out++;
+  return overlap + ',' + out;`;
+
+function fullStore(g){
+  g.run('eco.day = 30; eco.cash = 1e8; for(let i=0;i<12;i++) doBuy("expand");');
+  for(const id of ['table','xcounter','xgrill','xsink','soda','fryer']) buyUntilStopped(g, id);
+}
+
+t('floors 7-10 widen the store instead of making a corridor', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<12;i++) doBuy("expand");');
+  eq(g.run('return [bounds.r - bounds.l, bounds.b - bounds.t].join("x");'), '70x70', 'full-size floor:');
+  ok(g.run('return STORE_SPACING > bounds.r - bounds.l + 30;'), 'stores on the street would overlap');
+});
+
+t('new tables fill from the door, new kitchen gear from the back wall', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<10;i++) doBuy("expand"); doBuy("table"); doBuy("xgrill");');
+  const r = g.run('return [stations.table1.z, stations.grill1.z, bounds.t, bounds.b];');
+  ok(r[0] > (r[2] + r[3]) / 2, 'the new table went to the back half: z=' + r[0]);
+  ok(r[1] < r[2] + 8, 'the new grill is not near the back wall: z=' + r[1]);
+});
+
+t('expanding the floor keeps the kitchen against the back wall', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7;');
+  const gap = () => g.run('return stations.fridge.z - bounds.t;');
+  const before = gap();
+  g.run('for(let i=0;i<12;i++) doBuy("expand");');
+  ok(Math.abs(gap() - before) < 1e-6, `fridge drifted from the back wall: ${before} -> ${gap()}`);
+  eq(g.run(LAYOUT_CHECK), '0,0', 'overlaps,outside after expanding:');
+});
+
+t('Auto-arrange lays out a full store: kitchen at the back, tables at the front, all reachable', () => {
+  const g = boot(); fullStore(g);
+  g.run('startEditMode(); editAutoArrange();');
+  eq(g.run(LAYOUT_CHECK), '0,0', 'overlaps,outside:');
+  const r = g.run(`
+    const mid = (bounds.t + bounds.b) / 2, all = Object.values(stations);
+    const kitchenBack = all.filter(s=>['fridge','grill','fryer','sink'].includes(s.type)).every(s=>s.z < mid);
+    const tablesFront = all.filter(s=>s.type==='table').filter(s=>s.z > mid).length / all.filter(s=>s.type==='table').length;
+    const door = (baseBounds.l+baseBounds.r)/2;
+    const reach = all.filter(s=>s.type!=='robot'&&s.type!=='dumpster').every(s => !!navPath(door, bounds.b - 1, s, robotReach(s)));
+    return [kitchenBack, tablesFront >= 0.75, reach];`);
+  eq(r.join(), 'true,true,true', 'kitchen at back, tables mostly front, every station reachable from the door:');
+});
+
+t('an old save with stations outside the walls is re-laid out on load', () => {
+  const g = boot(); fullStore(g);
+  g.run('saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  // The old 50-wide x 90-deep floor: push a station far behind today's back wall.
+  const lay = save.stores[0].layout; lay.find(l => l.id === 'grill1').z = -85;
+  const g2 = boot({ save });
+  eq(g2.run(LAYOUT_CHECK), '0,0', 'overlaps,outside after load:');
+});
+
+section('22. The empire: autopilot stores and rolling grades');
+
+function chain(g, n){
+  noAchv(g);
+  g.run(`eco.day = 30; eco.cash = 1e9; for(let i=1;i<${n};i++) openNewStore(); document.getElementById("alert-popup").style.display="none";`);
+}
+// Give store i a robot crew (roles) at a given level.
+function crew(g, i, roles, tables){
+  g.run(`withStore(${i}, () => {
+    if(eco.floorLevel < 6){ eco.floorLevel = 6; updateBoundsFromLevel(); rebuildAll(); }
+    for(let k=1;k<${tables || 1};k++){ const p=layoutSpot('table',5,5); addStation('table'+upg.tableCount,'table',p.x,p.z,5,5); upg.tableCount++; }
+    ${JSON.stringify(roles)}.forEach((r,k)=>{ const d={role:r,hiredDay:eco.day-20,trained:3}; upg.robots.push(d); const p=freeSpot(1.5,1.5)||getValidSpawn(); addStation('robot'+k,'robot',p.x,p.z,1.5,1.5,d); });
+    upg.robotCount=upg.robots.length; markStationsDirty();
+  });`);
+}
+
+t('only the store you are in and its neighbours run live; the rest run on autopilot', () => {
+  const g = boot(); chain(g, 4);
+  g.run('executeDayStart(); for(let i=0;i<3;i++) ctxOf(i).stats.spawnTimer = 0; ctxOf(3).stats.spawnTimer = 0;');
+  g.frame(5);
+  eq(g.run('return [0,1,2,3].map(isLiveStore).join();'), 'true,true,false,false', 'live window from store 1:');
+  ok(g.run('return ctxOf(0).groups.length + ctxOf(1).groups.length > 0;'), 'live stores spawned no customers');
+  eq(g.run('return ctxOf(3).groups.length;'), 0, 'an autopilot store spawned customer meshes:');
+  ok(g.run('return ctxOf(3).stats.autopilot === true && ctxOf(3).stats.groupsLeft < ctxOf(3).stats.initialGroups;'), 'the far store is not resolving customers');
+  eq(g.run('return [0,1,2,3].map(i=>storeCtx[i].root.visible).join();'), 'true,true,false,false', 'drawn stores:');
+});
+
+t('an autopilot store with no crew serves nobody; a staffed one earns', () => {
+  const g = boot(); chain(g, 4);
+  crew(g, 3, ['chef','chef','waiter','waiter','waiter','waiter','busser','busser'], 10);
+  g.run('executeDayStart(); ctxOf(2).stats.spawnTimer = 0;');
+  for(let i = 0; i < 400 && g.run('return ctxOf(2).stats.groupsLeft + ctxOf(3).stats.groupsLeft > 0;'); i++) g.frame(60);
+  const r = g.run('const a=ctxOf(2).stats, b=ctxOf(3).stats; return [a.groupsServed, a.walkouts, b.groupsServed > 0, b.cashEarned > 0, ctxOf(3).eco.cash > 0];');
+  eq(r[0], 0, 'groups the crewless store served:');
+  ok(r[1] > 0, 'the crewless store lost no customers');
+  eq(r.slice(2).join(), 'true,true,true', 'the staffed store served / earned / banked:');
+  ok(g.run('return withStore(3, () => autopilotRate()) > withStore(2, () => autopilotRate());'), 'a crew should raise the autopilot rate');
+});
+
+t('autopilot capacity follows the crew: waiters are the bottleneck, levels and Overclock help', () => {
+  const g = boot(); chain(g, 2);
+  crew(g, 1, ['chef','chef','waiter','busser','busser'], 10);
+  const base = g.run('return withStore(1, () => autopilotCapacity());');
+  g.run(`withStore(1, () => { for(const k of [5,6]){ const d={role:'waiter',hiredDay:eco.day-20,trained:3}; const p=freeSpot(1.5,1.5)||getValidSpawn(); addStation('robot'+k,'robot',p.x,p.z,1.5,1.5,d); } });`);
+  const more = g.run('return withStore(1, () => autopilotCapacity());');
+  ok(more > base * 2, `two more waiters should multiply capacity (${base} -> ${more})`);
+  const oc = g.run('return withStore(1, () => { upg.robotOC = 5; return autopilotCapacity(); });');
+  ok(oc > more, 'Overclock should add capacity');
+});
+
+t('walking away hands a store\'s customers to autopilot', () => {
+  const g = boot(); chain(g, 3);
+  g.run('executeDayStart(); ctxOf(0).stats.spawnTimer = 0;');
+  g.frame(3);
+  ok(g.run('return ctxOf(0).groups.length > 0;'), 'store 1 has no customers to hand over');
+  const before = g.run('const s=ctxOf(0).stats; return s.groupsServed + (s.walkouts||0);');
+  g.run('travelToStore(2);');
+  eq(g.run('return activeStoreIdx;'), 2, 'travelled to store 3:');
+  eq(g.run('return ctxOf(0).groups.length;'), 0, 'customers left in the store that went on autopilot:');
+  ok(g.run('const s=ctxOf(0).stats; return s.groupsServed + (s.walkouts||0);') > before, 'the handed-over customers were not resolved');
+  ok(g.run('return Math.abs(player.pos.x - doorX()) < 1e-9 && player.pos.z > bounds.b;'), 'arrived away from the front door');
+});
+
+t('the store picker pauses the shift and travels to another store', () => {
+  const g = boot(); chain(g, 3);
+  g.run('executeDayStart(); _storesHudT = 0; updateStoresHud();');
+  ok(g.run('return document.getElementById("stores-hud").innerHTML;').includes('1/3'), 'the chip should show 1/3');
+  g.run('showStorePicker();');
+  eq(g.run('return gamePaused;'), true, 'paused while choosing:');
+  ok(g.run('return document.getElementById("store-picker-list").innerHTML.includes("Autopilot");'), 'the far store should say Autopilot');
+  g.run('travelToStore(1);');
+  eq(g.run('return [activeStoreIdx, gamePaused, document.getElementById("store-picker").style.display].join();'), '1,false,none');
+});
+
+t('a store\'s grade is the average of its last 7 shifts', () => {
+  const g = boot();
+  g.run('eco.shifts = []; for(let i=0;i<6;i++) recordShift(10, 0, 50); recordShift(10, 0, 20); recordShift(10, 0, 20);');
+  eq(g.run('return eco.shifts.length;'), 7, 'shifts kept:');
+  const gi = g.run('return storeGrade();');
+  ok(Math.abs(gi.score - (5*50 + 2*20) / 70) < 1e-9, 'score is the 7-shift average: ' + gi.score);
+  eq(gi.grade, 'B', 'five 5★ shifts and two 2★ shifts average 4.14:');
+  eq(g.run('return gradeLabel(storeGrade());'), 'B 4.1★');
+});
+
+t('a shift records into the rolling grade and the results show it', () => {
+  const g = boot(); noAchv(g);
+  g.run('eco.day = 10; eco.shifts = [{s:10,w:0,t:46}]; executeDayStart(); stats.groupsServed = 10; stats.totalStars = 30; stats.walkouts = 0; groups.forEach(x=>discard(actGrp,x.mesh)); groups.length = 0; stats.groupsLeft = 0; endDay();');
+  eq(g.run('return eco.shifts.length;'), 2);
+  eq(g.run('return lastShift.stores[0].gradeInfo.rolling.grade;'), 'B', 'rolling grade after a 4.6 and a 3.0 shift:');
+});
+
+t('old saves turn their letter grades into shifts', () => {
+  const g = boot();
+  g.run('saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  save.stores[0].eco.grades = ['B','A','A+']; delete save.stores[0].eco.shifts;
+  const g2 = boot({ save });
+  eq(g2.run('return eco.shifts.length;'), 3, 'shifts from letters:');
+  eq(g2.run('return storeGrade().grade;'), 'A', 'grade from B, A, A+:');
+});
+
+t('money pills shorten big numbers', () => {
+  const g = boot();
+  eq(g.run('return [fmtMoney(950.25), fmtMoney(12400), fmtMoney(254000), fmtMoney(3210000)].join(" ");'), '$950.25 $12.4k $254k $3.21M');
 });
 
 // ── run + summary ───────────────────────────────────────────────────────────

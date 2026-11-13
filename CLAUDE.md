@@ -8,7 +8,7 @@ Center (app) or MQTT lobby + WebRTC (web); shared bar via iCloud.
 
 ```
 npm run serve          # www/ on :8000
-npm test               # load-order check + 66 headless tests (stubbed THREE + DOM)
+npm test               # load-order check + 135 headless tests (stubbed THREE + DOM)
 npm run test:native    # simulated iOS bridge: save mirror, splash, haptics
 npm run perf           # Day-20 full restaurant, headless Chromium
 npm run visual | portrait   # screenshot tours → .smoke/
@@ -26,8 +26,8 @@ No `import`/`export` in game files.
 
 `00` settings/audio/haptics · `01` renderer, quality tiers, shared materials ·
 `01a` model kit + `bake()` merging · `02` world/stations · `04` state + save
-(backup recovery) · `04a` multi-store street · `07a` Kitchen Heat adaptive
-difficulty (`HEAT`) · `09` menus/dayflow (948 lines) · `10–12a` customers,
+(backup recovery) · `04a` multi-store street · `06a` store layout · `07a` Kitchen Heat adaptive
+difficulty (`HEAT`) · `07c` empire (autopilot, 7-shift grades) · `09` menus/dayflow (948 lines) · `10–12a` customers,
 actions, robots + A* · `13*` HUD/input, tutorial, co-op, shared bar, web link ·
 `14` boot + main loop. `www/js/native.js` = iOS bridge.
 

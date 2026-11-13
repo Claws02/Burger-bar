@@ -6,7 +6,7 @@
 function getCumRating(){ return gStats.lifeGroups===0?0:(gStats.lifeStars/gStats.lifeGroups).toFixed(1); }
 function updateCashUI(){
   if(window._remoteSim) return;    // the HUD shows the store you're standing in
-  document.getElementById('cash-val').textContent='$'+eco.cash.toFixed(2);
+  document.getElementById('cash-val').textContent=fmtMoney(eco.cash);
   document.getElementById('rating-val').textContent='⭐ '+getCumRating();
 }
 

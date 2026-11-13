@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 //  GAME DATA
 // ─────────────────────────────────────────────────────────────
-function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}, demand:1, grades:[]}; }
+function defEco()  { return {cash:0, day:0, floorLevel:0, totalTrays:4, menu:{combos:true}, demand:1, grades:[], shifts:[]}; }
 function defUpg()  { return {speedLv:0, grillMult:0.5, patienceMult:1, tableCount:1, robotCount:0, robots:[], extraGrills:0, extraSinks:0, extraCounters:0, burgerCrown:false, sodaCount:0, fryerCount:0, priceLv:0, robotOC:0}; }
 function defGS()   { return {lifeStars:0, lifeGroups:0, recentDays:[]}; }
 
@@ -197,7 +197,7 @@ function loadSave(){
       // in parkedStores so it survives saving, but it doesn't run.
       const live = [], parked = [];
       for(const st of s.stores){
-        if(st && (st.type || 'burger') === 'burger' && live.length < MAX_STORES) live.push(st); else parked.push(st);
+        if(st && (st.type || 'burger') === 'burger' && live.length < MAX_STORES) live.push(st); else if(st) parked.push(st);
       }
       if(!live.length) live.push(defStore(0, 'Burger Bar #1'));
       stores = live;
@@ -230,6 +230,7 @@ function loadActiveStore() { loadStoreRecord(stores[activeStoreIdx]); }
 // Load one store's saved record into the (current context's) globals.
 function loadStoreRecord(st) {
   const hadDemand = st.eco && typeof st.eco.demand === 'number';
+  const hadShifts = st.eco && Array.isArray(st.eco.shifts);
   eco    = Object.assign(defEco(),  st.eco    || {});
   upg    = Object.assign(defUpg(),  st.upg    || {});
   gStats = Object.assign(defGS(),   st.gStats || {});
@@ -249,6 +250,9 @@ function loadStoreRecord(st) {
     const r = gStats.lifeGroups ? gStats.lifeStars / gStats.lifeGroups : 3.5;
     eco.demand = r >= 4 ? 1.3 : r < 3 ? 0.7 : 1;
   }
+
+  // Saves from before rolling grades (eco.shifts): seed them from the letters.
+  if(!hadShifts) migrateShiftsFromGrades(eco);
 
   updateBoundsFromLevel();
 }

@@ -67,9 +67,25 @@ function animatePlayerRig(moving, dsF){
   ease(pArmR, 'z', carrying ? -.05 : -.18);
 }
 
+// Frames until the next customer group (live stores and autopilot alike).
+function nextSpawnDelay(){
+  let r = Math.random();
+  // Spawn interval scales by day: early days slow, later days faster (but not before day 10)
+  const baseDelay = eco.day <= 3 ? 18 : eco.day <= 6 ? 14 : eco.day <= 10 ? 11 : 8;
+  let delay;
+  if(r < 0.05) delay = baseDelay * 0.55;
+  else if(r < 0.10) delay = baseDelay * 1.4;
+  else {
+    const w = (Math.random() + Math.random() + Math.random()) / 3;
+    delay = baseDelay * (0.75 + w * 0.5);
+  }
+  return delay * 60 * heatSpawnMult() * rushSpawnMult() * demandSpawnMult();
+}
+
 // One store's shift for one frame: robots, cooking, arrivals, customers and
-// payouts. Runs for EVERY store each frame (in that store's context, see
-// 04a-stores.js), so a branch keeps trading while you're next door.
+// payouts. Runs each frame for the store you're in and its neighbours (in
+// that store's context, see 04a-stores.js); stores further away run on
+// autopilot (07c-empire.js).
 function simulateStore(){
   updateRobots(ds);
   // A full bin stinks up the dining room: guests lose patience 20% faster.
@@ -111,17 +127,7 @@ function simulateStore(){
     // After day 10: spawn up to maxSimultaneous groups at once when timer fires
     const toSpawn = Math.min(stats.groupsLeft, stats.maxSimultaneous||1);
     for(let _i=0;_i<toSpawn;_i++) { if(stats.groupsLeft>0) spawnGroup(); }
-    let r = Math.random();
-    // Spawn interval scales by day: early days slow, later days faster (but not before day 10)
-    const baseDelay = eco.day <= 3 ? 18 : eco.day <= 6 ? 14 : eco.day <= 10 ? 11 : 8;
-    let delay;
-    if(r < 0.05) delay = baseDelay * 0.55;
-    else if(r < 0.10) delay = baseDelay * 1.4;
-    else {
-      const w = (Math.random() + Math.random() + Math.random()) / 3;
-      delay = baseDelay * (0.75 + w * 0.5);
-    }
-    stats.spawnTimer = delay * 60 * heatSpawnMult() * rushSpawnMult() * demandSpawnMult();
+    stats.spawnTimer = nextSpawnDelay();
   }
 
   // Stamp queue positions once per frame. This used to be a filtered array
@@ -292,7 +298,7 @@ function animate(){
   ds=Math.min(frameMs/1000,0.1)/TARGET; lastT=now;
   if(gameState==='playing') perfSample(frameMs);
 
-  (window._clouds||[]).forEach(c=>{ c.position.x+=c._spd*ds; if(c.position.x>75) c.position.x=-75; });
+  (window._clouds||[]).forEach(c=>{ c.position.x+=c._spd*ds; const cx=camera.position.x; if(c.position.x>cx+75) c.position.x-=150; else if(c.position.x<cx-75) c.position.x+=150; });   // drift along with whichever store you're in
 
   coopTick();   // co-op: inputs, snapshots, the partner's chef
   if(gameState==='playing'||gameState==='edit'||gameState==='start_menu'){
@@ -365,7 +371,10 @@ function animate(){
       // With a neighbour on a side, the view may follow you out across the lawn.
       const [xLo, xHi] = playerXLimits();
       const minX = (simIdx > 0 ? xLo : bounds.l - 6) + halfW, maxX = (simIdx < storeCtx.length - 1 ? xHi : bounds.r + 6) - halfW;
-      const minZ = bounds.t - 7 + halfH, maxZ = bounds.b + 16 - halfH;
+      // The HUD pills cover the top ~9% of the screen: let the view travel
+      // that much further back so the kitchen line never hides under them.
+      const hudPad = 2 * halfH * CAMERA_HUD_PAD;
+      const minZ = bounds.t - 7 - hudPad + halfH, maxZ = bounds.b + 16 - halfH;
       camX = minX > maxX ? (bounds.l + bounds.r) / 2 : Math.max(minX, Math.min(maxX, camX));
       camZ = minZ > maxZ ? (bounds.t + bounds.b + 9) / 2 : Math.max(minZ, Math.min(maxZ, camZ));
     }
@@ -383,7 +392,7 @@ function animate(){
       for(let si = 0; si < storeCtx.length; si++){
         useStore(si);
         window._remoteSim = si !== activeStoreIdx;   // mute + no HUD writes for stores you're not in
-        simulateStore();
+        if(isLiveStore(si)) simulateStore(); else autopilotTick();   // far stores run on autopilot
       }
       window._remoteSim = false;
       useStore(activeStoreIdx);
@@ -396,7 +405,7 @@ function animate(){
   // The Home Screen is an opaque overlay with its own renderers; drawing the
   // full bar underneath it every frame only cost battery.
   // Every store's merged station mesh (cheap unless that store changed).
-  for(let si = 0; si < storeCtx.length; si++){ useStore(si); updateStationBatch(); }
+  for(let si = 0; si < storeCtx.length; si++){ if(storeCtx[si].root.visible){ useStore(si); updateStationBatch(); } }
   useStore(activeStoreIdx);
   updateAmbience();
   if(gameState==='start_menu' && homeScreenEl.style.display!=='none'){

@@ -148,10 +148,13 @@ function getClosest(){
 // (FREE_SPOT_GAP) around the new station, so the player and robots can still
 // pass between it and its neighbours.
 const FREE_SPOT_GAP = 1.75;  // > 2 x player.radius (1.7): room to walk through
-function freeSpot(w=2, d=2){
+// fromFront scans from the door back (tables), otherwise from the back wall
+// forward (kitchen equipment).
+function freeSpot(w=2, d=2, fromFront=false){
   const b=bounds;
   const probe = {id:'__probe', w:w+FREE_SPOT_GAP*2, d:d+FREE_SPOT_GAP*2};
-  for(let z=b.t+1;z<b.b-1;z+=1) {
+  const z0 = fromFront ? Math.floor(b.b-1) : b.t+1, dz = fromFront ? -1 : 1;
+  for(let z=z0; fromFront ? z>b.t+1 : z<b.b-1; z+=dz) {
     for(let x=b.l+1;x<b.r-1;x+=1) {
       // The station itself must fit inside the walls; its walkway may not.
       if(x-w/2 < b.l+0.5 || x+w/2 > b.r-0.5 || z-d/2 < b.t+0.5 || z+d/2 > b.b-0.5) continue;
@@ -173,6 +176,10 @@ function freeSpot(w=2, d=2){
   }
   return null;
 }
+
+// Where a newly bought item goes: tables and bins fill the dining room from
+// the door back, kitchen equipment fills from the back wall forward.
+function layoutSpot(type, w, d){ return freeSpot(w, d, type === 'table' || type === 'trash'); }
 
 function getValidSpawn(){
   const cx=Math.round((baseBounds.l+baseBounds.r)/2);

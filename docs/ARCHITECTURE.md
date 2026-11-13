@@ -124,21 +124,25 @@ The render loop always runs; `gameState==='playing'` gates simulation
 
 ## 3. Multiple stores
 
-Up to `MAX_STORES` (3) Burger Bars stand side by side along one street,
-`STORE_SPACING` (80) apart. All of them trade during every shift. Code:
-`04a-stores.js`.
+Any number of Burger Bars stand side by side along one street,
+`STORE_SPACING` (110) apart (`MAX_STORES` = 99 is only a save-size rail). All of
+them trade during every shift: the store you're in and its neighbours live, the
+rest on autopilot. Code: `04a-stores.js`, `07c-empire.js`.
 
 | Concern | How it works |
 |---|---|
 | Per-store state | Each store has a context (`storeCtx[i]`) holding its own `eco`, `upg`, `gStats`, `stations`, `groups`, `stats`, bounds, wall edges, nav grid and scene groups. `useStore(i)` swaps those into the globals the rest of the game already uses; `withStore(i, fn)` runs `fn` in a store and swaps back. |
 | Coordinates | Game logic runs in the current store's **local** frame (door at x=0, same as a single bar). Each store's scene groups sit under a root at `x = i * STORE_SPACING`; `storeOX` is the current store's offset (used by `scrXYZ`, floaters, the camera). |
 | The player | Lives in the local frame of the **active** store (`activeStoreIdx`). `playerRoot` carries the player, highlight ring, edit ghost and trail to that store's offset. `checkStoreCrossing()` re-bases the player into the neighbour when they cross the midpoint; `playerXLimits()` lets them walk out across the lawn. |
-| Simulation | The main loop calls `simulateStore()` once per store per frame (robots, cooking, arrivals, customers, payouts). `window._remoteSim` is set while simulating a store you're not in: its sounds are muted and it doesn't write the HUD. |
+| Simulation | Stores within `LIVE_RADIUS` (1) of the active store run `simulateStore()` each frame (robots, cooking, arrivals, customers, payouts). `window._remoteSim` is set while simulating a store you're not in: its sounds are muted and it doesn't write the HUD. Stores further away run `autopilotTick()`: each arriving group is resolved on the spot from `autopilotRate()` (what the robot crew can handle, see `docs/BALANCE.md` §6) and its stars and check are booked; no meshes, no robots. When a store leaves the live window (`switchActiveStore`) its customers are resolved by `toAutopilot()`. Only live stores are drawn (`updateStoreVisibility`). |
+| Grades | A store's grade is its last `GRADE_WINDOW` (7) shifts summed (`eco.shifts`, `storeGrade()`), shown as letter + score (`gradeLabel`). The day's own grade (`applyShiftGrade`) still moves tomorrow's demand. |
 | Shift | `executeDayStart()` runs `storeShiftStart()` in every store; the shift ends when `allStoresClosed()`. `endDay()` runs `storeShiftEnd()` per store (grade, demand, rolling rating) and builds `lastShift` (whole-chain totals + a row per store) for the results screen. Only store 0 can end the run. |
 | Days | The **calendar** is store 0's day (`calendarDay()`): shop unlocks, daily goals and heads-ups follow it. Each store's own `eco.day` is its age: a new branch starts at Day 1 and ramps up (customer count, VIPs, arrival pace). |
-| Money | Each store has its own register. Sales go to the store that made them; the shop spends the store you're managing (◀ ▶ in the shop header). Daily-goal and achievement cash goes to store 0. The Stores screen moves cash between registers (`transferCash`) and opens new stores (`openNewStore`: calendar Day 20, $5,000 from the managing store). |
+| Money | Each store has its own register. Sales go to the store that made them; the shop spends the store you're managing (◀ ▶ in the shop header). Daily-goal and achievement cash goes to store 0. The Stores screen moves cash between registers (`transferCash`) and opens new stores (`openNewStore`: calendar Day 20; `newStoreCost(n)` = $5,000 × 2^(n−1), paid by `payFromEmpire` from the richest registers first). |
+| HUD | One chip under the pause button (`#stores-hud`: store number, grade, ⚠️ count of stores in trouble). Tapping it pauses the shift and opens `#store-picker`, whose GO buttons `travelToStore(j)` to that store's front door. |
 | Shared street | Grass, road and parked cars are built once across the whole street (`buildStreet`); each store builds only its own lot (apron, lamps, trees, sign). |
-| Saves | `saveGame()` writes every store (`writeStoreRecord`). On load, stores that aren't burger bars (or beyond `MAX_STORES`) from old multi-map saves go to `parkedStores`: kept, not run. |
+| Saves | `saveGame()` writes every store (`writeStoreRecord`). On load, stores that aren't burger bars (or beyond `MAX_STORES`) from old multi-map saves go to `parkedStores`: kept, not run. Per store, `eco.shifts` (`[{s: served, w: walkouts, t: total stars}]`, last 7) holds the rolling grade and `eco.apHist` (`{n, cash, stars}`) what live customers paid, for autopilot checks. **Migration:** a store saved without `eco.shifts` gets one shift per remembered letter in `eco.grades`, at that grade's typical score (`migrateShiftsFromGrades`). A store with any station outside its walls (old saves laid out for the 50×90 floor) is re-laid out by `autoArrangeStore()` on load. |
+| Layout | `06a-layout.js`. New tables fill from the door back and kitchen gear from the back wall forward (`layoutSpot` → `freeSpot(w, d, fromFront)`). An expansion that moves the back wall moves the kitchen with it (`followBackWall`). **✨ Auto-arrange** in Edit Mode (`autoArrangeStore`) lays out the kitchen line along the back wall, a pass of counters, a mirrored grid of tables with an aisle from the door, and bins in the front corners. |
 
 ### Playing together
 
