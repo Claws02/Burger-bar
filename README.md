@@ -43,9 +43,11 @@ earlier file; `npm run check` enforces that.
 | `04-state-save` | game data, save/load with backup recovery |
 | `04a-stores` | up to three live stores on one street: per-store state, walking between them, transfers |
 | `05-player` … `06-shop-edit` | player, collision, edit mode, shop |
+| `06a-layout` | full-size store layout: kitchen at the back, tables by the door, Auto-arrange |
 | `07-progress` | achievements, daily goals |
 | `07a-adaptive` | **Kitchen Heat** adaptive difficulty, lunch rushes |
 | `07b-grades` | store grades and the demand they drive (customer count past Day 30) |
+| `07c-empire` | 7-shift store grades, autopilot for far stores, chain treasury |
 | `08-home` | home screen chef + live bar showcase |
 | `08a-characters` | the 12 player characters on one rig (walk cycle, carry pose, skins, crown) |
 | `09-menus-dayflow` | menus, settings, day start/end, results |
