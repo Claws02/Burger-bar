@@ -138,6 +138,9 @@ function robotOverclockMult(){ return 1 + 0.12 * (upg.robotOC||0); }
 // $7,400 for the full crew); a flatter climb keeps a crew within reach of a
 // Day-15 bar that also needs counters and tables.
 function robotCost(n){ return 200 + n * 60; }
+// Crew size grows with the floor: 10 in a small bar, 30 at full size.
+const ROBOT_CAP = { base: 10, perFloor: 2, max: 30 };
+function robotCap(floor){ const f = floor === undefined ? (eco.floorLevel || 0) : floor; return Math.min(ROBOT_CAP.max, ROBOT_CAP.base + ROBOT_CAP.perFloor * f); }
 
 const SHOP_DEFS = [
   // Tier 1 (Day 1)
@@ -157,7 +160,7 @@ const SHOP_DEFS = [
   {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=equipCap('grill'), capKind:'grill', size:[3.5,2], unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=layoutSpot('grill',3.5,2); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
   {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=equipCap('sink'),  capKind:'sink', size:[2.2,2.2], unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=layoutSpot('sink',2.2,2.2); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
   {id:'fryer',     label:'🍟 Fry Station',         desc:()=>(upg.fryerCount||0)?'Another fryer: more fries at once':'Add fries to your menu — a new item!', cat:'Equipment', cost:()=>170+(upg.fryerCount||0)*140, max:()=>(upg.fryerCount||0)>=equipCap('fryer'), capKind:'fryer', size:[3.2,2], unlockDay:11, action:()=>{ const n=upg.fryerCount||0; const pos=layoutSpot('fryer',3.2,2); addStation('fryer'+n,'fryer',pos.x,pos.z,3.2,2); upg.fryerCount=n+1; if(!eco.menu)eco.menu={}; if(!n) eco.menu.fries=true; }},
-  {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>robotCost(upg.robotCount), max:()=>upg.robotCount>=10, size:[1.5,1.5], unlockDay:5, action:()=>{ 
+  {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>robotCost(upg.robotCount), max:()=>upg.robotCount>=robotCap(), size:[1.5,1.5], unlockDay:5, action:()=>{ 
       const rData = {role:'busser', hiredDay:eco.day, trained:0, spec:'both'};
       upg.robots.push(rData);
       // Park new robots in an open spot, not stacked in the middle of the floor.

@@ -156,7 +156,7 @@
     <div id="tut-edge">➤</div>
     <div id="rush-banner" aria-live="polite">🔥 LUNCH RUSH! <span>+25% tips</span></div>
     <div id="top-hud">
-      <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: 0</span></div>
+      <div id="day-banner">DAY 1<br><span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">👥 0</span></div>
       <div id="cash-display"><span id="cash-val">$0.00</span><span id="rating-val">⭐ 0.0</span><span id="streak-wrap"><span id="streak-x">🔥 x1</span><span id="streak-bar"><span id="streak-fill"></span></span></span></div>
     </div>
     <div id="goals-hud">
@@ -179,6 +179,7 @@
   </div>
 
   <div id="pause-btn" onclick="togglePause()">⏸</div>
+  <div id="stores-hud" onclick="showStorePicker()"></div>
 
   <div id="sink-hold-ui">
     <div id="sink-hold-label">Hold to wash...</div>
@@ -268,7 +269,7 @@
 
   <div id="stores-screen">
     <h1 style="font-size:26px;margin:0 0 6px;color:#ab47bc;">🏪 YOUR STORES</h1>
-    <div style="font-size:12px;color:rgba(255,255,255,.55);margin:0 0 14px;text-align:center;max-width:420px;">Every store trades during the shift. Walk out the front door and along the street to work in another one. Each store keeps its own cash.</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.55);margin:0 0 14px;text-align:center;max-width:420px;">Build a chain. The store you're in and its neighbours trade live; stores further down the street run on autopilot with only their robot crew, so staff every store to run without you. Each new store costs double and is paid from all your stores' cash. A store's grade is its average over the last 7 shifts.</div>
     <div id="stores-list" style="width:100%;max-width:480px;"></div>
     <button class="btn-green" onclick="closeStores()" style="margin-top:14px;">BACK</button>
   </div>
@@ -361,6 +362,13 @@
     <button id="staff-btn" onclick="showStaff()">👥 STAFF</button>
     <button id="arrange-btn" onclick="editAutoArrange()">✨ AUTO-ARRANGE</button>
     <button id="finish-edit-btn" onclick="saveEditMode()">DONE ✓</button>
+  </div>
+
+  <div id="store-picker">
+    <h1>🏪 YOUR STORES</h1>
+    <div class="sp-sub">The shift is paused. Tap GO to ride to a store's front door.</div>
+    <div id="store-picker-list"></div>
+    <button class="btn-green" onclick="closeStorePicker()" style="margin-top:12px;">BACK TO WORK</button>
   </div>
 
   <div id="staff-panel">

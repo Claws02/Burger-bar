@@ -655,8 +655,8 @@ function executeDayStart() {
     const hl = heatLabel();
     const multi = storeCtx.length > 1;
     document.getElementById('day-banner').innerHTML=`DAY ${calendarDay()}<br>` +
-      (multi ? `<span id="day-store" style="font-size:11px;color:#FFD54F;">${storeName(activeStoreIdx)}</span>` : '') +
-      `<span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${groupCount}</span>` +
+      // (the 🏪 chip under the pause button names the store you're in)
+      `<span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">👥 ${groupCount}</span>` +
       (hl ? `<br><span id="day-heat" class="${adapt.easeShifts>0?'ease':''}">${hl}</span>` : '');
   }
   updateCashUI();
@@ -701,6 +701,9 @@ window.showShop=showShop;
 // Returns a summary row for the results screen.
 function storeShiftEnd(){
   const gradeInfo = applyShiftGrade();   // grade today, move tomorrow's demand
+  recordShift(stats.groupsServed || 0, stats.walkouts || 0, stats.totalStars || 0);
+  gradeInfo.rolling = storeGrade();      // the store's grade: last 7 shifts
+  recordAutopilotHistory();
   gStats.lifeStars+=stats.totalStars;
   gStats.lifeGroups+=stats.groupsServed;
 
@@ -728,7 +731,8 @@ function storeShiftEnd(){
   storeCtx[simIdx].snapshot = null;
   return { idx: simIdx, name: storeName(simIdx), gradeInfo, served: stats.groupsServed, walkouts: stats.walkouts || 0,
            earned: stats.cashEarned, cash: eco.cash,
-           failing: eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0 };
+           autopilot: !!stats.autopilot,
+           failing: !stats.autopilot && eco.day>=5 && gStats.recentDays.length>=3 && rollAvg<2.0 };
 }
 
 // What the results screen shows: the whole chain's shift. Set by endDay().
@@ -896,8 +900,12 @@ function showResults(){
       if(!gi || !gi.grade) return `${r.name}: closed today`;
       const pct = Math.round((gi.after - gi.before) * 100);
       const trend = pct > 0 ? `📈 +${pct}% customers tomorrow` : pct < 0 ? `📉 ${pct}% customers tomorrow` : 'customers steady';
-      const who = S.stores.length > 1 ? `${r.name} · +$${r.earned.toFixed(0)} · ` : '';
-      return `${who}<b style="color:${GRADE_COLORS[gi.grade]}">Grade ${gi.grade}</b> · ${trend}`;
+      const who = S.stores.length > 1 ? `${r.autopilot ? '🤖 ' : ''}${r.name} · +${fmtMoney(r.earned)} · ` : '';
+      // The store's grade is its 7-shift average; today's letter moves demand.
+      const rg = gi.rolling && gi.rolling.grade ? gi.rolling : null;
+      const store = rg ? `<b style="color:${GRADE_COLORS[rg.grade]}">Grade ${gradeLabel(rg)}</b> <span style="opacity:.6">(${rg.n}-shift avg)</span> · today ${gi.grade}`
+                       : `<b style="color:${GRADE_COLORS[gi.grade]}">Grade ${gi.grade}</b>`;
+      return `${who}${store} · ${trend}`;
     };
     heat = S.stores.map(gradeLine).join('<br>') + (heat ? '<br>' + heat : '');
     co.textContent = msg; co.style.opacity = '1';

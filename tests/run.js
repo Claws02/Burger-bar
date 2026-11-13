@@ -1046,6 +1046,13 @@ t('robot hires climb gently; Overclock unlocks on Day 15 and speeds robots up', 
   ok(Math.abs(g.run('return robotOverclockMult();') - 1.6) < 1e-9, 'five levels = +60% robot speed');
 });
 
+t('the robot crew can grow with the floor: 10 in a small bar, 30 at full size', () => {
+  const g = boot();
+  eq(g.run('return [robotCap(0), robotCap(5), robotCap(10)].join();'), '10,20,30', 'robot caps:');
+  g.run('eco.day = 30; eco.cash = 1e8; for(let i=0;i<12;i++) doBuy("expand"); document.getElementById("alert-popup").style.display="none";');
+  eq(buyUntilStopped(g, 'robot'), 30, 'robots hired at full size:');
+});
+
 t('the camera stays close enough to read characters at full size', () => {
   const g = boot();
   eq(g.run('eco.floorLevel = 0; return cameraFrustumSize();'), 26);
@@ -1179,7 +1186,7 @@ function twoStores(g){
   g.run('eco.day = 20; eco.cash = 9000; openNewStore(); document.getElementById("alert-popup").style.display="none";');
 }
 
-t('a second store unlocks on Day 20 for $5,000 from the managing store, up to 3', () => {
+t('a second store unlocks on Day 20 for $5,000; each later store costs double, with no cap', () => {
   const g = boot(); noAchv(g);
   g.run('eco.day = 19; eco.cash = 99999;');
   eq(g.run('return openNewStore();'), false, 'opened before Day 20:');
@@ -1189,12 +1196,21 @@ t('a second store unlocks on Day 20 for $5,000 from the managing store, up to 3'
   eq(g.run('return openNewStore();'), true);
   eq(g.run('return [storeCtx.length, Math.round(ctxOf(0).eco.cash), ctxOf(1).eco.cash, ctxOf(1).eco.day].join();'), '2,15000,0,0',
      'stores / HQ cash / new store cash / new store day:');
-  g.run('openNewStore();');
-  eq(g.run('return openNewStore();'), false, 'a fourth store:');
-  eq(g.run('return storeCtx.length;'), 3);
-  eq(g.run('return Object.values(ctxOf(2).stations).filter(s=>s.type==="fridge").length;'), 1, 'new store has a kitchen:');
+  eq(g.run('return [newStoreCost(2), newStoreCost(3), newStoreCost(4), newStoreCost(9)].join();'), '10000,20000,40000,1280000', 'prices:');
+  g.run('ctxOf(0).eco.cash = 1e7; for(let i=0;i<4;i++) openNewStore();');
+  eq(g.run('return storeCtx.length;'), 6, 'stores past the old cap of 3:');
+  eq(g.run('return Object.values(ctxOf(5).stations).filter(s=>s.type==="fridge").length;'), 1, 'new store has a kitchen:');
 });
 
+t('a new store is paid from the whole chain, richest register first', () => {
+  const g = boot(); twoStores(g);                     // HQ keeps $4,000
+  g.run('ctxOf(1).eco.cash = 7000;');                 // chain: $11,000; the third store costs $10,000
+  eq(g.run('return empireCash();'), 11000);
+  eq(g.run('return openNewStore();'), true, 'the chain could afford it together:');
+  eq(g.run('return [ctxOf(0).eco.cash, ctxOf(1).eco.cash].join();'), '1000,0', 'HQ / branch cash after paying (richest first):');
+  eq(g.run('return openNewStore();'), false, 'opened with $1,000 for a $20,000 store:');
+  eq(g.run('return empireCash();'), 1000, 'a refused purchase took nothing:');
+});
 t('transfers move cash between registers and never overdraw', () => {
   const g = boot(); twoStores(g);
   eq(g.run('return transferCash(0, 1, 1500);'), 1500);
@@ -1787,6 +1803,112 @@ t('an old save with stations outside the walls is re-laid out on load', () => {
   const lay = save.stores[0].layout; lay.find(l => l.id === 'grill1').z = -85;
   const g2 = boot({ save });
   eq(g2.run(LAYOUT_CHECK), '0,0', 'overlaps,outside after load:');
+});
+
+section('22. The empire: autopilot stores and rolling grades');
+
+function chain(g, n){
+  noAchv(g);
+  g.run(`eco.day = 30; eco.cash = 1e9; for(let i=1;i<${n};i++) openNewStore(); document.getElementById("alert-popup").style.display="none";`);
+}
+// Give store i a robot crew (roles) at a given level.
+function crew(g, i, roles, tables){
+  g.run(`withStore(${i}, () => {
+    if(eco.floorLevel < 6){ eco.floorLevel = 6; updateBoundsFromLevel(); rebuildAll(); }
+    for(let k=1;k<${tables || 1};k++){ const p=layoutSpot('table',5,5); addStation('table'+upg.tableCount,'table',p.x,p.z,5,5); upg.tableCount++; }
+    ${JSON.stringify(roles)}.forEach((r,k)=>{ const d={role:r,hiredDay:eco.day-20,trained:3}; upg.robots.push(d); const p=freeSpot(1.5,1.5)||getValidSpawn(); addStation('robot'+k,'robot',p.x,p.z,1.5,1.5,d); });
+    upg.robotCount=upg.robots.length; markStationsDirty();
+  });`);
+}
+
+t('only the store you are in and its neighbours run live; the rest run on autopilot', () => {
+  const g = boot(); chain(g, 4);
+  g.run('executeDayStart(); for(let i=0;i<3;i++) ctxOf(i).stats.spawnTimer = 0; ctxOf(3).stats.spawnTimer = 0;');
+  g.frame(5);
+  eq(g.run('return [0,1,2,3].map(isLiveStore).join();'), 'true,true,false,false', 'live window from store 1:');
+  ok(g.run('return ctxOf(0).groups.length + ctxOf(1).groups.length > 0;'), 'live stores spawned no customers');
+  eq(g.run('return ctxOf(3).groups.length;'), 0, 'an autopilot store spawned customer meshes:');
+  ok(g.run('return ctxOf(3).stats.autopilot === true && ctxOf(3).stats.groupsLeft < ctxOf(3).stats.initialGroups;'), 'the far store is not resolving customers');
+  eq(g.run('return [0,1,2,3].map(i=>storeCtx[i].root.visible).join();'), 'true,true,false,false', 'drawn stores:');
+});
+
+t('an autopilot store with no crew serves nobody; a staffed one earns', () => {
+  const g = boot(); chain(g, 4);
+  crew(g, 3, ['chef','chef','waiter','waiter','waiter','waiter','busser','busser'], 10);
+  g.run('executeDayStart(); ctxOf(2).stats.spawnTimer = 0;');
+  for(let i = 0; i < 400 && g.run('return ctxOf(2).stats.groupsLeft + ctxOf(3).stats.groupsLeft > 0;'); i++) g.frame(60);
+  const r = g.run('const a=ctxOf(2).stats, b=ctxOf(3).stats; return [a.groupsServed, a.walkouts, b.groupsServed > 0, b.cashEarned > 0, ctxOf(3).eco.cash > 0];');
+  eq(r[0], 0, 'groups the crewless store served:');
+  ok(r[1] > 0, 'the crewless store lost no customers');
+  eq(r.slice(2).join(), 'true,true,true', 'the staffed store served / earned / banked:');
+  ok(g.run('return withStore(3, () => autopilotRate()) > withStore(2, () => autopilotRate());'), 'a crew should raise the autopilot rate');
+});
+
+t('autopilot capacity follows the crew: waiters are the bottleneck, levels and Overclock help', () => {
+  const g = boot(); chain(g, 2);
+  crew(g, 1, ['chef','chef','waiter','busser','busser'], 10);
+  const base = g.run('return withStore(1, () => autopilotCapacity());');
+  g.run(`withStore(1, () => { for(const k of [5,6]){ const d={role:'waiter',hiredDay:eco.day-20,trained:3}; const p=freeSpot(1.5,1.5)||getValidSpawn(); addStation('robot'+k,'robot',p.x,p.z,1.5,1.5,d); } });`);
+  const more = g.run('return withStore(1, () => autopilotCapacity());');
+  ok(more > base * 2, `two more waiters should multiply capacity (${base} -> ${more})`);
+  const oc = g.run('return withStore(1, () => { upg.robotOC = 5; return autopilotCapacity(); });');
+  ok(oc > more, 'Overclock should add capacity');
+});
+
+t('walking away hands a store\'s customers to autopilot', () => {
+  const g = boot(); chain(g, 3);
+  g.run('executeDayStart(); ctxOf(0).stats.spawnTimer = 0;');
+  g.frame(3);
+  ok(g.run('return ctxOf(0).groups.length > 0;'), 'store 1 has no customers to hand over');
+  const before = g.run('const s=ctxOf(0).stats; return s.groupsServed + (s.walkouts||0);');
+  g.run('travelToStore(2);');
+  eq(g.run('return activeStoreIdx;'), 2, 'travelled to store 3:');
+  eq(g.run('return ctxOf(0).groups.length;'), 0, 'customers left in the store that went on autopilot:');
+  ok(g.run('const s=ctxOf(0).stats; return s.groupsServed + (s.walkouts||0);') > before, 'the handed-over customers were not resolved');
+  ok(g.run('return Math.abs(player.pos.x - doorX()) < 1e-9 && player.pos.z > bounds.b;'), 'arrived away from the front door');
+});
+
+t('the store picker pauses the shift and travels to another store', () => {
+  const g = boot(); chain(g, 3);
+  g.run('executeDayStart(); _storesHudT = 0; updateStoresHud();');
+  ok(g.run('return document.getElementById("stores-hud").innerHTML;').includes('1/3'), 'the chip should show 1/3');
+  g.run('showStorePicker();');
+  eq(g.run('return gamePaused;'), true, 'paused while choosing:');
+  ok(g.run('return document.getElementById("store-picker-list").innerHTML.includes("Autopilot");'), 'the far store should say Autopilot');
+  g.run('travelToStore(1);');
+  eq(g.run('return [activeStoreIdx, gamePaused, document.getElementById("store-picker").style.display].join();'), '1,false,none');
+});
+
+t('a store\'s grade is the average of its last 7 shifts', () => {
+  const g = boot();
+  g.run('eco.shifts = []; for(let i=0;i<6;i++) recordShift(10, 0, 50); recordShift(10, 0, 20); recordShift(10, 0, 20);');
+  eq(g.run('return eco.shifts.length;'), 7, 'shifts kept:');
+  const gi = g.run('return storeGrade();');
+  ok(Math.abs(gi.score - (5*50 + 2*20) / 70) < 1e-9, 'score is the 7-shift average: ' + gi.score);
+  eq(gi.grade, 'B', 'five 5★ shifts and two 2★ shifts average 4.14:');
+  eq(g.run('return gradeLabel(storeGrade());'), 'B 4.1★');
+});
+
+t('a shift records into the rolling grade and the results show it', () => {
+  const g = boot(); noAchv(g);
+  g.run('eco.day = 10; eco.shifts = [{s:10,w:0,t:46}]; executeDayStart(); stats.groupsServed = 10; stats.totalStars = 30; stats.walkouts = 0; groups.forEach(x=>discard(actGrp,x.mesh)); groups.length = 0; stats.groupsLeft = 0; endDay();');
+  eq(g.run('return eco.shifts.length;'), 2);
+  eq(g.run('return lastShift.stores[0].gradeInfo.rolling.grade;'), 'B', 'rolling grade after a 4.6 and a 3.0 shift:');
+});
+
+t('old saves turn their letter grades into shifts', () => {
+  const g = boot();
+  g.run('saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  save.stores[0].eco.grades = ['B','A','A+']; delete save.stores[0].eco.shifts;
+  const g2 = boot({ save });
+  eq(g2.run('return eco.shifts.length;'), 3, 'shifts from letters:');
+  eq(g2.run('return storeGrade().grade;'), 'A', 'grade from B, A, A+:');
+});
+
+t('money pills shorten big numbers', () => {
+  const g = boot();
+  eq(g.run('return [fmtMoney(950.25), fmtMoney(12400), fmtMoney(254000), fmtMoney(3210000)].join(" ");'), '$950.25 $12.4k $254k $3.21M');
 });
 
 // ── run + summary ───────────────────────────────────────────────────────────

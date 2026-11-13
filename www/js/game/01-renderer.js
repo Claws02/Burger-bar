@@ -104,6 +104,7 @@ let frustumSize = 26;
 // the player, so the view only needs to grow a little: enough that a typical
 // station cluster stays in frame. Capped at 30.
 const CAMERA_FRUSTUM_BASE = 26, CAMERA_FRUSTUM_PER_FLOOR = 0.7, CAMERA_FRUSTUM_MAX = 30;   // reached at floor 6
+const CAMERA_HUD_PAD = 0.09;   // share of the view height under the top HUD
 function cameraFrustumSize(){
   return Math.min(CAMERA_FRUSTUM_MAX, CAMERA_FRUSTUM_BASE + (eco.floorLevel||0) * CAMERA_FRUSTUM_PER_FLOOR);
 }

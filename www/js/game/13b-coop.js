@@ -330,7 +330,7 @@ function coopGuestDayStart(){
   { const gh = document.getElementById('goals-hud'); if(gh) gh.style.display = 'none'; }
   document.getElementById('day-banner').innerHTML = `DAY ${calendarDay()}<br>` +
     `<span id="day-store" style="font-size:11px;color:#FFD54F;">👥 ${coopPeerName()}</span>` +
-    `<span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">Customers: ${stats.groupsLeft || 0}</span>`;
+    `<span id="day-sub" style="font-size:11px;color:rgba(255,255,255,.45);">👥 ${stats.groupsLeft || 0}</span>`;
   player.holding = null; updateHolding();
   manageStore(0);
   player.pos = getValidSpawn(); player.pos.x += 2; pMesh.position.copy(player.pos);
@@ -433,7 +433,7 @@ function coopApplySnap(m){
   }
   if(gameState === 'playing'){
     const sub = document.getElementById('day-sub');
-    if(sub) sub.textContent = `Customers: ${stats.groupsLeft}`;
+    if(sub) sub.textContent = `👥 ${stats.groupsLeft}`;
     updateCashUI();
   }
 }
