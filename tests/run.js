@@ -986,11 +986,11 @@ t('equipment caps grow with each floor expansion', () => {
   const g = boot();
   g.run('eco.day = 18; eco.cash = 1e7;');
   eq(g.run('return equipCap("counter");'), 3, 'counters at floor 0 (extras):');
-  eq(g.run('eco.floorLevel = 3; return equipCap("counter");'), 9, 'counters at floor 3:');
-  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 15, 'counters at floor 6:');
-  eq(g.run('eco.floorLevel = 10; return equipCap("counter");'), 20, 'counters at full size (22 total):');
-  eq(g.run('return equipCap("grill") + "," + equipCap("sink") + "," + equipCap("soda") + "," + equipCap("table");'),
-     '13,13,8,18', 'grill/sink/soda/table caps at full size:');
+  eq(g.run('eco.floorLevel = 3; return equipCap("counter");'), 11, 'counters at floor 3:');
+  eq(g.run('eco.floorLevel = 6; return equipCap("counter");'), 18, 'counters at floor 6:');
+  eq(g.run('eco.floorLevel = 10; return equipCap("counter");'), 26, 'counters at full size (28 total):');
+  eq(g.run('return equipCap("grill") + "," + equipCap("sink") + "," + equipCap("soda") + "," + equipCap("table") + "," + equipCap("fryer");'),
+     '17,15,10,28,6', 'grill/sink/soda/table/fryer caps at full size:');
 });
 
 t('a fully expanded bar (floor 10) has room for every counter, grill, sink, soda and table', () => {
@@ -998,13 +998,14 @@ t('a fully expanded bar (floor 10) has room for every counter, grill, sink, soda
   g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<12;i++) doBuy("expand");');
   eq(g.run('return eco.floorLevel;'), 10);
   const bought = {};
-  for(const id of ['table','xcounter','xgrill','xsink','soda']) bought[id] = buyUntilStopped(g, id);
-  eq(bought.xcounter, 20, 'extra counters bought:');
-  eq(bought.xgrill, 13, 'extra grills bought:');
-  eq(bought.xsink, 13, 'extra sinks bought:');
-  eq(bought.soda, 8, 'soda fountains bought:');
-  eq(g.run('return upg.tableCount;'), 18, 'tables:');
-  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 22, 'counters on the floor:');
+  for(const id of ['table','xcounter','xgrill','xsink','soda','fryer']) bought[id] = buyUntilStopped(g, id);
+  eq(bought.xcounter, 26, 'extra counters bought:');
+  eq(bought.xgrill, 17, 'extra grills bought:');
+  eq(bought.xsink, 15, 'extra sinks bought:');
+  eq(bought.soda, 10, 'soda fountains bought:');
+  eq(bought.fryer, 6, 'fry stations bought:');
+  eq(g.run('return upg.tableCount;'), 28, 'tables:');
+  eq(g.run('return Object.values(stations).filter(s=>s.type==="counter").length;'), 28, 'counters on the floor:');
   // Nothing was placed overlapping another station.
   const overlaps = g.run(`
     const ss = Object.values(stations).filter(s=>s.type!=='robot' && s.type!=='dumpster'); let n=0;
@@ -1221,19 +1222,20 @@ t('every store trades in the same shift, and the shift ends when all are closed'
 
 t('walking past the midpoint makes the neighbour the active store', () => {
   const g = boot(); twoStores(g);
-  g.run('executeDayStart(); player.pos.set(39.5, 0, 14); checkStoreCrossing();');
+  const half = g.run('return STORE_SPACING / 2;');
+  g.run(`executeDayStart(); player.pos.set(${half - 0.5}, 0, 14); checkStoreCrossing();`);
   eq(g.run('return activeStoreIdx;'), 0);
-  g.run('player.pos.x = 40.5; checkStoreCrossing();');
+  g.run(`player.pos.x = ${half + 0.5}; checkStoreCrossing();`);
   eq(g.run('return activeStoreIdx;'), 1);
-  ok(Math.abs(g.run('return player.pos.x + storeOX;') - 40.5) < 1e-9, 'the player jumped in the world');
-  eq(g.run('return playerRoot.position.x;'), 80, 'player meshes follow the store root:');
-  eq(g.run('return checkColl(-45, 14, null);'), true, 'walked past the lawn edge');
-  eq(g.run('return checkColl(-35, 14, null);'), false, 'blocked on the lawn between stores');
+  ok(Math.abs(g.run('return player.pos.x + storeOX;') - (half + 0.5)) < 1e-9, 'the player jumped in the world');
+  eq(g.run('return playerRoot.position.x;'), half * 2, 'player meshes follow the store root:');
+  eq(g.run(`return checkColl(${-half - 5}, 14, null);`), true, 'walked past the lawn edge');
+  eq(g.run(`return checkColl(${-half + 5}, 14, null);`), false, 'blocked on the lawn between stores');
 });
 
 t('the HUD money and HQ rewards stay with the right stores', () => {
   const g = boot(); twoStores(g);
-  g.run('executeDayStart(); player.pos.x = 41; checkStoreCrossing(); updateCashUI();');
+  g.run('executeDayStart(); player.pos.x = STORE_SPACING / 2 + 1; checkStoreCrossing(); updateCashUI();');
   eq(g.text('cash-val'), '$0.00', 'HUD should show the store you are standing in:');
 });
 
@@ -1721,6 +1723,70 @@ t('a busser sets out a clean tray and the chef puts the burger on it', () => {
   g.frame(600);
   ok(g.run("return Object.values(stations).some(s=>s.type==='counter'&&s.item==='burger_on_tray') || groups[0].unservedOrders.length === 0;"),
      "the chef's burger didn't land on the waiting tray");
+});
+
+section('21. Store layout at full size');
+
+const LAYOUT_CHECK = `
+  const ss = Object.values(stations).filter(s=>s.type!=='robot' && s.type!=='dumpster'); let overlap=0, out=0;
+  const box = s => s.type==='table' ? {w:s.r*2, d:s.r*2} : s;
+  for(const a of ss) for(const b of ss){ if(a===b) continue; const A=box(a), B=box(b);
+    if(Math.abs(a.x-b.x) < (A.w+B.w)/2 && Math.abs(a.z-b.z) < (A.d+B.d)/2) overlap++; }
+  for(const s of ss) if(s.x-s.w/2 < bounds.l || s.x+s.w/2 > bounds.r || s.z-s.d/2 < bounds.t || s.z+s.d/2 > bounds.b) out++;
+  return overlap + ',' + out;`;
+
+function fullStore(g){
+  g.run('eco.day = 30; eco.cash = 1e8; for(let i=0;i<12;i++) doBuy("expand");');
+  for(const id of ['table','xcounter','xgrill','xsink','soda','fryer']) buyUntilStopped(g, id);
+}
+
+t('floors 7-10 widen the store instead of making a corridor', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<12;i++) doBuy("expand");');
+  eq(g.run('return [bounds.r - bounds.l, bounds.b - bounds.t].join("x");'), '70x70', 'full-size floor:');
+  ok(g.run('return STORE_SPACING > bounds.r - bounds.l + 30;'), 'stores on the street would overlap');
+});
+
+t('new tables fill from the door, new kitchen gear from the back wall', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7; for(let i=0;i<10;i++) doBuy("expand"); doBuy("table"); doBuy("xgrill");');
+  const r = g.run('return [stations.table1.z, stations.grill1.z, bounds.t, bounds.b];');
+  ok(r[0] > (r[2] + r[3]) / 2, 'the new table went to the back half: z=' + r[0]);
+  ok(r[1] < r[2] + 8, 'the new grill is not near the back wall: z=' + r[1]);
+});
+
+t('expanding the floor keeps the kitchen against the back wall', () => {
+  const g = boot();
+  g.run('eco.day = 30; eco.cash = 1e7;');
+  const gap = () => g.run('return stations.fridge.z - bounds.t;');
+  const before = gap();
+  g.run('for(let i=0;i<12;i++) doBuy("expand");');
+  ok(Math.abs(gap() - before) < 1e-6, `fridge drifted from the back wall: ${before} -> ${gap()}`);
+  eq(g.run(LAYOUT_CHECK), '0,0', 'overlaps,outside after expanding:');
+});
+
+t('Auto-arrange lays out a full store: kitchen at the back, tables at the front, all reachable', () => {
+  const g = boot(); fullStore(g);
+  g.run('startEditMode(); editAutoArrange();');
+  eq(g.run(LAYOUT_CHECK), '0,0', 'overlaps,outside:');
+  const r = g.run(`
+    const mid = (bounds.t + bounds.b) / 2, all = Object.values(stations);
+    const kitchenBack = all.filter(s=>['fridge','grill','fryer','sink'].includes(s.type)).every(s=>s.z < mid);
+    const tablesFront = all.filter(s=>s.type==='table').filter(s=>s.z > mid).length / all.filter(s=>s.type==='table').length;
+    const door = (baseBounds.l+baseBounds.r)/2;
+    const reach = all.filter(s=>s.type!=='robot'&&s.type!=='dumpster').every(s => !!navPath(door, bounds.b - 1, s, robotReach(s)));
+    return [kitchenBack, tablesFront >= 0.75, reach];`);
+  eq(r.join(), 'true,true,true', 'kitchen at back, tables mostly front, every station reachable from the door:');
+});
+
+t('an old save with stations outside the walls is re-laid out on load', () => {
+  const g = boot(); fullStore(g);
+  g.run('saveGame();');
+  const save = JSON.parse(g.dom.localStorage.getItem('burgerBoss_save'));
+  // The old 50-wide x 90-deep floor: push a station far behind today's back wall.
+  const lay = save.stores[0].layout; lay.find(l => l.id === 'grill1').z = -85;
+  const g2 = boot({ save });
+  eq(g2.run(LAYOUT_CHECK), '0,0', 'overlaps,outside after load:');
 });
 
 // ── run + summary ───────────────────────────────────────────────────────────

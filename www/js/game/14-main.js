@@ -292,7 +292,7 @@ function animate(){
   ds=Math.min(frameMs/1000,0.1)/TARGET; lastT=now;
   if(gameState==='playing') perfSample(frameMs);
 
-  (window._clouds||[]).forEach(c=>{ c.position.x+=c._spd*ds; if(c.position.x>75) c.position.x=-75; });
+  (window._clouds||[]).forEach(c=>{ c.position.x+=c._spd*ds; const cx=camera.position.x; if(c.position.x>cx+75) c.position.x-=150; else if(c.position.x<cx-75) c.position.x+=150; });   // drift along with whichever store you're in
 
   coopTick();   // co-op: inputs, snapshots, the partner's chef
   if(gameState==='playing'||gameState==='edit'||gameState==='start_menu'){

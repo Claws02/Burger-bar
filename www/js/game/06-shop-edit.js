@@ -99,11 +99,12 @@ function rebuildAll(){
 // the EXTRA stations bought, on top of what the bar starts with.
 const EQUIP_CAPS = {
   //            extras at floor 0,  per expansion,  hard ceiling (extras)
-  counter: { base:3, perFloor:2,   max:20 },   // starts with 2 -> up to 22 total
-  grill:   { base:3, perFloor:1,   max:13 },   // starts with 1 -> up to 14
-  sink:    { base:3, perFloor:1,   max:13 },   // starts with 1 -> up to 14
-  soda:    { base:3, perFloor:0.5, max:8  },   // starts with 0 -> up to 8
-  table:   { base:8, perFloor:1,   max:18 },   // TOTAL tables (starts with 1)
+  counter: { base:3, perFloor:2.5, max:26 },   // starts with 2 -> up to 28 total
+  grill:   { base:3, perFloor:1.5, max:17 },   // starts with 1 -> up to 18
+  sink:    { base:3, perFloor:1.2, max:15 },   // starts with 1 -> up to 16
+  soda:    { base:3, perFloor:0.7, max:10 },   // starts with 0 -> up to 10
+  table:   { base:8, perFloor:2,   max:28 },   // TOTAL tables (starts with 1)
+  fryer:   { base:1, perFloor:0.5, max:6  },   // TOTAL fry stations (starts with 0)
 };
 function equipCap(kind, floor){
   const c = EQUIP_CAPS[kind];
@@ -145,17 +146,17 @@ const SHOP_DEFS = [
   {id:'grillspd',  label:'🔥 Turbo Grill',        desc:'Cook burgers faster',                   cat:'Upgrades',  cost:()=>55+Math.floor(upg.grillMult*25), max:()=>upg.grillMult>=3, unlockDay:1, action:()=>{ upg.grillMult=Math.min(3,upg.grillMult+.35); }},
   
   // Tier 2 (Day 3)
-  {id:'table',     label:'🪑 Add Table',         desc:'Serve more customers at once',          cat:'Building',  cost:()=>80*(upg.tableCount+1),  max:()=>upg.tableCount>=equipCap('table'), capKind:'table', size:[5,5], unlockDay:3, action:()=>{ const pos=freeSpot(5,5)||{x:baseBounds.r-3,z:baseBounds.t+4}; addStation('table'+upg.tableCount,'table', pos.x, pos.z, 5,5); upg.tableCount++; }},
+  {id:'table',     label:'🪑 Add Table',         desc:'Serve more customers at once',          cat:'Building',  cost:()=>80*(upg.tableCount+1),  max:()=>upg.tableCount>=equipCap('table'), capKind:'table', size:[5,5], unlockDay:3, action:()=>{ const pos=layoutSpot('table',5,5)||{x:baseBounds.r-3,z:baseBounds.t+4}; addStation('table'+upg.tableCount,'table', pos.x, pos.z, 5,5); upg.tableCount++; }},
   {id:'decor',     label:'🌸 Fancy Decor',        desc:'Customers wait longer',                 cat:'Upgrades',  cost:()=>45+Math.floor(upg.patienceMult*20), max:()=>upg.patienceMult>=3, unlockDay:3, action:()=>{ upg.patienceMult=Math.min(3,upg.patienceMult+.35); }},
-  {id:'xcounter',  label:'🍽️ Extra Counter',      desc:'Staging space for you and your robots', cat:'Equipment', cost:()=>70+upg.extraCounters*35,max:()=>upg.extraCounters>=equipCap('counter'), capKind:'counter', size:[1.8,1.8], unlockDay:3, action:()=>{ const id='counter'+(upg.extraCounters+2); const pos=freeSpot(1.8,1.8); addStation(id,'counter',pos.x,pos.z,1.8,1.8); upg.extraCounters++; }},
+  {id:'xcounter',  label:'🍽️ Extra Counter',      desc:'Staging space for you and your robots', cat:'Equipment', cost:()=>70+upg.extraCounters*35,max:()=>upg.extraCounters>=equipCap('counter'), capKind:'counter', size:[1.8,1.8], unlockDay:3, action:()=>{ const id='counter'+(upg.extraCounters+2); const pos=layoutSpot('counter',1.8,1.8); addStation(id,'counter',pos.x,pos.z,1.8,1.8); upg.extraCounters++; }},
   {id:'price',     label:'📈 Menu Prices',        desc:()=>`Every order pays +15% (now ${Math.round(menuPriceMult()*100)}%)`, cat:'Upgrades', cost:()=>menuPriceCost(upg.priceLv||0), max:()=>(upg.priceLv||0)>=MENU_PRICE_MAX, unlockDay:4, action:()=>{ upg.priceLv=(upg.priceLv||0)+1; }},
   
   // Tier 3 (Day 5)
-  {id:'soda',      label:'🥤 Soda Fountain',      desc:'Unlock Combo Meals for higher profit!', cat:'Equipment', cost:()=>150 + upg.sodaCount*100, max:()=>upg.sodaCount>=equipCap('soda'), capKind:'soda', size:[2,2], unlockDay:5, action:()=>{ const pos=freeSpot(2,2); addStation('soda'+upg.sodaCount,'sodafountain',pos.x,pos.z,2,2); upg.sodaCount++; }},
-  {id:'expand',    label:'🏗️ Expand Floorplan',  desc:'More space, and room for more equipment', cat:'Building',  cost:()=>200*(eco.floorLevel+1), max:()=>eco.floorLevel>=MAX_FLOOR_LEVEL, unlockDay:5, action:()=>{ eco.floorLevel++; updateBoundsFromLevel(); rebuildAll(); }},
-  {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=equipCap('grill'), capKind:'grill', size:[3.5,2], unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=freeSpot(3.5,2); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
-  {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=equipCap('sink'),  capKind:'sink', size:[2.2,2.2], unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=freeSpot(2.2,2.2); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
-  {id:'fryer',     label:'🍟 Fry Station',         desc:'Add fries to your menu — a new item!',  cat:'Equipment', cost:()=>170,                    max:()=>(upg.fryerCount||0)>=1, size:[3.2,2], unlockDay:11, action:()=>{ const pos=freeSpot(3.2,2); addStation('fryer0','fryer',pos.x,pos.z,3.2,2); upg.fryerCount=1; if(!eco.menu)eco.menu={}; eco.menu.fries=true; }},
+  {id:'soda',      label:'🥤 Soda Fountain',      desc:'Unlock Combo Meals for higher profit!', cat:'Equipment', cost:()=>150 + upg.sodaCount*100, max:()=>upg.sodaCount>=equipCap('soda'), capKind:'soda', size:[2,2], unlockDay:5, action:()=>{ const pos=layoutSpot('sodafountain',2,2); addStation('soda'+upg.sodaCount,'sodafountain',pos.x,pos.z,2,2); upg.sodaCount++; }},
+  {id:'expand',    label:'🏗️ Expand Floorplan',  desc:'More space, and room for more equipment', cat:'Building',  cost:()=>200*(eco.floorLevel+1), max:()=>eco.floorLevel>=MAX_FLOOR_LEVEL, unlockDay:5, action:()=>{ const t0=baseBounds.t; eco.floorLevel++; updateBoundsFromLevel(); followBackWall(baseBounds.t-t0); rebuildAll(); }},
+  {id:'xgrill',    label:'🍳 Extra Grill',         desc:'Add another grill station',             cat:'Equipment', cost:()=>120+upg.extraGrills*80, max:()=>upg.extraGrills>=equipCap('grill'), capKind:'grill', size:[3.5,2], unlockDay:5, action:()=>{ const id='grill'+(upg.extraGrills+1); const pos=layoutSpot('grill',3.5,2); addStation(id,'grill',pos.x,pos.z,3.5,2); upg.extraGrills++; }},
+  {id:'xsink',     label:'🚿 Extra Sink',          desc:'Wash trays in parallel',               cat:'Equipment', cost:()=>90+upg.extraSinks*60,   max:()=>upg.extraSinks>=equipCap('sink'),  capKind:'sink', size:[2.2,2.2], unlockDay:5, action:()=>{ const id='sink'+(upg.extraSinks+1); const pos=layoutSpot('sink',2.2,2.2); addStation(id,'sink',pos.x,pos.z,2.2,2.2); upg.extraSinks++; }},
+  {id:'fryer',     label:'🍟 Fry Station',         desc:()=>(upg.fryerCount||0)?'Another fryer: more fries at once':'Add fries to your menu — a new item!', cat:'Equipment', cost:()=>170+(upg.fryerCount||0)*140, max:()=>(upg.fryerCount||0)>=equipCap('fryer'), capKind:'fryer', size:[3.2,2], unlockDay:11, action:()=>{ const n=upg.fryerCount||0; const pos=layoutSpot('fryer',3.2,2); addStation('fryer'+n,'fryer',pos.x,pos.z,3.2,2); upg.fryerCount=n+1; if(!eco.menu)eco.menu={}; if(!n) eco.menu.fries=true; }},
   {id:'robot',     label:'🤖 Hire Robot',          desc:'Enter Edit mode to set role',           cat:'Automation',cost:()=>robotCost(upg.robotCount), max:()=>upg.robotCount>=10, size:[1.5,1.5], unlockDay:5, action:()=>{ 
       const rData = {role:'busser', hiredDay:eco.day, trained:0, spec:'both'};
       upg.robots.push(rData);

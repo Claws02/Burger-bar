@@ -21,7 +21,7 @@
 // player's meshes to that store's offset, and crossing the midpoint between
 // two stores re-bases the player into the neighbour's frame.
 
-const STORE_SPACING = 80;            // world units between store centres
+const STORE_SPACING = 110;           // world units between store centres
 const MAX_STORES = 3;
 const NEW_STORE_DAY = 20;            // calendar day a second store unlocks
 const NEW_STORE_COST = 5000;         // paid from the store you're managing
@@ -165,13 +165,14 @@ function buildStoreStations(st){
   for(let i=1;i<=upg.extraGrills;i++)   { const pos=freeSpot(3.5,2); if(pos) addStation('grill'+i,'grill',pos.x,pos.z,3.5,2); }
   for(let i=1;i<=upg.extraSinks;i++)    { const pos=freeSpot(2.2,2.2); if(pos) addStation('sink'+i,'sink',pos.x,pos.z,2.2,2.2); }
   for(let i=1;i<=upg.extraCounters;i++) { const pos=freeSpot(1.8,1.8); if(pos) addStation('counter'+(i+1),'counter',pos.x,pos.z,1.8,1.8); }
-  for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(5,5); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
+  for(let i=1;i<upg.tableCount;i++)     { const pos=freeSpot(5,5,true); if(pos) addStation('table'+i,'table',pos.x,pos.z,5,5); }
   for(let i=0;i<upg.robotCount;i++){
     const rData = upg.robots[i] || {role: 'busser', hiredDay: 1};
     const pos = freeSpot(1.5,1.5) || getValidSpawn();
     if(pos) addStation('robot'+i,'robot',pos.x,pos.z,1.5,1.5,{role: rData.role, hiredDay: rData.hiredDay, trained: rData.trained||0, spec: rData.spec||'both'});
   }
   for(let i=0;i<upg.sodaCount;i++) { const pos=freeSpot(2,2); if(pos) addStation('soda'+i,'sodafountain',pos.x,pos.z,2,2); }
+  for(let i=0;i<(upg.fryerCount||0);i++) { const pos=freeSpot(3.2,2); if(pos) addStation('fryer'+i,'fryer',pos.x,pos.z,3.2,2); }
 }
 
 function addStoreContext(i){
@@ -182,6 +183,9 @@ function addStoreContext(i){
   loadStoreRecord(stores[i]);
   buildStoreStations(stores[i]);
   rebuildAll();
+  // Old saves: a store laid out for the deep 50-wide floor (or a crowded
+  // one) gets a clean layout instead of stations stuck in the walls.
+  if(layoutOutOfBounds()) autoArrangeStore();
   stashGlobals(c);
   return c;
 }

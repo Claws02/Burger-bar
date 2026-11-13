@@ -28,7 +28,7 @@ function buildWorld(){
         cp.position.set((Math.random()-.5)*5,Math.random()*2,(Math.random()-.5)*3);
         cg.add(cp);
       }
-      cg.position.set((Math.random()-.5)*100, 22+Math.random()*8, -40+Math.random()*-60);
+      cg.position.set((Math.random()-.5)*150, 22+Math.random()*8, -130+Math.random()*-60);   // behind even a full-size store
       cg._spd = .008+Math.random()*.012;
       scene.add(cg); window._clouds.push(cg);
     }
